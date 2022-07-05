@@ -1,0 +1,1299 @@
+{% extends 'orders/layout.html' %}
+{% block title %}Bestellung {{ order.id }} - {{order.name }}{% endblock %}
+
+{% block content %}
+    <div class="visible white small box100" style="text-align: left">
+        <div class="big box100title" style="text-align: left">Bestellung - {{ order.id }}
+            {% if order.sent %}
+                <button type="button" class="blackbutton standardbutton tiny visible" style="vertical-align: top" onclick="get_order_status()"><i class="fa fa-spinner" aria-hidden="true"></i> Status abfragen</button>
+            {% endif %}
+            <button type="button" class="standardbutton blackbutton tiny visible" style="vertical-align: top" onclick="print_csv()"><i class="fa fa-file-o" aria-hidden="true"></i> CSV</button>
+            <select class="tiny" id="merge_id">
+                {% for merge_order in orders %}
+                <option value="{{ merge_order.id }}">{{ merge_order.id }} - {{ merge_order.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="standardbutton blackbutton tiny visible" style="vertical-align: top" onclick="merge_orders()"><i class="fa fa-retweet" aria-hidden="true"></i> Zusammenführen</button>
+        </div>
+        <form action="" method="POST" id="form">
+
+            <div class="splitleft25">
+                <div class="form-group">
+                    <label for="name">Bezeichnung</label>
+                    <input type="text" id="name" name="name" class="form-control" value="{{ order.name if order.name }}">
+                </div>
+                <div class="form-group">
+                    <label for="afterbuy_id">Afterbuy-ID</label>
+                    <input type="text" id="afterbuy_id" name="afterbuy_id" class="form-control" value="{{ order.afterbuy_id if order.afterbuy_id }}">
+                </div>
+                <div class="form-group">
+                    <label for="order_time">Bestelldatum *</label>
+                    <input id="order_time" type="date" name="order_time" class="form-control" value="{{ order.order_time.strftime('%Y-%m-%d') if order.order_time }}">
+                    <span class="supertiny formwarning" id="order_time_warning">Gib ein gültiges Bestelldatum an!</span>
+                </div>
+                <div class="form-group">
+                    <label for="stock">Lager *</label>
+                    <select id="stock" name="stock" class="form-control">
+                        {% for stock in stocks %}
+                        <option id="{{ stock.id }}" value="{{ stock.id }}" {% if stock.id==order.stock_id %}selected{% endif %}>{{ stock.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="supplier">
+                        Lieferant *
+                        <button type="button" style="margin: 0 5px; padding: 2px 7px" class="supertiny standardbutton visible blackbutton" onclick="refreshsuppliers()">
+                            <i class="fa fa-refresh" aria-hidden="true"></i>
+                        </button>
+                    </label>
+                    <a href="{{ url_for('orders.addsupplier') }}" style="float: right" target="_blank">
+                        <button type="button" class="standardbutton supertiny greenbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px">
+                            <i class="fa fa-plus" aria-hidden="true"></i> neu anlegen
+                        </button>
+                    </a>
+                    <select id="supplier" name="supplier" class="form-control">
+                        <option value=""></option>'
+                        {% for supplier in suppliers %}
+                        <option id="{{ supplier.id }}" value="{{ supplier.id }}" {% if supplier.id==order.supplier_id %}selected{% endif %}>
+                            {% if supplier.isfirm %}
+                                {{ supplier.firmname }}
+                            {% else %}
+                                {{ supplier.salutation }} {{ supplier.firstname }} {{ supplier.name }}
+                            {% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="supertiny formwarning" id="supplier_warning">Gib einen Lieferanten an!</span>
+                </div>
+                <div class="form-group">
+                    <label for="payment_method">
+                        Bezahlmethode *
+                        <button type="button" style="margin: 0 5px; padding: 2px 7px" class="supertiny standardbutton visible blackbutton" onclick="refreshpaymentmethods()">
+                            <i class="fa fa-refresh" aria-hidden="true"></i>
+                        </button>
+                    </label>
+                    <div style="float: right">
+                        <input type="text" id="new_paymentmethod">
+                        <button type="button" class="standardbutton supertiny greenbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px" onclick="add_paymentmethod()">
+                            <i class="fa fa-plus" aria-hidden="true"></i> neu anlegen
+                        </button>
+                    </div>
+                    <select id="payment_method" name="payment_method" class="form-control">
+                        <option value=""></option>
+                        {% for payment_method in payment_methods %}
+                        <option id="{{ payment_method.id }}" value="{{ payment_method.id }}" {% if payment_method.id==order.paymentmethod_id %} selected {% endif %}>
+                            {{ payment_method.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <span class="supertiny formwarning" id="payment_method_warning">Gib eine Bezahlmethode an!</span>
+                </div>
+                <div class="form-group" style="position: relative">
+                    <label for="additional_cost">Zusätzliche Kosten</label>
+                    <input type="text" id="additional_cost" name="additional_cost" class="form-control" value="0">
+                    <span class="supertiny formwarning" id="additional_cost_warning">Ungültiges Format!</span>
+                    <span class="supertiny formwarning" id="additional_cost_split_warning">Keine Stückzahl vorhanden!</span>
+                    <button type="button" class="fromfield_button " id="additional_cost_button" onclick="split_additional_cost()">
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </button>
+                    <input type="hidden" id="splitted_additional_cost" name="splitted_additional_cost" value="0"/>
+                </div>
+                <div class="form-group">
+                    <label for="payment_status">
+                        Bezahl-Status
+                    </label>
+                    <select id="payment_status" name="payment_status" class="form-control">
+                        <option id="" value=""></option>
+                        <option id="" value="offen" {% if order.get_current_payment_stat().label == 'offen' %} selected {% endif %}>offen</option>
+                        <option id="" value="bezahlt" {% if order.get_current_payment_stat().label == 'bezahlt' %} selected {% endif %}>bezahlt</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="payment_status_comment">Bezahlstatus-Kommentar</label>
+                    <textarea id="payment_status_comment" rows="3" name="payment_status_comment" class="form-control">{{ order.payment_status_comment if order.payment_status_comment }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="shipping_status">
+                        Liefer-Status
+                    </label>
+                    <select id="shipping_status" name="shipping_status" class="form-control">
+                        <option id="" value=""></option>
+                        <option id="" value="angefragt" {% if order.get_current_shipping_stat().label == 'angefragt' %} selected {% endif %}>angefragt</option>
+                        <option id="" value="bestellt" {% if order.get_current_shipping_stat().label == 'bestellt' %} selected {% endif %}>bestellt</option>
+                        <option id="" value="unterwegs" {% if order.get_current_shipping_stat().label == 'unterwegs' %} selected {% endif %}>unterwegs</option>
+                        <option id="" value="geliefert" {% if order.get_current_shipping_stat().label == 'geliefert' %} selected {% endif %}>geliefert</option>
+                        <option id="" value="abgeschlossen" {% if order.get_current_shipping_stat().label == 'abgeschlossen' %} selected {% endif %}>abgeschlossen</option>
+                        <option id="" value="storniert" {% if order.get_current_shipping_stat().label == 'storniert' %} selected {% endif %}>storniert</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="shipping_status_comment">Lieferstatus-Kommentar</label>
+                    <textarea id="shipping_status_comment" rows="3" name="shipping_status_comment" class="form-control">{{ order.shipping_status_comment if order.shipping_status_comment }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="delivery_time">Lieferdatum</label>
+                    <input id="delivery_time" type="date" name="delivery_time" class="form-control datepicker" value="{{ order.delivery_time.strftime('%Y-%m-%d') if order.delivery_time }}">
+                    <span class="supertiny formwarning" id="delivery_time_warning">Ungültiges Format</span>
+                </div>
+                <div class="form-group">
+                    <label for="comment">Kommentar</label>
+                    <textarea id="comment" rows="5" name="comment" class="form-control">{{ order.comment if order.comment }}</textarea>
+                </div>
+            </div>
+            <div class="splitright75" style="padding-bottom: {{ (order.combined_history()|length)*22 + 151 }}px;">
+                {% if order.get_current_shipping_stat().label != 'abgeschlossen' %}
+                    <div class="form-group" style="position: relative">
+                        <div style="width: 60px; position: absolute">
+                            <label for="productquant">Anzahl</label>
+                            <input type="text" id="productquant" name="productquant" class="form-control" onkeyup="lowerbound_warning(this, 1)">
+                            <span class="supertiny formwarning" id="productquant_warning" style="float: left">keine Eingabe</span>
+                            <span class="supertiny formwarning" id="productquant_format_warning" style="position: absolute; left: 0">Ungültiges Format</span>
+                        </div>
+                        <div style="position: absolute; left: 70px; padding-top: 40px; text-align: center">X</div>
+                        <div style="width: 150px; position: absolute;left: 90px;">
+                            <label for="addproduct">ID</label>
+                            <input type="text" id="addproduct" name="addproduct" class="form-control" onkeyup="lowerbound_warning(this, 1); checkforname(this)">
+                            <span class="supertiny formwarning" id="addproduct_warning">keine Eingabe</span>
+                        </div>
+                        <div style="position: absolute; left: 250px; padding-top: 40px; text-align: center">-</div>
+                        <div style="position: absolute; right: 430px; padding-top: 40px; text-align: center">zu</div>
+                        <div style="width: 75px; position: absolute; right: 345px">
+                            <label for="prc_tax">Steuer in %</label>
+                            <input type="text" id="prc_tax" name="prc_tax" class="form-control" onkeyup="price_update(this); lowerbound_warning(this, 1)" value="19">
+                            <span class="supertiny formwarning" id="prc_tax_warning">keine Eingabe</span>
+                            <span class="supertiny formwarning" id="prc_tax_format_warning" style="float: left">Ungültiges Format</span>
+                        </div>
+                        <div style="width: 185px; position: absolute; right: 145px">
+                            <label for="price_format">Preisformat</label>
+                            <select id="price_format" name="price_format" class="form-control" onchange="switch_price_format(this)">
+                                <option value="net_price-wrapper" selected>Netto-Preis</option>
+                                <option value="gross_price-wrapper">Brutto-Preis</option>
+                                <option value="summed_net_price-wrapper">Gesamt-Netto-Preis</option>
+                                <option value="summed_gross_price-wrapper">Gesamt-Brutto-Preis</option>
+                            </select>
+                        </div>
+                        <div id="net_price-wrapper" class="price_wrapper" style="width: 130px; position: absolute; right: 0">
+                            <label for="net_price">Netto-Preis</label>
+                            <input type="text" id="net_price" name="net_price" class="form-control" onkeyup="price_update(this); lowerbound_warning(this, 1)">
+                            <span class="supertiny formwarning" id="net_price_warning">keine Eingabe</span>
+                            <span class="supertiny formwarning" id="net_price_format_warning" style="float: left">Ungültiges Format</span>
+                        </div>
+                        <div id="gross_price-wrapper" class="price_wrapper" style="width: 130px; position: absolute; right: 0; display: none;">
+                            <label for="gross_price">Brutto-Preis</label>
+                            <input type="text" id="gross_price" name="gross_price" class="form-control" style="padding-right: 50px;" onkeyup="price_update(this); lowerbound_warning(this, 1)">
+                            <span class="supertiny formwarning" id="gross_price_warning">keine Eingabe</span>
+                            <span class="supertiny formwarning" id="gross_price_format_warning" style="float: left">Ungültiges Format</span>
+                        </div>
+                        <div id="summed_net_price-wrapper" class="price_wrapper" style="width: 130px; position: absolute; right: 0; display: none;">
+                            <label for="summed_net_price">Gesamt-Netto-Preis</label>
+                            <input type="text" id="summed_net_price" name="summed_net_price" class="form-control" onkeyup="price_update(this); lowerbound_warning(this, 1)">
+                            <span class="supertiny formwarning" id="summed_net_price_warning">keine Eingabe</span>
+                            <span class="supertiny formwarning" id="summed_net_price_format_warning" style="float: left">Ungültiges Format</span>
+                        </div>
+                        <div id="summed_gross_price-wrapper" class="price_wrapper" style="width: 130px; position: absolute; right: 0; display: none;">
+                            <label for="summed_gross_price">Gesamt-Brutto-Preis</label>
+                            <input type="text" id="summed_gross_price" name="summed_gross_price" class="form-control" style="padding-right: 50px;" onkeyup="price_update(this); lowerbound_warning(this, 1)">
+                            <span class="supertiny formwarning" id="summed_gross_price_warning">keine Eingabe</span>
+                            <span class="supertiny formwarning" id="summed_gross_price_format_warning" style="float: left">Ungültiges Format</span>
+                        </div>
+                        <div style="width: 100%; padding: 0 455px 0 265px">
+                            <label for="name">Name</label>
+                            <input type="text" id="prod_name" maxlength="80" name="prod_name" class="form-control" onkeyup="lowerbound_warning(this, 1)">
+                            <span class="supertiny formwarning" id="prod_name_warning">keine Eingabe</span>
+                            <span class="supertiny formwarning" id="prod_name_length_warning">Höchstens 255 Zeichen!</span>
+                        </div>
+                        <div>
+
+                        </div>
+                        <button type="button" class="fromfield_button" id="addproduct_button" onclick="addproducts()">
+                            <i class="fa fa-plus" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="five" style="width: 100%; text-align: center">oder</div>
+                    <div class="form-group" style="text-align: center; padding-bottom: 0; margin-bottom: 0">
+                        <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="show_scanproducts_field()">
+                            <i class="fa fa-barcode" aria-hidden="true"></i> scannen
+                        </button>
+                    </div>
+                    <table class="table table-striped" id="productwrapper" style="margin-top: 40px">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px"></th>
+                                <th>HSP-ID</th>
+                                <th>Name</th>
+                                <th style="width: 50px">Anzahl</th>
+                                <th style="width: 75px">Steuer</th>
+                                <th style="width: 120px">Netto Stckpr.</th>
+                                <th style="width: 120px">Brutto Stckpr.</th>
+                                <th style="width: 120px">Gesamt</th>
+                                <th style="width: 50px; position: relative;">
+                                    Geliefert
+                                    <div class="dotclose visible blackbutton supertiny" style="padding-top: 1px; top:11px" onclick="transfer_quantities()">
+                                        <i class="fa fa-exchange" aria-hidden="true"></i>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="productholder">
+                            {% for product in order.products %}
+                            <tr id="row_{{ product.index }}">
+                                <td style="position: relative">
+                                    <div class="dotclose visible redbutton supertiny" data-value="{{ product.index }}" onclick="subtractproduct({{ product.index }},{{ product.product.hsp_id }},{{ '%0.20f' % (product.price*product.ordered*(1+product.prc_tax*0.01))|float }}, {{ '%0.20f' % (product.price*(1+(product.prc_tax*0.01)))|float }},{{ product.ordered }},{{ '%0.20f' % (product.price*product.ordered)|float }}, {{ '%0.20f' % (product.price)|float }})">
+                                        <i class="fa fa-times" aria-hidden="true"></i>
+                                    </div>
+                                    <div style="left:5px" class="dotclose visible blackbutton supertiny" data-value="{{ product.index }}" onclick="editproduct({{ product.index }},{{ product.product.hsp_id }},{{ '%0.20f' % (product.price*product.ordered*(1+(product.prc_tax*0.01)))|float }}, {{ '%0.20f' % (product.price*(1+(product.prc_tax*0.01)))|float }},{{ product.ordered }},{{ '%0.20f' % (product.price*product.ordered)|float }}, {{ '%0.20f' % (product.price)|float }}, {{ '%0.20f' % (product.prc_tax)|float }})">
+                                        <i class="fa fa-pencil" aria-hidden="true"></i>
+                                    </div>
+                                </td>
+                                <td>
+                                    {{ product.product.hsp_id }}
+                                    <input hidden name="hsp_id{{ product.index }}" value="{{ product.product.hsp_id }}">
+                                    <input hidden class="p_ids" name="id{{ product.index }}" id="p{{ product.product.id }}" data-index="{{ product.index }}" value="{{ product.product.id }}">
+                                </td>
+                                <td>
+                                    {{ product.product.name }}
+                                    <input hidden id="prod_name{{ product.index }}" name="prod_name{{ product.index }}" value="{{ product.product.name }}">
+                                </td>
+                                <td>
+                                    {{ product.ordered }}
+                                    <input hidden id="quant{{ product.index }}" name="quant{{ product.index }}" value="{{ product.ordered }}">
+                                </td>
+                                <td>
+                                    {{ '%0.1f' % (product.prc_tax)|float }} %
+                                    <input hidden id="prc_tax{{ product.index }}" name="prc_tax{{ product.index }}" value="{{ '%0.1f' % (product.prc_tax)|float }}">
+                                </td>
+                                <td id="net_price{{ product.index }}">
+                                    <span id="np_text{{ product.product.id }}">{{ '%0.2f' % (product.price)|float }} €</span>
+                                    <input hidden id="np{{ product.product.id }}" name="net_price{{ product.index }}" value="{{ product.price }}">
+                                </td>
+                                <td id="gross_price{{ product.index }}">
+                                    <span id="gp_text{{ product.product.id }}">{{ '%0.2f' % (product.gross_price())|float }} €</span>
+                                    <input hidden id="gp{{ product.product.id }}" class="gross_price_field" name="gross_price{{ product.index }}" value="{{ product.gross_price() }}">
+                                </td>
+                                <td id="summed_gross_price{{ product.index }}">
+                                    <span id="sgp_text{{ product.product.id }}">{{ '%0.2f' % (product.gross_price()*product.ordered)|float }} €</span>
+                                </td>
+                                <td style="width: 100px; padding: 5px">
+                                    <input type="number" value="{{ product.shipped }}" name="shipped{{ product.index }}" id="shipped{{ product.index }}" class="form-control" style="margin: 0">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <span class="supertiny formwarning" id="productwrapper_warning" style="float: left">Gib mindestens ein Produkt an!</span>
+                    <div id="summed_price" style="width: 100%; text-align: right; margin-bottom: {{ (order.combined_history()|length)*22 + 150 }}px; display: inline-block" data-value="{{ order.price }}" data-netsum="{{ order.net_price() }}" data-distquant="{{ order.products|length }}" data-summedquant="{{ order.products | sum(attribute='ordered') }}" >
+                        Gesamtsumme brutto: {{ '%0.2f' % (order.price)|float }} €<br>
+                        Gesamtsumme netto: {{ '%0.2f' % (order.net_price())|float }} €<br>
+                        Anzahl Positionen: {{ order.products|length }} <br>
+                        Gesamtstückzahl: {{ order.products | sum(attribute='ordered') }}
+                    </div>
+                    <input id="counter" name="counter" hidden value="{{ order.products|length + 1 }}">
+                    <input id="removed" name="removed" hidden>
+                    <input id="summed_price_value" name="summed_price_value" hidden value="{{ order.price }}">
+                    <input id="summed_price_distquant" name="summed_price_distquant" hidden value="{{ order.products|length }}">
+                    <input id="summed_price_summedquant" name="summed_price_summedquant" hidden value="{{ order.products | sum(attribute='ordered') }}">
+                {% else %}
+                    <table class="table table-striped" id="productwrapper" style="margin-top: 25px">
+                        <thead>
+                            <tr>
+                                <th>HSP-ID</th>
+                                <th>Name</th>
+                                <th style="width: 50px">Anzahl</th>
+                                    <th style="width: 75px">Steuer</th>
+                                    <th style="width: 120px">Netto Stckpr.</th>
+                                    <th style="width: 120px">Brutto Stckpr.</th>
+                                    <th style="width: 120px">Gesamt</th>
+                                <th style="width: 50px">Geliefert</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productholder">
+                            {% for product in order.products %}
+                            <tr id="row_{{ product.index }}">
+                                <td>
+                                    {{ product.product.hsp_id }}
+                                    <input hidden name="hsp_id{{ product.index }}" value="{{ product.product.hsp_id }}">
+                                    <input hidden class="p_ids" name="id{{ product.index }}" value="{{ product.product.id }}">
+                                </td>
+                                <td>
+                                    {{ product.product.name }}
+                                    <input hidden id="prod_name{{ product.index }}" name="prod_name{{ product.index }}" value="{{ product.product.name }}">
+                                </td>
+                                <td>
+                                    {{ product.ordered }}
+                                    <input hidden id="quant{{ product.index }}" name="quant{{ product.index }}" value="{{ product.ordered }}">
+                                </td>
+                                <td>
+                                   {{ '%0.1f' % (product.prc_tax)|float }} %
+                                    <input hidden id="prc_tax{{ product.index }}"  name="prc_tax{{ product.index }}" value="{{ '%0.1f' % (product.prc_tax)|float }}">
+                                </td>
+                                <td>
+                                   {{ '%0.2f' % (product.price)|float }} €
+                                    <input hidden name="net_price{{ product.index }}" value="{{ product.price }}">
+                                </td>
+                                <td>
+                                   {{ '%0.2f' % (product.gross_price())|float }} €
+                                    <input hidden id="gp{{ product.product.id }}" name="gross_price{{ product.index }}" value="{{ product.gross_price() }}">
+                                </td>
+                                <td>
+                                    {{ '%0.2f' % (product.gross_price()*product.ordered)|float }} €
+                                </td>
+                                <td style="width: 100px">
+                                    {{ product.shipped }}
+                                    <input hidden type="number" min="0" value="{{ product.shipped }}" name="shipped{{ product.index }}" id="shipped{{ product.index }}" class="form-control" style="margin: 0">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <span class="supertiny formwarning" id="productwrapper_warning" style="float: left">Gib mindestens ein Produkt an!</span>
+                    <div id="summed_price" style="width: 100%; text-align: right" data-value="{{ order.price }}" data-netsum="{{ order.net_price() }}" data-distquant="{{ order.products|length }}" data-summedquant="{{ order.products | sum(attribute='ordered') }}" >
+                        Gesamtsumme brutto: {{ '%0.2f' % (order.price)|float }} €<br>
+                        Gesamtsumme netto: {{ '%0.2f' % (order.net_price())|float }} €<br>
+                        Anzahl Positionen: {{ order.products|length }} <br>
+                        Gesamtstückzahl: {{ order.products | sum(attribute='ordered') }}
+                    </div>
+                    <input id="counter" name="counter" hidden value="{{ order.products|length + 1 }}">
+                    <input id="removed" name="removed" hidden>
+                    <input id="summed_price_value" name="summed_price_value" hidden value="{{ order.price }}">
+                    <input id="summed_price_distquant" name="summed_price_distquant" hidden value="{{ order.products|length }}">
+                    <input id="summed_price_summedquant" name="summed_price_summedquant" hidden value="{{ order.products | sum(attribute='ordered') }}">
+                {% endif %}
+                <div class="small buttonholder" style="bottom: {{ (order.combined_history()|length)*22 + 85 }}px;">
+                    <a href="{{ url_for('orders.list_')}}">
+                        <button type="button" class="standardbutton redbutton visible" style="display: inline-block; margin-right: 15px">
+                            <i class="fa fa-reply" aria-hidden="true"></i> zurück
+                        </button>
+                    </a>
+                    <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="checkorderform()">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                    </button>
+                    <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="find_lower_prices()">
+                        <i class="fa fa-magic" aria-hidden="true"></i> Preise checkern
+                    </button>
+                    {% if (order.get_current_shipping_stat().label == 'angefragt' or order.get_current_shipping_stat()==None) and order.sent in [None, False]%}
+                        <button name="btn" type="button" class="standardbutton bluebutton visible" id="send_order_button" style="display: inline-block" onclick="send_order()">
+                            <i class="fa fa-truck" aria-hidden="true"></i> bestellen
+                        </button>
+                    {% endif %}
+                </div>
+                <div style="padding: 20px; border-top: solid 1px #aaaaaa; border-bottom: solid 1px #aaaaaa; margin: 10px 0; position: absolute; bottom: 0; width: 100%;">
+                    <span class="regbig five">Historie</span><br><br>
+                    {% for entry in order.combined_history() %}
+                        {{ entry.init_date.strftime('%d.%m.%Y - %H:%M') }} -
+                        {% if entry.shipping %}
+                            Lieferstatus auf "{{ entry.label }}" geändert.
+                        {% else %}
+                            Bezahlstatus auf "{{ entry.label }}" geändert.
+                        {% endif %}
+                        <br>
+                    {% endfor %}
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="box100 white visible" style="padding: 25px; text-align: left">
+        <b>SKUs:</b><br>
+        {{ internal_ids }}
+        <button class="standardbutton blackbutton visible" onclick="
+            window.open('https://farm02.afterbuy.de/afterbuy/auktionsliste.aspx?AWebayname=&AWFilter=0&AWSuchwort=&AWRENummer=&AWFilter2=0&awmaxart=100&maxgesamt=500&AWEmail=&AWDatumVon=&AWDatumBis=&AWBezug=EndeDerAuktion&AWPLZ=&AWBetrag=&AWBetragBezug=1&AWStammID={{ internal_ids }}&AWLaenderkennung=&AWLaenderkennungBezug=rechnung&AWLabelDynSearchField1=ShippingAddress&AWDynSearchField1=&AWLabelDynSearchField2=PaymentStatus&AWDynSearchField2=&AWDynamicSorting=0&AWLabelDynSearchField3=PaymentShipMethod&AWDynSearchField3=&searchUserTag1=0&searchUserTag2=0&searchUserTag3=0&searchUserTag4=0&killordersession=0&art=SetAuswahl')"
+        >
+            <i class="fa fa-external-link" aria-hidden="true"></i> Zu Afterbuy
+        </button>
+    </div>
+    <div id="ScreenDarkener">
+
+    </div>
+    <div class="white visible small" id="scanproducts_field">
+        <a onclick="hidescanproducts_field()" class="blackfont" style="position: absolute; right: 10px; top:10px; width: 25px; height: 25px; z-index: 1002">
+            <div>
+                <img src="{{ url_for('static', filename='images/X.png') }}" style="width: 100%;">
+            </div>
+        </a>
+        <div class="form-gourp" style="position: relative">
+            <label for="HSP_ID_Scan">HSP-ID</label>
+            <input id="HSP_ID_Scan" name="HSP_ID_Scan" class="form-control" style="padding-right: 50px;" onkeydown="checkforenter(event)">
+            <span class="supertiny formwarning" id="HSP_ID_Scan_warning">Ungültige Eingabe!</span>
+            <button type="button" class="fromfield_button" id="addhspid_button" onclick="addhspid()">
+                <i class="fa fa-plus" aria-hidden="true"></i>
+            </button>
+        </div>
+        <table class="table table-striped" id="hspidwrapper" style="margin-top: 40px">
+            <thead>
+                <tr>
+                    <th style="width: 50px"></th>
+                    <th>HSP-ID</th>
+                    <th>Name</th>
+                    <th style="width: 50px">Anzahl</th>
+                </tr>
+            </thead>
+            <tbody id="hspidholder">
+            </tbody>
+        </table>
+        <div class="small buttonholder">
+            <button name="btn" type="button" class="standardbutton blackbutton visible" style="display: inline-block" onclick="transfer_hspids()">
+                <i class="fa fa-arrow-circle-o-right" aria-hidden="true"></i> übertragen
+            </button>
+        </div>
+    </div>
+    <div class="white visible small" id="order_response">
+        <a onclick="hide_order_response_field()" class="blackfont" style="position: absolute; right: 10px; top:10px; width: 25px; height: 25px; z-index: 1002">
+            <div>
+                <img src="{{ url_for('static', filename='images/X.png') }}" style="width: 100%;">
+            </div>
+        </a>
+        <div id="order_res_title" class="regbig"></div>
+        <p id="order_res_msg"></p>
+    </div>
+    <div class="white visible small" id="order_status" style="overflow-y: scroll">
+        <a onclick="hide_order_status_field()" class="blackfont" style="position: absolute; right: 10px; top:10px; width: 25px; height: 25px; z-index: 1002">
+            <div>
+                <img src="{{ url_for('static', filename='images/X.png') }}" style="width: 100%;">
+            </div>
+        </a>
+        <div class="regbig">Order-Status</div>
+        <table class="table" id="order_status_table">
+            <tr>
+                <td>Status:</td>
+                <td>
+                    <span id="status"></span>
+                </td>
+            </tr>
+            <tr>
+                <td>Created at: </td>
+                <td>
+                    <span id="created_at"></span>
+                </td>
+            </tr>
+            <tr>
+                <td>Updated at:</td>
+                <td>
+                    <span id="updated_at"></span>
+                </td>
+            </tr>
+            <tr class="black">
+                <td colspan="2" style="text-align: center">
+                    LINES
+                </td>
+            </tr>
+        </table>
+    </div>
+    <script>        function find_lower_prices(){
+            var ps = document.getElementsByClassName('p_ids');
+            var p_ids = [];
+            for (var j = 0; j < ps.length; j++) {
+                p_ids.push(ps[j].value);
+            }
+            $.ajax({
+                url: "{{ url_for('orders.order_find_lowest_price') }}",
+                type: "POST",
+                data: {'p_ids': p_ids.join(','), 'supplier_id': {{order.supplier_id}}},
+                success: function (data) {
+                    for (var j = 0; j < data.p_ids.length; j++) {
+                        var p_id =  data.p_ids[j];
+                        var p_index = document.getElementById('p' + p_id).getAttribute('data-index');
+                        document.getElementById('gp' + p_id).value = data.results[p_id].toFixed(2);
+                        document.getElementById('gp_text' + p_id).innerText = data.results[p_id].toFixed(2) + ' €';
+                        document.getElementById('np' + p_id).value = data.results[p_id].toFixed(2);
+                        document.getElementById('np_text' + p_id).innerText = data.results[p_id].toFixed(2) + ' €';
+                        var quant = document.getElementById('quant' + p_index).value;
+                        document.getElementById('sgp_text' + p_id).innerText = (Number(quant) * Number(data.results[p_id])).toFixed(2) + ' €';
+                    }
+                }
+            });
+        }
+        function merge_orders(){
+            var order_id = document.getElementById('merge_id').value;
+            window.open('/orders/merge_orders/{{ order.id }},' + order_id, "_self");
+        }
+        function print_csv() {
+            window.open('/orders/order/print_csv/{{ order.id }}');
+        }
+        {% if order.sent %}
+            function get_order_status() {
+                fetch('{{ url_for("orders.get_order_status", external_id=order.external_id) }}').then(function (response) {
+                    response.json().then(function (data) {
+                        if (data.status==='danger'){
+                            document.getElementById('status').innerText = 'ERROR';
+                            document.getElementById("order_status").style.display = 'Block';
+                            document.getElementById("order_status").style.zIndex = '15002';
+                            document.getElementById("ScreenDarkener").style.display = 'Block';
+
+                            setTimeout(function() {
+                                document.getElementById("order_status").style.opacity = '1';
+                                document.getElementById("ScreenDarkener").style.opacity = '0.8';
+                            }, 200);
+                        }else{
+                            document.getElementById('status').innerText = data.status;
+                            document.getElementById('created_at').innerText = data.created_at.replace('T', ' - ').split('.')[0];
+                            document.getElementById('updated_at').innerText = data.updated_at.replace('T', ' - ').split('.')[0];
+                            var table = document.getElementById('order_status_table');
+                            for (var j = 0; j < data.lines.length; j++) {
+                                var line = data.lines[j];
+                                table.innerHTML += "<tr><td>" + line.title + "</td><td>" + line.status + "</td></tr>";
+                            }
+                            document.getElementById("order_status").style.display = 'Block';
+                            document.getElementById("order_status").style.zIndex = '15002';
+                            document.getElementById("ScreenDarkener").style.display = 'Block';
+
+                            setTimeout(function() {
+                                document.getElementById("order_status").style.opacity = '1';
+                                document.getElementById("ScreenDarkener").style.opacity = '0.8';
+                            }, 200);
+                        }
+                    });
+                });
+            }
+
+            function hide_order_status_field() {
+                document.getElementById("order_status").style.opacity = '0';
+                document.getElementById("order_status").style.zIndex = '15000';
+                document.getElementById("ScreenDarkener").style.opacity = '0';
+                setTimeout(function () {
+                    document.getElementById("order_status").style.display = 'None';
+                    document.getElementById("ScreenDarkener").style.display = 'None';
+                }, 200);
+            }
+
+        {% endif %}
+
+        function send_order() {
+            document.getElementById('send_order_button').innerHTML = '<div style="position: relative; width:10px; height:10px"><div class="loader" style="height: 8px; width: 8px; margin: -25px"></div></div>';
+            $.ajax({
+                url: "{{ url_for('orders.send_order') }}",
+                type: "POST",
+                data: {
+                    order_id: {{order.id}}
+                },
+                success: function(data) {
+                    if (data.status_code === 201){
+                        document.getElementById('order_res_title').innerText = 'Bestellung erfolgreich versendet.';
+                        window.location.reload();
+                    }
+                    else if (data.status_code === 500){
+                        document.getElementById('order_res_title').innerText = 'API-Error';
+                        document.getElementById('order_res_msg').innerText = '(' + data.status_code + ') ' + data.reason;
+                    }
+                    else{
+                        document.getElementById('order_res_title').innerText = 'Internal-Error';
+                        document.getElementById('order_res_msg').innerHTML = '(' + data.status_code + ') ' + data.reason + '<br>';
+                        for (var i = 0; i < data.add_info.length; i++) {
+                            document.getElementById('order_res_msg').innerHTML += data.add_info[i] + '<br>';
+                        }
+
+                    }
+
+                    document.getElementById("order_response").style.display = 'Block';
+                    document.getElementById("order_response").style.zIndex = '15002';
+                    document.getElementById("ScreenDarkener").style.display = 'Block';
+
+                    setTimeout(function() {
+                        document.getElementById("order_response").style.opacity = '1';
+                        document.getElementById("ScreenDarkener").style.opacity = '0.8';
+                    }, 200);
+                    document.getElementById('send_order_button').innerHTML = '<i class="fa fa-truck" aria-hidden="true"></i> bestellen';
+                },
+                error: function() {
+                    document.getElementById('order_res_title').innerText = 'Internal-Error';
+
+                    document.getElementById("order_response").style.display = 'Block';
+                    document.getElementById("order_response").style.zIndex = '15002';
+                    document.getElementById("ScreenDarkener").style.display = 'Block';
+
+                    setTimeout(function() {
+                        document.getElementById("order_response").style.opacity = '1';
+                        document.getElementById("ScreenDarkener").style.opacity = '0.8';
+                    }, 200);
+                    document.getElementById('send_order_button').innerHTML = '<i class="fa fa-truck" aria-hidden="true"></i> bestellen';
+                }
+            });
+        }
+
+        function hide_order_response_field() {
+            document.getElementById("order_response").style.opacity = '0';
+            document.getElementById("order_response").style.zIndex = '15000';
+            document.getElementById("ScreenDarkener").style.opacity = '0';
+            setTimeout(function () {
+                document.getElementById("order_response").style.display = 'None';
+                document.getElementById("ScreenDarkener").style.display = 'None';
+            }, 200);
+        }
+
+        function split_additional_cost() {
+            var cost = document.getElementById('additional_cost').value.replace(',','.');
+            var gross_prices = document.getElementsByClassName('gross_price_field');
+            var quantity = 0;
+            for (var i = 0; i < gross_prices.length; i++) {
+                quantity += Number(document.getElementById('quant'+gross_prices[i].name.replace('gross_price', '')).value);
+            }
+            if (quantity!==0){
+                var split_cost = Number(cost)/quantity;
+                for (var j = 0; j < gross_prices.length; j++) {
+                    var index = gross_prices[j].name.replace('gross_price', '');
+                    var prc_tax = document.getElementById("prc_tax"+index).value;
+                    prc_tax = prc_tax.replace(',','.').replace(' ','');
+                    prc_tax = Number(prc_tax);
+                    var quant = document.getElementById("quant"+index).value;
+                    quant = Number(quant);
+                    var gross_price = Number(gross_prices[j].value)+split_cost;
+                    var summed_gross_price = gross_price*quant;
+                    var net_price = gross_price/(1+prc_tax*0.01);
+                    document.getElementById('gross_price'+index).innerHTML = gross_price.toFixed(2) + '€ <input hidden class="gross_price_field" name="gross_price' + index + '" value="' + gross_price.toFixed(2)  + '">';
+                    document.getElementById('summed_gross_price'+index).innerHTML = summed_gross_price.toFixed(2) + '€ <input hidden name="summed_gross_price' + index + '" value="' + summed_gross_price.toFixed(2)  + '">';
+                    document.getElementById('net_price'+index).innerHTML = net_price.toFixed(2) + '€ <input hidden name="net_price' + index + '" value="' + net_price.toFixed(2)  + '">';
+                    var sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+                    var net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+                    var distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+                    var summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+                    sum_price += quant*split_cost;
+                    net_sum += quant*split_cost/(1+prc_tax*0.01);
+                    document.getElementById('summed_price');
+                    document.getElementById('summed_price').setAttribute('data-netsum', net_sum);
+                    document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + sum_price.toFixed(2)+' €<br>';
+                    document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + net_sum.toFixed(2)+' €<br>';
+                    document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+                    document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+                }
+                document.getElementById('additional_cost_split_warning').style.opacity = '0';
+                document.getElementById('additional_cost').disabled = true;
+                document.getElementById('additional_cost_button').disabled = true;
+                document.getElementById('splitted_additional_cost').value = '1';
+            }else{
+                document.getElementById('additional_cost_split_warning').style.opacity = '1';
+            }
+        }
+
+        function switch_price_format(object){
+            var price_wrappers = document.getElementsByClassName('price_wrapper');
+            for (var i = 0; i < price_wrappers.length; i++) {
+                if (price_wrappers[i].id===object.value){
+                    price_wrappers[i].style.display = 'block';
+                }else{
+                    price_wrappers[i].style.display = 'None';
+                }
+            }
+        }
+
+        function price_update(object){
+            if (object.id==='prc_tax'){
+                var prc_tax = document.getElementById("prc_tax").value;
+                prc_tax = prc_tax.replace(',','.').replace(' ','');
+                prc_tax = Number(prc_tax);
+                var quantity = Number(document.getElementById("productquant").value);
+                if (!isNaN(prc_tax) && !isNaN(quantity)) {
+                    var active_price_box = document.getElementById('price_format').value.split('-')[0];
+                    if (active_price_box === 'net_price') {
+                        var net_price = document.getElementById("net_price").value;
+                        net_price = net_price.replace(',','.').replace(' ','');
+                        net_price = Number(net_price);
+                        var gross_price = (1+prc_tax*0.01)*net_price;
+                        var summed_net_price = quantity*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else if (active_price_box === 'gross_price') {
+                        var gross_price = document.getElementById("gross_price").value;
+                        gross_price = gross_price.replace(',','.').replace(' ','');
+                        gross_price = Number(gross_price);
+                        var net_price = gross_price/(1+prc_tax*0.01);
+                        var summed_net_price = quantity*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else if (active_price_box === 'summed_net_price') {
+                        var summed_net_price = document.getElementById("summed_net_price").value;
+                        summed_net_price = summed_net_price.replace(',','.').replace(' ','');
+                        summed_net_price = Number(summed_net_price);
+                        var net_price = summed_net_price/quantity;
+                        var gross_price = (1+prc_tax*0.01)*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else {
+                        var summed_gross_price = document.getElementById("summed_gross_price").value;
+                        summed_gross_price = summed_gross_price.replace(',','.').replace(' ','');
+                        summed_gross_price = Number(summed_gross_price);
+                        var gross_price = summed_gross_price/quantity;
+                        var net_price = gross_price/(1+prc_tax*0.01);
+                        var summed_net_price = quantity*net_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                    }
+                }
+            }else{
+                var prc_tax = document.getElementById("prc_tax").value;
+                prc_tax = prc_tax.replace(',','.').replace(' ','');
+                prc_tax = Number(prc_tax);
+                var quantity = Number(document.getElementById("productquant").value);
+                if (!isNaN(prc_tax) && !isNaN(quantity)) {
+                    var active_price_box = document.getElementById('price_format').value.split('-')[0];
+                    if (active_price_box === 'net_price') {
+                        var net_price = object.value;
+                        net_price = net_price.replace(',','.').replace(' ','');
+                        net_price = Number(net_price);
+                        var gross_price = (1+prc_tax*0.01)*net_price;
+                        var summed_net_price = quantity*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else if (active_price_box === 'gross_price') {
+                        var gross_price = object.value;
+                        gross_price = gross_price.replace(',','.').replace(' ','');
+                        gross_price = Number(gross_price);
+                        var net_price = gross_price/(1+prc_tax*0.01);
+                        var summed_net_price = quantity*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else if (active_price_box === 'summed_net_price') {
+                        var summed_net_price = object.value;
+                        summed_net_price = summed_net_price.replace(',','.').replace(' ','');
+                        summed_net_price = Number(summed_net_price);
+                        var net_price = summed_net_price/quantity;
+                        var gross_price = (1+prc_tax*0.01)*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else {
+                        var summed_gross_price = object.value;
+                        summed_gross_price = summed_gross_price.replace(',','.').replace(' ','');
+                        summed_gross_price = Number(summed_gross_price);
+                        var gross_price = summed_gross_price/quantity;
+                        var net_price = gross_price/(1+prc_tax*0.01);
+                        var summed_net_price = quantity*net_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                    }
+                }
+            }
+        }
+
+
+        function transfer_quantities(){
+            var removed = document.getElementById('removed').value.split(',');
+            count = document.getElementById('counter').value;
+            for (var i = 1; i < count; i++){
+                if (!removed.some(e => e === i.toString())){
+                    document.getElementById('shipped'+i.toString()).value = document.getElementById('quant'+i.toString()).value;
+                }
+            }
+
+        }
+
+        function show_scanproducts_field() {
+            document.getElementById("scanproducts_field").style.display = 'Block';
+            document.getElementById("scanproducts_field").style.zIndex = '15002';
+            document.getElementById("ScreenDarkener").style.display = 'Block';
+            document.getElementById('HSP_ID_Scan').focus();
+
+            setTimeout(function() {
+                document.getElementById("scanproducts_field").style.opacity = '1';
+                document.getElementById("ScreenDarkener").style.opacity = '0.8';
+            }, 200);
+
+        }
+
+        function hidescanproducts_field() {
+            document.getElementById("scanproducts_field").style.opacity = '0';
+            document.getElementById("scanproducts_field").style.zIndex = '15000';
+            document.getElementById("ScreenDarkener").style.opacity = '0';
+            setTimeout(function () {
+                document.getElementById("scanproducts_field").style.display = 'None';
+                document.getElementById("ScreenDarkener").style.display = 'None';
+            }, 200);
+        }
+
+        function checkforname(input) {
+            fetch('/orders/get_hsp_id_name/'+input.value).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("prod_name").value = data.product_name;
+                });
+            });
+        }
+
+        function addproducts() {
+            newproduct = document.getElementById('addproduct').value;
+            fetch('/orders/get_hsp_id_name/'+newproduct).then(function (response) {
+                response.json().then(function (data) {
+                    newproduct = data.hsp_id;
+                    var product_id = data.product_id;
+                    productname = document.getElementById('prod_name').value;
+                    productquant = document.getElementById('productquant').value;
+                    net_price = document.getElementById('net_price').value;
+                    gross_price = document.getElementById('gross_price').value;
+                    prc_tax = document.getElementById('prc_tax').value;
+                    if (productname.length > 255){
+                        document.getElementById('prod_name_length_warning').style.opacity = '1';
+                        document.getElementById('prod_name').style.borderColor = '#a54843';
+                        document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                    }
+                    else if (newproduct != '' && productquant != '' && gross_price != '' && productname != ''){
+                        net_price = net_price.replace(',','.').replace(' ','');
+                        gross_price = gross_price.replace(',','.').replace(' ','');
+                        prc_tax = prc_tax.replace(',','.').replace(' ','');
+                        productquant = Number(productquant);
+                        net_price = Number(net_price);
+                        gross_price = Number(gross_price);
+                        prc_tax = Number(prc_tax);
+                        if (!isNaN(productquant) && !isNaN(gross_price) && !isNaN(prc_tax)){
+                            thisid = document.getElementById('counter').value;
+                            document.getElementById('counter').value = Number(thisid)+1;
+                            document.getElementById('gross_price_format_warning').style.opacity = '0';
+                            document.getElementById('productquant_format_warning').style.opacity = '0';
+                            document.getElementById('addproduct').value = '';
+                            document.getElementById('prod_name').value = '';
+                            document.getElementById('productquant').value = '';
+                            document.getElementById('prc_tax').value = '19';
+                            document.getElementById('net_price').value = '';
+                            document.getElementById('gross_price').value = '';
+                            document.getElementById('summed_net_price').value = '';
+                            document.getElementById('summed_gross_price').value = '';
+                            innerstring = '<tr id="row_' + thisid + '">';
+                            innerstring += '<td style="position: relative; padding-top: 15px">';
+                            innerstring += '<div class="dotclose visible redbutton supertiny" data-value="' + thisid + '" onclick="subtractproduct('+ thisid +', ' + newproduct + ', ' + (gross_price*productquant).toFixed(20) + ', '+ gross_price.toFixed(20) + ', ' + productquant+ ', ' + (net_price*productquant).toFixed(20)+', ' + net_price.toFixed(20)+')">';
+                            innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+                            innerstring += '</div>';
+                            innerstring += '<div style="left:5px" class="dotclose visible blackbutton supertiny" data-value="' + thisid + '" onclick="editproduct('+ thisid +', ' + newproduct +', ' + (gross_price*productquant).toFixed(20) + ', '+ gross_price.toFixed(20) + ', ' + productquant+ ', ' + (net_price*productquant).toFixed(20)+', ' + net_price.toFixed(20)+', ' + prc_tax.toFixed(2) +')">';
+                            innerstring += '<i class="fa fa-pencil" aria-hidden="true"></i>';
+                            innerstring += '</div>';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += newproduct;
+                            innerstring += '<input hidden name="hsp_id' + thisid + '" value="' + newproduct + '">';
+                            innerstring += '<input hidden class="p_ids" name="id' + thisid + '" id="p' + product_id + '" data-index="' + thisid + '" value="' + product_id + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += productname;
+                            innerstring += '<input hidden id="prod_name' + thisid + '" name="prod_name' + thisid + '" value="' + productname + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += productquant;
+                            innerstring += '<input hidden id="quant' + thisid + '" name="quant' + thisid + '" value="' + productquant + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += prc_tax.toFixed(0)+' %';
+                            innerstring += '<input hidden id="prc_tax' + thisid + '" name="prc_tax' + thisid + '" value="' + prc_tax + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td id="net_price' + thisid + '">';
+                            innerstring += '<span id="np_text' + product_id + '">' + net_price.toFixed(2)+' €</span>';
+                            innerstring += '<input hidden id="np' + product_id + '" name="net_price' + thisid + '" value="' + net_price + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td id="gross_price' + thisid + '">';
+                            innerstring += '<span id="gp_text' + product_id + '">' + gross_price.toFixed(2)+' €</span>';
+                            innerstring += '<input hidden id="gp' + product_id + '" class="gross_price_field" name="gross_price' + thisid + '" value="' + gross_price + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td id="summed_gross_price' + thisid + '">';
+                            innerstring += '<span id="sgp_text' + product_id + '">' + (gross_price*productquant).toFixed(2)+' €</span>';
+                            innerstring += '</td>';
+                            innerstring += '<td style="width: 100px; padding: 5px">';
+                            innerstring += '<input type="number" min="0" value="0" name="shipped' + thisid + '" id="shipped' + thisid + '" class="form-control" style="margin: 0">';
+                            innerstring += '</td>';
+                            innerstring += '</tr>';
+                            document.getElementById('productholder').innerHTML += innerstring;
+                            document.getElementById('addproduct_warning').style.opacity = '0';
+                            document.getElementById('addproduct').style.borderColor = '#ced4da';
+                            document.getElementById('prod_name_warning').style.opacity = '0';
+                            document.getElementById('prod_name').style.borderColor = '#ced4da';
+                            document.getElementById('productquant_warning').style.opacity = '0';
+                            document.getElementById('productquant').style.borderColor = '#ced4da';
+                            document.getElementById('gross_price_warning').style.opacity = '0';
+                            document.getElementById('gross_price').style.borderColor = '#ced4da';
+                            sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+                            net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+                            distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+                            summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+                            sum_price += productquant*gross_price;
+                            net_sum += productquant*net_price;
+                            distquant += 1;
+                            summedquant += productquant;
+                            document.getElementById('summed_price').setAttribute('data-value', sum_price);
+                            document.getElementById('summed_price').setAttribute('data-netsum', net_sum);
+                            document.getElementById('summed_price').setAttribute('data-distquant', distquant);
+                            document.getElementById('summed_price').setAttribute('data-summedquant', summedquant);
+                            document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + sum_price.toFixed(2)+' €<br>';
+                            document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + net_sum.toFixed(2)+' €<br>';
+                            document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+                            document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+                            {% if (order.get_current_shipping_stat().label == 'angefragt' or order.get_current_shipping_stat()==None) and order.sent in [None, False]%}
+                                document.getElementById("send_order_button").style.display = "None";
+                            {% endif %}
+                        }else{
+                            if (isNaN(productquant)){
+                                document.getElementById('productquant_format_warning').style.opacity = '1';
+                                document.getElementById('productquant').style.borderColor = '#a54843';
+                                document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                            }
+                            else {
+                                document.getElementById('productquant_format_warning').style.opacity = '0';
+                            }
+                            if (isNaN(gross_price)){
+                                document.getElementById('gross_price_format_warning').style.opacity = '1';
+                                document.getElementById('gross_price').style.borderColor = '#a54843';
+                                document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                            }
+                            else {
+                                document.getElementById('gross_price_format_warning').style.opacity = '0';
+                            }
+                        }
+
+                    }else{
+                        if (newproduct == ''){
+                            document.getElementById('addproduct_warning').style.opacity = '1';
+                            document.getElementById('addproduct').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }
+                        if (productname == ''){
+                            document.getElementById('prod_name_warning').style.opacity = '1';
+                            document.getElementById('prod_name').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }
+                        if (productquant == ''){
+                            document.getElementById('productquant_warning').style.opacity = '1';
+                            document.getElementById('productquant').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }else if (isNaN(productquant)){
+                            document.getElementById('productquant_format_warning').style.opacity = '1';
+                            document.getElementById('productquant').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }
+                        else{
+                            document.getElementById('productquant_format_warning').style.opacity = '0';
+                        }
+                        if (gross_price == ''){
+                            document.getElementById('gross_price_warning').style.opacity = '1';
+                            document.getElementById('gross_price').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }else if (isNaN(gross_price)){
+                            document.getElementById('gross_price_format_warning').style.opacity = '1';
+                            document.getElementById('gross_price').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }else{
+                            document.getElementById('gross_price_format_warning').style.opacity = '0';
+                        }
+                    }
+                });
+            });
+        }
+
+        function editproduct(thisid, hspid, value, gross_price, quant, net_value, net_price, prc_tax) {
+            document.getElementById('addproduct').value = hspid;
+            document.getElementById('prod_name').value = document.getElementById('prod_name'+thisid).value;
+            document.getElementById('productquant').value = quant;
+            document.getElementById('prc_tax').value = prc_tax;
+            document.getElementById('net_price').value = net_price;
+            document.getElementById('gross_price').value = gross_price;
+            sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+            net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+            distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+            summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+            distquant -= 1;
+            summedquant -= quant;
+            newsum = sum_price-value;
+            newnetsum = net_sum-net_value;
+            document.getElementById('summed_price').setAttribute('data-value', newsum);
+            document.getElementById('summed_price').setAttribute('data-netsum', newnetsum);
+            document.getElementById('summed_price').setAttribute('data-distquant', distquant);
+            document.getElementById('summed_price').setAttribute('data-summedquant', summedquant);
+            document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + newsum.toFixed(2)+' €<br>';
+            document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + newnetsum.toFixed(2)+' €<br>';
+            document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+            document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+            subtracted = document.getElementById('row_'+thisid);
+            subtracted.parentNode.removeChild(subtracted);
+            document.getElementById('removed').value += thisid+',';
+            {% if (order.get_current_shipping_stat().label == 'angefragt' or order.get_current_shipping_stat()==None) and order.sent in [None, False]%}
+                document.getElementById("send_order_button").style.display = "None";
+            {% endif %}
+        }
+
+        function subtractproduct(thisid, hspid, value, gross_price, quant, net_value, net_price){
+            sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+            net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+            distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+            summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+            distquant -= 1;
+            summedquant -= quant;
+            newsum = sum_price-value;
+            newnetsum = net_sum-net_value;
+            document.getElementById('summed_price').setAttribute('data-value', newsum);
+            document.getElementById('summed_price').setAttribute('data-netsum', newnetsum);
+            document.getElementById('summed_price').setAttribute('data-distquant', distquant);
+            document.getElementById('summed_price').setAttribute('data-summedquant', summedquant);
+            document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + newsum.toFixed(2)+' €<br>';
+            document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + newnetsum.toFixed(2)+' €<br>';
+            document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+            document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+            subtracted = document.getElementById('row_'+thisid);
+            subtracted.parentNode.removeChild(subtracted);
+            document.getElementById('removed').value += thisid+',';
+            {% if (order.get_current_shipping_stat().label == 'angefragt' or order.get_current_shipping_stat()==None) and order.sent in [None, False]%}
+                document.getElementById("send_order_button").style.display = "None";
+            {% endif %}
+        }
+
+        function checkforenter(event) {
+            if (event.which === 13){
+                addhspid();
+            }
+        }
+
+        function addhspid() {
+            HSP_ID_Scan_Field = document.getElementById('HSP_ID_Scan');
+            HSP_ID_Scan = HSP_ID_Scan_Field.value;
+            if (HSP_ID_Scan.length > 10 && HSP_ID_Scan.length < 14 ){
+                while (HSP_ID_Scan.length<13){
+                    HSP_ID_Scan = '0'+HSP_ID_Scan;
+                }
+                fetch('/orders/get_hsp_id_name/'+HSP_ID_Scan).then(function (response) {
+                    response.json().then(function (data) {
+                        newname = data.product_name;
+                        var product_id = data.product_id;
+                        checkhspidrow = document.getElementById('scanrow_'+HSP_ID_Scan);
+                        if (checkhspidrow !== null){
+                            newquantity = Number(document.getElementById(HSP_ID_Scan+'quant').getAttribute('data-quantity'))+1;
+                            document.getElementById(HSP_ID_Scan+'quantity').innerText = newquantity;
+                            document.getElementById(HSP_ID_Scan+'quant').setAttribute('data-quantity', newquantity);
+                        }else{
+                            innerstring = '<tr class="scanned_hspid" id="scanrow_' + HSP_ID_Scan + '" data-value="' + HSP_ID_Scan + '">';
+                            innerstring += '<td style="position: relative; padding-top: 15px">';
+                            innerstring += '<div class="dotclose visible redbutton supertiny" data-value="' + HSP_ID_Scan + '" onclick="subtracthspid(this)">';
+                            innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+                            innerstring += '</div>';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += HSP_ID_Scan;
+                            innerstring += '<input hidden name="' + HSP_ID_Scan + '" value="' + HSP_ID_Scan + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += newname;
+                            innerstring += '<input hidden id="' + HSP_ID_Scan + 'name" value="' + newname + '" data-id="' + product_id + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += '<span id="'+ HSP_ID_Scan +'quantity">1</span>';
+                            innerstring += '<input hidden id="' + HSP_ID_Scan + 'quant" data-quantity="1" name="' + HSP_ID_Scan + 'quant">';
+                            innerstring += '</td>';
+                            innerstring += '</tr>';
+                            document.getElementById('hspidholder').innerHTML += innerstring;
+                        }
+                    });
+                });
+                HSP_ID_Scan_Field.value = '';
+            }else{
+                document.getElementById('HSP_ID_Scan_warning').style.opacity = '1';
+                document.getElementById('HSP_ID_Scan').style.borderColor = '#a54843';
+                document.getElementById('addhspid_button').className = 'fromfield_warningbutton';
+            }
+
+        }
+
+        function subtracthspid(val){
+            subtracted = document.getElementById('scanrow_'+val.getAttribute('data-value'));
+            subtracted.parentNode.removeChild(subtracted);
+        }
+
+        function transfer_hspids() {
+            scannedhspids = document.getElementsByClassName('scanned_hspid');
+            for (var i = 0; i < scannedhspids.length; i++){
+                thisid = document.getElementById('counter').value;
+                document.getElementById('counter').value = Number(thisid)+1;
+                newproduct = scannedhspids[i].getAttribute('data-value');
+                productname = document.getElementById(newproduct+'name').value;
+                var product_id = document.getElementById(newproduct+'name').getAttribute('data-id');
+                productquant = Number(document.getElementById(newproduct+'quant').getAttribute('data-quantity'));
+                gross_price = 0;
+                net_price = 0;
+                innerstring = '<tr id="row_' + thisid + '">';
+                innerstring += '<td style="position: relative; padding-top: 15px">';
+                innerstring += '<div class="dotclose visible redbutton supertiny" data-value="' + thisid + '" onclick="subtractproduct('+ thisid +', ' + newproduct +', ' + (gross_price*productquant).toFixed(2) + ', '+ gross_price.toFixed(2) + ', ' + productquant.toFixed(2) + ')">';
+                innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+                innerstring += '</div>';
+                innerstring += '<div style="left:5px" class="dotclose visible blackbutton supertiny" data-value="' + thisid + '" onclick="editproduct('+ thisid +', ' + newproduct +', ' + (gross_price*productquant).toFixed(2) + ', '+ gross_price.toFixed(2) + ', ' + productquant.toFixed(2) +', 19)">';
+                innerstring += '<i class="fa fa-pencil" aria-hidden="true"></i>';
+                innerstring += '</div>';
+                innerstring += '</td>';
+                innerstring += '<td>';
+                innerstring += newproduct;
+                innerstring += '<input hidden name="hsp_id' + thisid + '" value="' + newproduct + '">';
+                innerstring += '<input hidden class="p_ids" name="id' + thisid + '" id="p' + product_id + '" data-index="' + thisid + '" value="' + product_id + '">';
+                innerstring += '</td>';
+                innerstring += '<td>';
+                innerstring += productname;
+                innerstring += '<input hidden id="prod_name' + thisid + '" name="prod_name' + thisid + '" value="' + productname + '">';
+                innerstring += '<input hidden id="idealo_link' + thisid + '" name="idealo_link' + thisid + '" value="">';
+                innerstring += '</td>';
+                innerstring += '<td>';
+                innerstring += productquant;
+                innerstring += '<input hidden id="quant' + thisid + '" name="quant' + thisid + '" value="' + productquant + '">';
+                innerstring += '</td>';
+                innerstring += '<td>';
+                innerstring += 19+' %';
+                innerstring += '<input hidden id="prc_tax' + thisid + '" name="prc_tax' + thisid + '" value="' + 19 + '">';
+                innerstring += '</td>';
+                innerstring += '<td id="net_price' + thisid + '">';
+                innerstring += '<span id="np_text' + product_id + '">' + net_price.toFixed(2)+' €</span>';
+                innerstring += '<input hidden id="np' + product_id + '" name="net_price' + thisid + '" value="' + net_price + '">';
+                innerstring += '</td>';
+                innerstring += '<td id="gross_price' + thisid + '">';
+                innerstring += '<span id="gp_text' + product_id + '">' + gross_price.toFixed(2)+' €</span>';
+                innerstring += '<input hidden id="gp' + product_id + '" class="gross_price_field" name="gross_price' + thisid + '" value="' + gross_price + '">';
+                innerstring += '</td>';
+                innerstring += '<td id="summed_gross_price' + thisid + '">';
+                innerstring += '<span id="sgp_text' + product_id + '">' + (gross_price*productquant).toFixed(2)+' €</span>';
+                innerstring += '</td>';
+                innerstring += '<td style="width: 100px; padding: 5px">';
+                innerstring += '<input type="number" min="0" value="0" name="shipped' + thisid + '" id="shipped' + thisid + '" class="form-control" style="margin: 0">';
+                innerstring += '</td>';
+                innerstring += '</tr>';
+                document.getElementById('productholder').innerHTML += innerstring;
+                sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+                net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+                distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+                summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+                sum_price += productquant*gross_price;
+                net_sum += productquant*net_price;
+                distquant += 1;
+                summedquant += productquant;
+                document.getElementById('summed_price').setAttribute('data-value', sum_price);
+                document.getElementById('summed_price').setAttribute('data-netsum', net_sum);
+                document.getElementById('summed_price').setAttribute('data-distquant', distquant);
+                document.getElementById('summed_price').setAttribute('data-summedquant', summedquant);
+                document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + sum_price.toFixed(2)+' €<br>';
+                document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + net_sum.toFixed(2)+' €<br>';
+                document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+                document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+            }
+
+            document.getElementById("scanproducts_field").style.opacity = '0';
+            document.getElementById("scanproducts_field").style.zIndex = '15000';
+            document.getElementById("ScreenDarkener").style.opacity = '0';
+            setTimeout(function () {
+                document.getElementById("scanproducts_field").style.display = 'None';
+                document.getElementById("ScreenDarkener").style.display = 'None';
+            }, 200);
+            document.getElementById('hspidholder').innerHTML = '';
+        }
+        function refreshsuppliers() {
+            fetch('/orders/get_suppliers/').then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("supplier").innerHTML = data.out;
+                });
+            });
+        }
+        function refreshpaymentmethods() {
+            fetch('/orders/get_paymentmethods/').then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("payment_method").innerHTML = data.out;
+                });
+            });
+        }
+
+        function add_paymentmethod() {
+            methodfield = document.getElementById('new_paymentmethod');
+            methodfieldvalue = methodfield.value.replace(' existiert bereits', '');
+            if (methodfieldvalue != '' && methodfieldvalue != 'keine Eingabe' && methodfieldvalue != 'hinzugefügt'){
+                fetch('/orders/add_paymentmethod/'+methodfieldvalue).then(function (response) {
+                    response.json().then(function (data) {
+                        if (data.msg == 'danger'){
+                            methodfield.value = methodfieldvalue + ' existiert bereits';
+                            methodfield.style.borderColor = '#a54843';
+                        }else{
+                            methodfield.value = 'hinzugefügt';
+                            methodfield.style.borderColor = '#ced4da';
+                        }
+                    });
+                });
+            }else{
+                methodfield.value = 'keine Eingabe';
+                methodfield.style.borderColor = '#a54843';
+            }
+        }
+        function checkorderform() {
+            additional_cost = document.getElementById('additional_cost');
+            additional_cost_value = additional_cost.value;
+            additional_cost_value = additional_cost_value.replace(',', '.');
+            additional_cost_value = additional_cost_value.replace(' ', '');
+            additional_cost_value = additional_cost_value.replace('-', '00');
+            additional_cost_value = additional_cost_value.replace('€', '');
+            additional_cost_value = Number(additional_cost_value);
+            order_time = document.getElementById('order_time');
+            delivery_time = document.getElementById('delivery_time');
+            supplier = document.getElementById('supplier');
+            payment_method = document.getElementById('payment_method');
+            distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+
+            if (!order_time.value
+                || supplier.value == ''
+                || payment_method.value == ''
+                || distquant < 1
+                || isNaN(additional_cost_value))
+            {
+                if(!order_time.value){
+                    document.getElementById('order_time_warning').style.opacity = '1';
+                    order_time.style.borderColor = '#a54843';
+                }
+                else{
+                    document.getElementById('order_time_warning').style.opacity = '0';
+                    order_time.style.borderColor = '#ced4da';
+                }
+                if(supplier.value == ''){
+                    document.getElementById('supplier_warning').style.opacity = '1';
+                    supplier.style.borderColor = '#a54843';
+                }
+                else{
+                    document.getElementById('supplier_warning').style.opacity = '0';
+                    supplier.style.borderColor = '#ced4da';
+                }
+                if(payment_method.value == ''){
+                    document.getElementById('payment_method_warning').style.opacity = '1';
+                    payment_method.style.borderColor = '#a54843';
+                }
+                else{
+                    document.getElementById('payment_method_warning').style.opacity = '0';
+                    payment_method.style.borderColor = '#ced4da';
+                }
+                if(distquant < 1){
+                    document.getElementById('productwrapper_warning').style.opacity = '1';
+                    document.getElementById('productwrapper').style.border = 'solid';
+                    document.getElementById('productwrapper').style.borderColor = '#a54843';
+                }
+                else{
+                    document.getElementById('productwrapper_warning').style.opacity = '0';
+                    document.getElementById('productwrapper').style.border = 'None';
+                }
+                if(isNaN(additional_cost_value)){
+                    document.getElementById('additional_cost_warning').style.opacity = '1';
+                    additional_cost.style.borderColor = '#a54843';
+                }
+                else {
+                    document.getElementById('additional_cost_warning').style.opacity = '0';
+                    additional_cost.style.borderColor = '#ced4da';
+                }
+            }
+
+            else{
+                document.getElementById('removed').value += '0';
+                document.getElementById('order_time_warning').style.opacity = '0';
+                order_time.style.borderColor = '#ced4da';
+                document.getElementById('supplier_warning').style.opacity = '0';
+                supplier.style.borderColor = '#ced4da';
+                document.getElementById('payment_method_warning').style.opacity = '0';
+                payment_method.style.borderColor = '#ced4da';
+                document.getElementById('productwrapper_warning').style.opacity = '0';
+                document.getElementById('productwrapper').style.border = 'None';
+                document.getElementById('additional_cost_warning').style.opacity = '0';
+                additional_cost.style.borderColor = '#ced4da';
+                document.getElementById('summed_price_value').value = Number(document.getElementById('summed_price').getAttribute('data-net_sum'));
+                document.getElementById('summed_price_distquant').value = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+                document.getElementById('summed_price_summedquant').value = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+                document.getElementById('form').submit();
+            }
+        }
+    </script>
+{%endblock%}
+

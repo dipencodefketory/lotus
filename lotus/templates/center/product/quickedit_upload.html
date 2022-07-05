@@ -1,0 +1,219 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkte{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="box100">
+        <div class="big seven" style="padding: 15px 0 10px 20px; text-align: left">Schnelles Einstellen</div>
+    </div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_proc_sources') }}">
+            <div class="submenu five">
+                Quellen auswerten
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step1') }}">
+            <div class="submenu fives">
+                Schritt 1
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step2') }}">
+            <div class="submenu five ">
+                Schritt 2
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step3') }}">
+            <div class="submenu five">
+                Schritt 3
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step4') }}">
+            <div class="submenu five">
+                Schritt 4
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Upload
+        </div>
+    </div>
+    <div class="box100">
+        <form id="red_form" action="{{ url_for('center_product_quickedit_upload_worker') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <table class="table table-hover tiny" style="text-align: left">
+                <thead class="black">
+                    <tr>
+                        <th style="width: 100px">
+                            ID<br>
+                            EAN<br>
+                            Interne ID<br>
+                            Aktive Aktion<br>
+                        </th>
+                        <th style="width: 400px">
+                            Name<br>
+                            Merkmal 0<br>
+                            Merkmal 1<br>
+                            Merkmal 2<br>
+                            Merkmal 3
+                        </th>
+                        <th style="width: 250px">
+                            {% for mp in mps %}
+                                {{ mp.name }}-Upload<br>
+                            {% endfor %}
+                            Afterbuy-Upload
+                            {% if mps|length < 5 %}
+                                {% for i in range(5 - mps|length) %}
+                                    <br>
+                                {% endfor %}
+                            {% endif %}
+                        </th>
+                        <th width="400px">
+                            Ergebnis<br>
+                            <br>
+                            <br>
+                            <br>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% for row in query %}
+                    <tr id="{{ row[0].id }}">
+                        <td>
+                            {{ row[0].id }}<br>
+                            {{ row[0].hsp_id }}<br>
+                            {{ row[0].internal_id }}<br>
+                            {{ row[1].name }}
+                        </td>
+                        <td>
+                            {{ row[0].name }}<br>
+                            {{ row[0].spec_trait_0 }}<br>
+                            {{ row[0].spec_trait_1 }}<br>
+                            {{ row[0].spec_trait_2 }}<br>
+                            {{ row[0].spec_trait_3 }}
+                        </td>
+                        <td>
+                            {% for mp in mps %}
+                                <label for="upload_{{ row[0].id }}_{{ mp.id }}">
+                                    <input type="checkbox" name="upload_{{ row[0].id }}_{{ mp.id }}" id="upload_{{ row[0].id }}_{{ mp.id }}" checked> {{ mp.name }}-Upload
+                                </label><br>
+                            {% endfor %}
+                            <label for="upload_{{ row[0].id }}_afterbuy">
+                                <input type="checkbox" name="upload_{{ row[0].id }}_afterbuy" id="upload_{{ row[0].id }}_afterbuy" checked> Afterbuy-Upload
+                            </label>
+                        </td>
+                        <td>
+                            {% for mp in mps %}
+                            <span id="result_{{ row[0].id }}_{{ mp.id }}"></span><br>
+                            {% endfor %}
+                            <span id="result_{{ row[0].id }}_afterbuy"></span>
+                        </td>
+                    </tr>
+                    <tr class="trclick" id="load_{{ row[0].id }}" style="display: None">
+                        <td>
+                            {{ row[0].id }}<br>
+                            {{ row[0].hsp_id }}<br>
+                            {{ row[0].internal_id }}<br>
+                            {{ row[1].name }}
+                        </td>
+                        <td>
+                            {{ row[0].name }}<br>
+                            {{ row[0].spec_trait_0 }}<br>
+                            {{ row[0].spec_trait_1 }}<br>
+                            {{ row[0].spec_trait_2 }}<br>
+                            {{ row[0].spec_trait_3 }}
+                        </td>
+                        <td colspan="2">
+                            <div style="width: 100%; height: 60px; position: relative;">
+                                <div class="loader" style="height: 50px; width: 50px; margin: -25px"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="trclick" id="error_{{ row[0].id }}" style="display: None">
+                        <td>
+                            {{ row[0].id }}<br>
+                            {{ row[0].hsp_id }}<br>
+                            {{ row[0].internal_id }}<br>
+                            {{ row[1].name }}
+                        </td>
+                        <td>
+                            {{ row[0].name }}<br>
+                            {{ row[0].spec_trait_0 }}<br>
+                            {{ row[0].spec_trait_1 }}<br>
+                            {{ row[0].spec_trait_2 }}<br>
+                            {{ row[0].spec_trait_3 }}
+                        </td>
+                        <td colspan="2">
+                            <b>FEHLER</b>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="box100" style="position: relative; height: 50px; width: 100%">
+                <button name="button" type="button" id="real_button" class="standardbutton visible blackbutton" style="position: absolute; right: 10px; bottom: 10px; margin-top: 0" onclick="submit_form()">
+                    <i class="fa fa-upload" aria-hidden="true"></i> Upload
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+        function submit_form(){
+            {% for row in query %}
+                document.getElementById("{{ row[0].id }}").style.display = 'None';
+                document.getElementById("load_{{ row[0].id }}").style.display = 'table-row';
+            {% endfor %}
+            {% for row in query %}
+                $.ajax({
+                    url: "{{ url_for('center_product_quickedit_upload_worker') }}",
+                    type: "POST",
+                    data: {
+                    {% for mp in mps %}
+                        upload_{{ mp.id }}: document.getElementById("upload_{{ row[0].id }}_{{ mp.id }}").checked,
+                    {% endfor %}
+                        upload_afterbuy: document.getElementById("upload_{{ row[0].id }}_afterbuy").checked,
+                        product_id: {{ row[0].id }}
+                    },
+                    success: function(data) {
+                        {% for mp in mps %}
+                            if (data.mp_{{ mp.id }}.result === 1){
+                                document.getElementById('result_{{ row[0].id }}_{{ mp.id }}').innerText = '{{ mp.name }} - Success';
+                            }
+                            else if (data.mp_{{ mp.id }}.result === 0){
+                                document.getElementById('result_{{ row[0].id }}_{{ mp.id }}').innerText = '';
+                            }
+                            else{
+                                document.getElementById('result_{{ row[0].id }}_{{ mp.id }}').innerText = '{{ mp.name }} - Error: ' + data.mp_{{ mp.id }}.msg;
+                            }
+                        {% endfor %}
+                        if (data.afterbuy.result === 1){
+                            document.getElementById('result_{{ row[0].id }}_afterbuy').innerText = 'Afterbuy - Success';
+                        }
+                        else if (data.afterbuy.result === 0){
+                            document.getElementById('result_{{ row[0].id }}_afterbuy').innerText = '';
+                            }
+                        else{
+                            document.getElementById('result_{{ row[0].id }}_afterbuy').innerText = 'Afterbuy - Error: ' + data.afterbuy.msg;
+                        }
+                        document.getElementById("{{ row[0].id }}").style.display = 'table-row';
+                        document.getElementById("load_{{ row[0].id }}").style.display = 'None';
+                    },
+                    error: function() {
+                        document.getElementById("error_{{ row[0].id }}").style.display = 'table-row';
+                        document.getElementById("load_{{ row[0].id }}").style.display = 'None';
+                    }
+                });
+            {% endfor %}
+        }
+    </script>
+{%endblock%}

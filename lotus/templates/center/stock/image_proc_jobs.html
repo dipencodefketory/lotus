@@ -1,0 +1,118 @@
+{% extends 'center/basis.html' %}
+{% block title %}Bild-Bearbeitung{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_stock') }}">
+            <div class="submenu five">
+                Lager
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_stock_products') }}">
+            <div class="submenu five">
+                Produkte
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_stock_receipts') }}">
+            <div class="submenu five">
+                Wareneingänge
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Bild-Bearbeitung
+        </div>
+    </div>
+    <div class="box100">
+        <table class="table visible sortable tiny" style="text-align: left">
+            <thead class="black">
+                <tr>
+                    <th style="vertical-align: top">
+                        Erstellt
+                    </th>
+                    <th style="vertical-align: top">
+                        ID
+                    </th>
+                    <th style="vertical-align: top">
+                        Präfix
+                    </th>
+                    <th style="vertical-align: top">
+                        Ziffern
+                    </th>
+                    <th style="vertical-align: top">
+                        Von
+                    </th>
+                    <th style="vertical-align: top">
+                        Bis
+                    </th>
+                    <th style="vertical-align: top">
+                        Suffix
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ipj in ipjs %}
+                    <tr>
+                        <td>
+                            {{ ipj.init_dt.strftime('%d.%m.%Y - %H:%M') }}
+                        </td>
+                        <td>
+                            {{ ipj.id }}
+                        </td>
+                        <td>
+                            {{ ipj.prefix }}
+                        </td>
+                        <td>
+                            {{ ipj.digits }}
+                        </td>
+                        <td>
+                            {{ ipj.min_int }}
+                        </td>
+                        <td>
+                            {{ ipj.max_int }}
+                        </td>
+                        <td>
+                            {{ ipj.suffix }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="box100title big" style="text-align: left;">
+            Neuer Job
+        </div>
+        <form action="" method="POST" style="text-align: left">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="width: 100%; padding: 10px 60px 0 0; position: relative">
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="prefix">Präfix:</label>
+                    <input id="prefix" type="text" name="prefix" class="form-control tinyhead" value="DSC" required>
+                </div>
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="digits">Ziffern:</label>
+                    <input id="digits" type="number" step="1" name="digits" class="form-control tinyhead" value="5" required>
+                </div>
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="min_int">Von:</label>
+                    <input id="min_int" type="number" step="1" name="min_int" class="form-control tinyhead" min="1" required>
+                </div>
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="max_int">Bis:</label>
+                    <input id="max_int" type="number" step="1" name="max_int" class="form-control tinyhead" required>
+                </div>
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="suffix">Suffix:</label>
+                    <input id="suffix" type="text" name="suffix" class="form-control tinyhead" value=".JPG" required>
+                </div>
+                <button name="btn" type="submit" class="standardbutton green greenbutton tiny" style="position: absolute; right: 0; top: 32px">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+    </script>
+{%endblock%}

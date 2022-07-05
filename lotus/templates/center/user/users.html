@@ -1,0 +1,53 @@
+{% extends 'center/basis.html' %}
+{% block title %}Users{% endblock %}
+
+{% block addsheets %}
+{% endblock %}
+
+{% block ext %}
+    <div class="box100 lightgrey filterblock">
+        (FILTERBOX)
+    </div>
+
+    <div class="box100">
+        <table class="table table-hover tiny">
+            <thead class="black">
+                <tr>
+                    <th>Username</th>
+                    <th>Vorname</th>
+                    <th>Name</th>
+                    <th>Aktiv</th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+            {% for user in users %}
+                <tr class="clickable-row" data-href="{{ url_for('center_user_user', user_id=user.id) }}">
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.firstname }}</td>
+                    <td>{{ user.name }}</td>
+                    {% if user.active == True %}
+                        <td>
+                            <a class="blackfont" href="{{ url_for('center_user_deactivate_user', user_id=user.id) }}">
+                                <i class="fa fa-check-square-o" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                    {% else %}
+                        <td>
+                            <a class="blackfont" href="{{ url_for('center_user_activate_user', user_id=user.id) }}">
+                                <i class="fa fa-square-o" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+    jQuery(document).ready(function($) {
+        $(".clickable-row").click(function() {
+            window.location = $(this).data("href");
+        });
+    });
+    </script>
+{%endblock%}

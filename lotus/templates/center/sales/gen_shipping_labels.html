@@ -1,0 +1,197 @@
+{% extends 'center/sales/sales_basis.html' %}
+{% block title %}Versand-Labels{% endblock %}
+
+{% block ext2 %}
+    <div class="box100">
+        <div class="box100title regbig" style="text-align: left">
+            Versand-Label
+        </div>
+        <div class="box100title" style="text-align: left">
+            Filter-Zeitraum:
+        </div>
+        <div class="splitleft">
+            <div class="splitleft" style="padding-left: 0">
+                <label for="start" style="width: 100%"> Start:
+                    <input type="date" id="start" name="start" class="form-control">
+                </label>
+            </div>
+            <div class="splitright" style="padding-right: 0">
+                <label for="end" style="width: 100%"> Ende:
+                    <input type="date" id="end" name="end" class="form-control">
+                </label>
+            </div>
+            <button class="standardbutton blackbutton" style="float: right" onclick="filter_problems()"><i class="fa fa-filter" aria-hidden="true"></i> Filtern</button>
+        </div>
+        <div class="splitright">
+
+        </div>
+        <table class="table" style="text-align: left">
+            <thead class="black">
+                <tr>
+                    <th>Order-ID</th>
+                    <th>Datum</th>
+                    <th>Kunde</th>
+                    <th>Address-Daten</th>
+                    <th>Produkte</th>
+                    <th>Gewicht (g)</th>
+                    <th>Versandart</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="info">
+
+            </tbody>
+        </table>
+        <button class="standardbutton small blackbutton visible" type="button" value="order" name="btn" onclick="generate_labels()" style="float: right">
+            <i class="fa fa-floppy-o" aria-hidden="true"></i> Labels generieren
+        </button>
+    </div>
+
+    <script>
+        var order_dicts = {};
+        function filter_problems() {
+            var start = document.getElementById("start").value;
+            var end = document.getElementById("end").value;
+            fetch('/center/sales/filter_int_sales/' + start + ',' + end).then(function (response) {
+                response.json().then(function (data) {
+                    var tbody = document.getElementById("info");
+                    tbody.innerHTML = "";
+                    for (var i = 0; i < data.orders.length; i++) {
+                        var el = data.orders[i];
+                        order_dicts[el.order_id] = el;
+                        var row = tbody.insertRow();
+                        var order_id_cell = row.insertCell();
+                        order_id_cell.innerHTML = el.order_id;
+                        var order_date_cell = row.insertCell();
+                        order_date_cell.innerHTML = el.order_date;
+                        var name_cell = row.insertCell();
+                        name_cell.style.position = 'relative';
+
+                        var name = '<span class="supertiny formwarning" id="recipient_' + (el.order_id).toString() + '_warning"  style="position: absolute; top: -2px;';
+
+                        if ((el.first_name + ' ' + el.last_name).length > 30) {
+                            name += 'visibility: visible;opacity: 1;';
+                        }
+                        name += '">Maximal 30 Zeichen</span>';
+                        name += '<input type="text" id="recipient_' + (el.order_id).toString() + '" style="width: 200px;';
+                        if ((el.first_name + ' ' + el.last_name).length > 30){
+                            name += 'border-color: #a54843;';
+                        }
+                        name += '" value="' + el.first_name + ' ' + el.last_name + '" onkeyup="upperbound_warning(this, 30)"><br>';
+                        name_cell.innerHTML = name;
+                        var address_cell = row.insertCell();
+                        address_cell.style.position = 'relative';
+                        var address = '<span class="supertiny formwarning" id="address_1_' + (el.order_id).toString() + '_warning"  style="position: absolute; top: -2px;';
+
+                        if ((el.street).length > 40) {
+                            address += 'visibility: visible;opacity: 1;';
+                        }
+                        address += '">Maximal 40 Zeichen</span>';
+
+                        address += '<input type="text" id="address_1_' + (el.order_id).toString() + '" style="width: 330px;';
+                        if ((el.street).length > 40){
+                            address += 'border-color: #a54843;';
+                        }
+                        address += '" value="' + el.street + '" onkeyup="upperbound_warning(this, 40)"><br>';
+                        address += '<span class="supertiny formwarning" id="address_2_' + (el.order_id).toString() + '_warning"  style="position: absolute; top: -2px;';
+                        if ((el.street2).length > 40) {
+                            address += 'visibility: visible;opacity: 1;';
+                        }
+                        address += '">Maximal 40 Zeichen</span>';
+                        address += '<input type="text" id="address_2_' + (el.order_id).toString() + '" style="width: 330px;';
+                        if ((el.street2).length > 40){
+                            address += 'border-color: #a54843;';
+                        }
+                        address += '" value="' + el.street2 + '" onkeyup="upperbound_warning(this, 40)"><br>';
+                        address += '<span class="supertiny formwarning" id="address_3_' + (el.order_id).toString() + '_warning"  style="position: absolute; top: -2px;">Maximal 40 Zeichen</span>';
+                        address += '<input type="text" id="address_3_' + (el.order_id).toString() + '" style="width: 330px" onkeyup="upperbound_warning(this, 40)"><br>';
+                        address_cell.innerHTML = address;
+                        address_cell.innerHTML += '<input type="text" style="width: 100px" id="postal_code_' + (el.order_id).toString() + '" value="' + el.postal_code + '"> <input type="text" id="city_' + (el.order_id).toString() + '" value="' + el.city + '"><br>';
+                        if (el.state_or_province !== ''){
+                            var state_or_province = '<input type="text" style="width: 200px;';
+                            if ((el.state_or_province).length > 20){
+                                state_or_province += 'border-color: #a54843;';
+                            }
+                            state_or_province += '" id="state_or_province_' + (el.order_id).toString() + '" value="' + el.state_or_province + '">';
+                            state_or_province += '<span class="supertiny formwarning" id="state_or_province_' + (el.order_id).toString() + '_warning"  style="position: absolute; left:115px; top: 120px; ';
+                            if ((el.state_or_province).length > 20) {
+                                state_or_province += 'visibility: visible;opacity: 1;';
+                            }
+                            state_or_province += '">Maximal 20 Zeichen</span>';
+                            address_cell.innerHTML += state_or_province;
+                        }
+                        address_cell.innerHTML += el.country + ' (' + el.country_iso + ')';
+                        var product_cell = row.insertCell();
+                        product_cell.innerHTML = el.p_names;
+                        var weight_cell = row.insertCell();
+                        weight_cell.innerHTML = '<input type="number" step="1" id="summed_weight_' + (el.order_id).toString() + '" style="width: 75px;" value="' + el.summed_weight + '">';
+                        var shipping_service_cell = row.insertCell();
+                        var ss_select = document.createElement("select");
+                        ss_select.id = 'ss_' + (el.order_id).toString();
+                        shipping_service_cell.appendChild(ss_select);
+                        for (var j = 0; j < data.sss.length; j++) {
+                            var option = document.createElement("option");
+                            option.value = data.sss[j].ss_id;
+                            option.text = data.sss[j].ss_name;
+                            if (data.sss[j].ss_id === el.int_sh_id){
+                                option.selected = true;
+                            }
+                            ss_select.appendChild(option);
+                        }
+                        var check_cell = row.insertCell();
+                        check_cell.innerHTML = '<input class="checkbox" value="' + el.order_id + '" type="checkbox">';
+                    }
+                });
+            });
+        }
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+
+        function generate_labels() {
+            var checkboxes = document.getElementsByClassName('checkbox');
+            var data = [];
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    var order_data = order_dicts[checkboxes[i].value];
+                    order_data['ss_id'] = document.getElementById('ss_' + checkboxes[i].value).value;
+                    order_data['recipient'] = document.getElementById('recipient_' + checkboxes[i].value).value;
+                    order_data['street'] = document.getElementById('address_1_' + checkboxes[i].value).value;
+                    order_data['street2'] = document.getElementById('address_2_' + checkboxes[i].value).value;
+                    order_data['street3'] = document.getElementById('address_3_' + checkboxes[i].value).value;
+                    var state_or_province = document.getElementById('state_or_province_' + checkboxes[i].value);
+                    if (state_or_province !== null) {
+                        order_data['state_or_province'] = state_or_province.value;
+                    }
+                    else {
+                        order_data['state_or_province'] = '';
+                    }
+                    order_data['postal_code'] = document.getElementById('postal_code_' + checkboxes[i].value).value;
+                    order_data['city'] = document.getElementById('city_' + checkboxes[i].value).value;
+                    order_data['summed_weight'] = document.getElementById('summed_weight_' + checkboxes[i].value).value;
+                    data.push(order_data);
+                }
+            }
+            if (data.length > 0) {
+                $.ajax({
+                    url: "{{ url_for('center_sales_req_shipping_labels') }}",
+                    type: "POST",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    success: function(res) {
+                        window.open('/center/sales/download_labels/' + res.file)
+                    },
+                    error: function() {
+                    }
+                });
+            }
+        }
+    </script>
+{%endblock%}

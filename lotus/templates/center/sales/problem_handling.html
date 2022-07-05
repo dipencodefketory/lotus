@@ -1,0 +1,95 @@
+{% extends 'center/sales/sales_basis.html' %}
+{% block title %}Problem-Behandlung{% endblock %}
+
+{% block ext2 %}
+    <div class="box100">
+        <div class="box100title regbig" style="text-align: left">
+            Fehlerhafte Adressdaten
+        </div>
+        <div class="box100title" style="text-align: left">
+            Filter-Zeitraum:
+        </div>
+        <div class="splitleft">
+            <div class="splitleft" style="padding-left: 0">
+                <label for="start" style="width: 100%"> Start:
+                    <input type="date" id="start" name="start" class="form-control">
+                </label>
+            </div>
+            <div class="splitright" style="padding-right: 0">
+                <label for="end" style="width: 100%"> Ende:
+                    <input type="date" id="end" name="end" class="form-control">
+                </label>
+            </div>
+            <button class="standardbutton blackbutton" style="float: right" onclick="filter_problems()"><i class="fa fa-filter" aria-hidden="true"></i> Filtern</button>
+            <table class="table">
+                <thead class="black">
+                    <tr>
+                        <th>Wert</th>
+                        <th>Kunden-Eingabe</th>
+                        <th>Korrektur</th>
+                    </tr>
+                </thead>
+                <tbody id="info">
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        function filter_problems() {
+            var start = document.getElementById("start").value;
+            var end = document.getElementById("end").value;
+            fetch('/center/sales/filter_addresses/' + start + ',' + end).then(function (response) {
+                response.json().then(function (data) {
+                    var tbody = document.getElementById("info");
+                    tbody.innerHTML = "";
+                    for (var i = 0; i < data.length; i++) {
+                        var el = data[i];
+                        var title_row = tbody.insertRow();
+                        title_row.className = "grey reg";
+                        title_row.style.textAlign = "center";
+                        title_row.style.fontWeight = "500";
+                        var title_cell = title_row.insertCell();
+                        title_cell.colSpan = 3;
+                        title_cell.innerText = "Order-ID: " + el.order_id + " (" + el.status + ")";
+                        var address_row = tbody.insertRow();
+                        var address_cell_1 = address_row.insertCell();
+                        address_cell_1.innerText = 'Adresse';
+                        var address_cell_2 = address_row.insertCell();
+                        address_cell_2.innerText = el.street_address[0];
+                        var address_cell_3 = address_row.insertCell();
+                        address_cell_3.innerText = el.street_address[1];
+                        var add_info_row = tbody.insertRow();
+                        var add_info_cell_1 = add_info_row.insertCell();
+                        add_info_cell_1.innerText = 'Adress-Zusatz';
+                        var add_info_cell_2 = add_info_row.insertCell();
+                        add_info_cell_2.innerText = el.additional_address_info[0];
+                        var add_info_cell_3 = add_info_row.insertCell();
+                        add_info_cell_3.innerText = el.additional_address_info[1];
+                        var postal_code_row = tbody.insertRow();
+                        var postal_code_cell_1 = postal_code_row.insertCell();
+                        postal_code_cell_1.innerText = 'PLZ';
+                        var postal_code_cell_2 = postal_code_row.insertCell();
+                        postal_code_cell_2.innerText = el.postal_code[0];
+                        var postal_code_cell_3 = postal_code_row.insertCell();
+                        postal_code_cell_3.innerText = el.postal_code[1];
+                        var city_row = tbody.insertRow();
+                        var city_cell_1 = city_row.insertCell();
+                        city_cell_1.innerText = 'Stadt';
+                        var city_cell_2 = city_row.insertCell();
+                        city_cell_2.innerText = el.city[0];
+                        var city_cell_3 = city_row.insertCell();
+                        city_cell_3.innerText = el.city[1];
+                        var country_row = tbody.insertRow();
+                        var country_cell_1 = country_row.insertCell();
+                        country_cell_1.innerText = 'Land';
+                        var country_cell_2 = country_row.insertCell();
+                        country_cell_2.innerText = el.country_code[0];
+                        var country_cell_3 = country_row.insertCell();
+                        country_cell_3.innerText = el.country_code[1];
+                    }
+                });
+            });
+        }
+    </script>
+{%endblock%}

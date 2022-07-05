@@ -1,0 +1,32 @@
+{% extends 'center/basis.html' %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/stock.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_stock') }}">
+            <div class="submenu five">
+                Lager
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_stock_products') }}">
+            <div class="submenu five">
+                Produkte
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_stock_receipts') }}">
+            <div class="submenu five">
+                Wareneingänge
+            </div>
+        </a>
+            <a class="blackfont" href="{{ url_for('center_stock_image_processing') }}">
+            <div class="submenu five">
+                Bild-Bearbeitung
+            </div>
+        </a>
+    </div>
+    {% block ext2 %}
+    {% endblock %}
+{% endblock %}

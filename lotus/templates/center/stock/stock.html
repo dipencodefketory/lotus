@@ -1,0 +1,502 @@
+{% extends 'center/stock/stock_basis.html' %}
+{% block title %}Lager - {{ stock.name }}{% endblock %}
+
+{% block ext2 %}
+    <div class="box100" style="text-align: left">
+        <div class="box100title big" style="text-align: left">
+            {{ stock.name }}
+            {% if stock.owned %}
+            (<i class="fa fa-home" aria-hidden="true"></i>)
+            {% else %}
+                {% if stock.supplier %}
+                    ({{ stock.supplier.get_name() }})
+                {% endif %}
+            {% endif %}
+            <a href="{{ url_for('center_stock_add_to_stock', stock_id=stock.id) }}" target="_blank">
+                <div class="standardbutton greenbutton visible small">
+                    <i class="fa fa-plus" aria-hidden="true"></i> Produkt hinzufügen
+                </div>
+            </a>
+        </div>
+    </div>
+    <div class="box100" style="text-align: left">
+        <div class="big seven" style="padding: 15px 0 10px 20px"><i>Filter</i></div>
+        <form action="" method="POST" name="filterform" style="padding-top: 3px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <div class="form-group">
+                    <label for="product_ids" style="width: 100%">Produkte (IDs an Semikolon trennen!)
+                        <div style="float: right">
+                            <input type="radio" value="id" id="id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['stock_filter_infos'] %}
+                                    {% if session['stock_filter_infos']['product_id_type'] == 'id' %}
+                                        checked
+                                    {% endif %}
+                                    {% else %}
+                                        checked
+                                    {% endif %}
+                            >
+                            <label for="id" style="margin: 0; padding-bottom: 0">ID
+                            </label>
+                            <input type="radio" value="Internal_ID" id="Internal_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['stock_filter_infos'] %}
+                                    {% if session['stock_filter_infos']['product_id_type'] == 'Internal_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="Internal_ID" style="margin: 0; padding-bottom: 0">Interne ID
+                            </label>
+                            <input type="radio" value="HSP_ID" id="HSP_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['stock_filter_infos'] %}
+                                    {% if session['stock_filter_infos']['product_id_type'] == 'HSP_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="HSP_ID" style="margin: 0; padding-bottom: 0">HSP-ID
+                            </label>
+                            <input hidden name="product_type" id="product_type" value="{{ session['stock_filter_infos']['product_id_type'] if session['stock_filter_infos']['product_id_type'] else 'id' }}">
+                        </div>
+                    </label>
+                    <textarea rows="4" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% for p in session['stock_filter_infos']['product_ids'] %}{{ p }};{% endfor %}</textarea>
+                    <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                    <div style="position:relative;">
+                        <input type="text" name="product" style="border: solid 1px black;"  class="form-control" id="product" list="product-datalist" style="padding-right: 120px" onkeyup="find_products(this.value)">
+                        <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                        <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="splitright">
+                <table class="table tiny" style="margin-bottom: 0; text-align: left; border: none; box-shadow: none">
+                    <thead style="border: none; box-shadow: none">
+                        <tr style="border: none; box-shadow: none">
+                            <th style="border: none; box-shadow: none; position: relative; padding: 5px">
+                                <div style="width: 50%; float: left; padding-right: 5px">
+                                    <label for="quantity_min"> Stückzahl Min:
+                                    </label>
+                                        <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="number"
+                                               name="quantity_min" id="quantity_min" min="0" step="1"
+                                                {% if 'quantity_min' in session['stock_filter_infos'] %}
+                                                value="{{ session['stock_filter_infos']['quantity_min'] }}"
+                                               {% endif %}
+                                        >
+                                </div>
+                                <div style="width: 50%; float: left; padding-left: 5px">
+                                    <label for="quantity_max"> Stückzahl Max:
+                                    </label>
+                                        <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="number"
+                                               name="quantity_max" id="quantity_max" min="0" step="1"
+                                                {% if 'quantity_min' in session['stock_filter_infos'] %}
+                                                value="{{ session['stock_filter_infos']['quantity_max'] }}"
+                                               {% endif %}
+                                        >
+                                </div>
+                            </th>
+                            <th style="border: none; box-shadow: none; position: relative; padding: 5px">
+                                <label for="buying_price"> EK-Preis:
+                                </label>
+                                    <input class="form-control tiny" style="border: solid 1px black; display: block; padding-left: 50px; width: 100%;" type="number"
+                                           name="buying_price" id="buying_price" min="0" step="0.01"
+                                            {% if 'buying_price' in session['stock_filter_infos'] %}
+                                            value="{{ session['stock_filter_infos']['buying_price'] }}"
+                                           {% endif %}
+                                    >
+                                <select name="buying_price-operator" class="fromfield_dropdown_left_black supertiny">
+                                    <option value=">=" {% if session['stock_filter_infos']['buying_price-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['stock_filter_infos']['buying_price-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['stock_filter_infos']['buying_price-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['stock_filter_infos']['buying_price-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['stock_filter_infos']['buying_price-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </th>
+                            <th style="border: none; box-shadow: none; position: relative; padding: 5px">
+                                <label for="datalimit_page"> Anzeige pro Seite:
+                                </label>
+                                    <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="number"
+                                           name="datalimit_page" id="datalimit_page" min="1"
+                                            {% if 'datalimit_page' in session['stock_filter_infos'] %}
+                                            value="{{ session['stock_filter_infos']['datalimit_page'] }}"
+                                           {% endif %}
+                                    >
+                            </th>
+                            <th style="border: none; box-shadow: none; position: relative; padding: 5px">
+                                <label for="last_update"> Letztes Update:
+                                </label>
+                                    <input class="form-control tiny" style="border: solid 1px black; display: block; padding-left: 50px; width: 100%;" type="date"
+                                           name="last_update" id="last_update"
+                                            {% if 'last_update' in session['stock_filter_infos'] %}
+                                            value="{{ session['stock_filter_infos']['last_update'] }}"
+                                           {% endif %}
+                                    >
+                                <select name="last_update-operator" class="fromfield_dropdown_left_black supertiny" >
+                                    <option value=">=" {% if session['stock_filter_infos']['last_update-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['stock_filter_infos']['last_update-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['stock_filter_infos']['last_update-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['stock_filter_infos']['last_update-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['stock_filter_infos']['last_update-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="border: none; box-shadow: none; position: relative; padding: 5px">
+                                <label for="lag_days"> Lieferzeit in Tagen:
+                                </label>
+                                    <input class="form-control tiny" style="border: solid 1px black; display: block; padding-left: 50px; width: 100%;" type="number"
+                                           name="lag_days" id="lag_days" min="0" step="1"
+                                            {% if 'lag_days' in session['stock_filter_infos'] %}
+                                            value="{{ session['stock_filter_infos']['lag_days'] }}"
+                                           {% endif %}
+                                    >
+                                <select name="lag_days-operator" class="fromfield_dropdown_left_black supertiny">
+                                    <option value=">=" {% if session['stock_filter_infos']['lag_days-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['stock_filter_infos']['lag_days-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['stock_filter_infos']['lag_days-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['stock_filter_infos']['lag_days-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['stock_filter_infos']['lag_days-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </th>
+                            <th style="border: none; box-shadow: none; position: relative; padding: 5px">
+                                <label for="shipping_cost"> Versandkosten:
+                                </label>
+                                    <input class="form-control tiny" style="border: solid 1px black; display: block; padding-left: 50px; width: 100%;" type="number"
+                                           name="shipping_cost" id="shipping_cost" min="0" step="0.01"
+                                            {% if 'shipping_cost' in session['stock_filter_infos'] %}
+                                            value="{{ session['stock_filter_infos']['shipping_cost'] }}"
+                                           {% endif %}
+                                    >
+                                <select name="shipping_cost-operator" class="fromfield_dropdown_left_black supertiny">
+                                    <option value=">=" {% if session['stock_filter_infos']['shipping_cost-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['stock_filter_infos']['shipping_cost-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['stock_filter_infos']['shipping_cost-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['stock_filter_infos']['shipping_cost-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['stock_filter_infos']['shipping_cost-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </th>
+                            <th style="border: none; box-shadow: none; position: relative; padding: 5px">
+                                <label for="datalimit_whole">Max. Anzahl:
+                                </label>
+                                    <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="number"
+                                           name="datalimit_whole" id="datalimit_whole" min="1"
+                                            {% if 'datalimit_whole' in session['stock_filter_infos'] %}
+                                            value="{{ session['stock_filter_infos']['datalimit_whole'] }}"
+                                           {% endif %}
+                                    >
+                            </th>
+                            <th style="border: none; box-shadow: none; text-align: center">
+                                <button class="standardbutton tiny blackbutton visible" style="margin: 0" type="submit" value="filter" name="btn">
+                                    <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </form>
+    </div>
+    <div class="box100">
+        <div class="box100title">
+            {{ result_length }} Treffer
+        </div>
+        <div class="box100title">
+            Seite: <input id="page" type="number" max="{{ (result_length/session['stock_filter_infos']['datalimit_page'])|round(0, 'ceil')|int }}"
+                          min="1" value="{{ session['stock_filter_infos']['datalimit_offset'] + 1 }}" style="width: 50px" onchange="turnpage(this.value)">
+            / {{ (result_length/session['stock_filter_infos']['datalimit_page'])|round(0, 'ceil')|int }}
+        </div>
+    </div>
+    <form name="order_form" action="", method="POST">
+        <div class="box100">
+            <table class="table table-hover visible tiny" style="text-align: left">
+                <thead class="black">
+                    <tr>
+                        <th style="vertical-align: top">
+                            <div class="sortable" onclick="sort_results('id')">
+                                ID
+                                {% if session['stock_filter_infos']['sort'] == 'id' %}
+                                    {% if session['stock_filter_infos']['sort_dir'] == 'ASC' %}
+                                        <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="sortable" onclick="sort_results('hsp_id')">
+                                HSP-ID
+                                {% if session['stock_filter_infos']['sort'] == 'hsp_id' %}
+                                    {% if session['stock_filter_infos']['sort_dir'] == 'ASC' %}
+                                        <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="sortable" onclick="sort_results('internal_id')">
+                                Interne-ID
+                                {% if session['stock_filter_infos']['sort'] == 'internal_id' %}
+                                    {% if session['stock_filter_infos']['sort_dir'] == 'ASC' %}
+                                        <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </th>
+                        <th style="vertical-align: top">
+                            <div class="sortable" onclick="sort_results('name')">
+                                Name
+                                {% if session['stock_filter_infos']['sort'] == 'name' %}
+                                    {% if session['stock_filter_infos']['sort_dir'] == 'ASC' %}
+                                        <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </th>
+                        <th style="vertical-align: top">
+                            <div class="sortable" onclick="sort_results('buying_price')">
+                                EK-Preis (netto)
+                                {% if session['stock_filter_infos']['sort'] == 'buying_price' %}
+                                    {% if session['stock_filter_infos']['sort_dir'] == 'ASC' %}
+                                        <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+
+                            <div class="sortable" onclick="sort_results('shipping_cost')">
+                                Lieferkosten (netto)
+                                {% if session['stock_filter_infos']['sort'] == 'buying_price' %}
+                                    {% if session['stock_filter_infos']['sort_dir'] == 'ASC' %}
+                                        <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </th>
+                        <th style="vertical-align: top">Steuer</th>
+                        <th style="vertical-align: top">Zustand</th>
+                        <th style="vertical-align: top">Lieferzeit in Tagen</th>
+                        <th style="vertical-align: top">Letztes Update</th>
+                        <th style="vertical-align: top">
+                            <div class="sortable" onclick="sort_results('quantity')">
+                                Stückzahl
+                                {% if session['stock_filter_infos']['sort'] == 'quantity' %}
+                                    {% if session['stock_filter_infos']['sort_dir'] == 'ASC' %}
+                                        <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </th>
+                        <th style="vertical-align: top"></th>
+                        <th style="vertical-align: top"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for product in display_products %}
+                    <tr class="trclick{% if product.user_generated %} lightgrey{% endif %}" onclick="window.open('{{ url_for('center_redirect_stock_products_filtered', product_id=product.product.id) }}', '_blank');event.cancelBubble=true;">
+                        <td>
+                            {{ product.product.id }}<br>
+                            {{ product.product.hsp_id }}<br>
+                            {{ product.product.internal_id }}
+                        </td>
+                        <td>
+                            {{ product.product.name }}
+                        </td>
+                        <td>
+                            {% if product.stock.owned %}
+                                {{ '%0.2f' % (product.product.get_own_buying_price())|float }} €<br>
+                                {{ '%0.2f' % (product.shipping_cost)|float }} €
+                            {% else %}
+                                {{ '%0.2f' % (product.buying_price)|float }} €<br>
+                                {{ '%0.2f' % (product.shipping_cost)|float }} €
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ product.prc_tax }} %
+                        </td>
+                        <td>
+                            {{ product.condition }}
+                        </td>
+                        <td>
+                            {{ product.lag_days }}
+                        </td>
+                        <td>
+                            {{ product.last_seen.strftime('%d.%m.%Y - %H:%M') if product.last_seen }}
+                        </td>
+                        <td>
+                            {{ product.quantity }}
+                        </td>
+                        <td>
+                            {% if product.user_generated %}
+                            <a href="{{ url_for('center_stock_manipulate_stock', stock_attribute_id=product.id) }}" target="_blank" onclick="event.cancelBubble=true;">
+                                <div class="smallbutton visible blackbutton">
+                                    <i class="fa fa-pencil" aria-hidden="true"></i>
+                                </div>
+                            </a>
+                            {% endif %}
+                        </td>
+                        {% if supplier %}
+                            <td>
+                                <input class="order_field" required min="0" value="0" style="width: 60px;" type="number" data-p_id="{{ product.product.id }}" data-buying_price="{{ '%0.2f' % (product.buying_price)|float }}" onclick="event.cancelBubble=true;">
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if supplier %}
+            <div class="box100">
+                <div class="splitleft">
+                    <select id="order" name="order" class="form-control">
+                        <option value="0">Neue Bestellung</option>
+                        {% for order in orders %}
+                            <option value="{{ order.id }}">{{ order.id }} - {{ order.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="splitright" style="text-align: center">
+                    <button class="standardbutton tiny blackbutton visible" type="button" value="order" name="btn" onclick="add_to_order()">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> Bestellung hinzufügen
+                    </button>
+                </div>
+            </div>
+        {% endif %}
+    </form>
+    <div id="ScreenDarkener">
+        <div id="loader" class="box100" style="position: relative; height: 100%">
+            <div class="loader"></div>
+        </div>
+    </div>
+    <script>
+        {% if supplier %}
+            function add_to_order() {
+                document.getElementById("ScreenDarkener").style.display = 'Block';
+
+                setTimeout(function() {
+                    document.getElementById("ScreenDarkener").style.opacity = '0.8';
+                }, 200);
+                var order_fields = document.getElementsByClassName('order_field');
+                var data = {'order_id': document.getElementById("order").value, 'supplier_id': {{ supplier.id }}};
+                var j = 0;
+                for (var i=0; i<order_fields.length; i++) {
+                    if (order_fields[i].value > 0){
+                        data['p_id_' + j] = order_fields[i].getAttribute('data-p_id');
+                        data['price_' + j] = order_fields[i].getAttribute('data-buying_price');
+                        data['quant_' + j] = order_fields[i].value;
+                        j += 1;
+                    }
+                }
+                data['max_index'] = j;
+                $.ajax({
+                    url: "{{ url_for('center_stock_stock_worker') }}",
+                    type: "POST",
+                    data: data,
+                    success: function() {
+                        setTimeout(function () {
+                            document.getElementById("ScreenDarkener").style.opacity = '0';
+                            setTimeout(function () {
+                                document.getElementById("ScreenDarkener").style.display = 'None';
+                            }, 200);
+                        }, 1000);
+                    },
+                    error: function() {
+                    }
+                });
+            }
+        {% endif %}
+        function sort_results(val){
+            fetch('/center/stock/product_sort/' + val);
+            setTimeout(function() {
+                document.filterform.submit();
+            }, 200);
+        }
+        function turnpage(val){
+            fetch('/center/stock/turnpage/' + val).then(function (response) {
+                setTimeout(function() {
+                    document.filterform.submit();
+                }, 200);
+            });
+        }
+
+        function find_products(val){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)) {
+                fetch('/center/product/products/find_products/' + val).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("product-datalist").innerHTML = data.out;
+                    });
+                });
+            }
+        }
+
+
+        function add_product() {
+            var value = document.getElementById('product').value;
+            var values = value.split(' - ');
+            var type = document.getElementById('product_type').value;
+            if (values.length > 2 && !isNaN(Number(values[0])) && !isNaN(Number(values[1])) && !isNaN(Number(values[2]))) {
+                if (type === 'id') {
+                    var prod_id = document.getElementById('product').value.split(" - ")[0];
+                } else if (type === 'Internal_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[1];
+                } else if (type === 'HSP_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[2];
+                }
+                var prod_ids = document.getElementById('product_ids');
+                if (prod_ids.value.replace(' ', '') === '') {
+                    prod_ids.value = prod_id;
+                }
+                else {
+                    prod_ids.value += ';' + prod_id;
+                }
+            } else {
+                var list = document.getElementById("product-datalist").children;
+                for (var i = 0; i < list.length; i++) {
+                    if (type === 'id') {
+                        prod_id = list[i].value.split(" - ")[0];
+                    } else if (type === 'Internal_ID') {
+                        prod_id = list[i].value.split(" - ")[1];
+                    } else if (type === 'HSP_ID') {
+                        prod_id = list[i].value.split(" - ")[2];
+                    }
+                    prod_ids = document.getElementById('product_ids');
+                    if (prod_ids.value.replace(' ', '') === '') {
+                        prod_ids.value = prod_id;
+                    }
+                    else {
+                        prod_ids.value += ';' + prod_id;
+                    }
+                }
+            }
+        }
+
+        function transform_ids(val) {
+            old_type = document.getElementById('product_type').value;
+            document.getElementById('product_type').value = val;
+            ids = document.getElementById('product_ids').value.replace(/(?:\r\n|\r|\n|,)/g, ';');
+            fetch('/center/product/dynamic_pricing/transform_ids/'+ids+','+old_type+','+val).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('product_ids').value = data.ids;
+                    if(data.not_found!==''){
+                        alert("Die IDs "+data.not_found+" konnten nicht umgewandelt werden.");
+                    }
+                });
+            });
+        }
+    </script>
+{%endblock%}

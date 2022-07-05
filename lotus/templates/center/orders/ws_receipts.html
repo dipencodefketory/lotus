@@ -1,0 +1,464 @@
+{% extends 'center/orders/index.html' %}
+{% block title %}Waren-Eingänge{% endblock %}
+
+{% block ext2 %}
+    <div class="container-fluid py-2 big seven text-start">
+        Waren-Eingänge
+    </div>
+    <div class="container-fluid" style="text-align: left">
+        <form action="" method="POST" name="filterform">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="text" name="checker" value="filter_sales" hidden>
+            <div class="row">
+                <div class="col-12 col-md-6 ">
+                    <div class="form-group" style="margin-top: 20px">
+                        <label for="product_ids" style="width: 100%">Produkte (IDs an Semikolon trennen!)
+                            <div style="float: right">
+                                <input type="radio" value="id" id="id" class="id_type"
+                                       name="id_type" onclick="transform_ids(this.value)"
+                                        {% if 'product_id_type' in session['wsr_filter'] %}
+                                        {% if session['wsr_filter']['product_id_type'] == 'id' %}
+                                            checked
+                                        {% endif %}
+                                        {% else %}
+                                            checked
+                                        {% endif %}
+                                >
+                                <label for="id" style="margin: 0; padding-bottom: 0">ID
+                                </label>
+                                <input type="radio" value="Internal_ID" id="Internal_ID" class="id_type"
+                                       name="id_type" onclick="transform_ids(this.value)"
+                                        {% if 'product_id_type' in session['wsr_filter'] %}
+                                        {% if session['wsr_filter']['product_id_type'] == 'Internal_ID' %}
+                                            checked
+                                        {% endif %}
+                                        {% endif %}
+                                >
+                                <label for="Internal_ID" style="margin: 0; padding-bottom: 0">Interne ID
+                                </label>
+                                <input type="radio" value="HSP_ID" id="HSP_ID" class="id_type"
+                                       name="id_type" onclick="transform_ids(this.value)"
+                                        {% if 'product_id_type' in session['wsr_filter'] %}
+                                        {% if session['wsr_filter']['product_id_type'] == 'HSP_ID' %}
+                                            checked
+                                        {% endif %}
+                                        {% endif %}
+                                >
+                                <label for="HSP_ID" style="margin: 0; padding-bottom: 0">HSP-ID
+                                </label>
+                                <input hidden name="product_type" id="product_type" value="{{ session['wsr_filter']['product_id_type'] if session['wsr_filter']['product_id_type'] else 'id' }}">
+                            </div>
+                        </label>
+                        <textarea rows="2" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% for p in session['wsr_filter']['product_ids'] %}{{ p }};{% endfor %}</textarea>
+                        <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                        <div style="position:relative;">
+                            <input type="text" name="product" style="border: solid 1px black; padding-right: 120px"  class="form-control" id="product" list="product-datalist" onkeyup="find_products(this.value)">
+                            <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                            <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+                            </datalist>
+                            <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                                <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 container-fluid">
+                    <div class="row">
+                        <div class="col-12 col-lg-6">
+                            <div class="row">
+                                <div class="col-12">
+                                    Datum:
+                                </div>
+                                <div class="col-6">
+                                    <label class="w-100" for="min_init_dt"> Min:
+                                        <input class="form-control tiny" style="border: solid 1px black" type="date" name="min_init_dt" id="min_init_dt" value="{{ session['wsr_filter']['min_init_dt'].strftime('%Y-%m-%d') if session['wsr_filter']['min_init_dt']}}">
+                                    </label>
+                                </div>
+                                <div class="col-6">
+                                    <label class="w-100"  for="max_init_dt"> Max:
+                                        <input class="form-control tiny" style="border: solid 1px black" type="date" name="max_init_dt" id="max_init_dt" value="{{ session['wsr_filter']['max_init_dt'].strftime('%Y-%m-%d') if session['wsr_filter']['max_init_dt']}}">
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="row">
+                                <div class="col-12">
+                                    Abgeschlossen:
+                                </div>
+                                <div class="col-6">
+                                    <label class="w-100" for="min_completed_at"> Min:
+                                        <input class="form-control tiny" style="border: solid 1px black" type="date" name="min_completed_at" id="min_completed_at" value="{{ session['wsr_filter']['min_completed_at'].strftime('%Y-%m-%d') if session['wsr_filter']['min_completed_at']}}">
+                                    </label>
+                                </div>
+                                <div class="col-6">
+                                    <label class="w-100"  for="max_completed_at"> Max:
+                                        <input class="form-control tiny" style="border: solid 1px black" type="date" name="max_completed_at" id="max_completed_at" value="{{ session['wsr_filter']['max_completed_at'].strftime('%Y-%m-%d') if session['wsr_filter']['max_completed_at']}}">
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <label for="supplier">
+                                Lieferant *
+                                <button type="button" style="margin: 0 5px; padding: 2px 7px" class="supertiny standardbutton visible blackbutton" onclick="refresh_suppliers()">
+                                    <i class="fa fa-refresh" aria-hidden="true"></i>
+                                </button>
+                            </label>
+                            <a href="{{ url_for('center_addsupplier') }}" style="float: right" target="_blank">
+                                <button type="button" class="standardbutton supertiny greenbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px">
+                                    <i class="fa fa-plus" aria-hidden="true"></i> neu anlegen
+                                </button>
+                            </a>
+                            <select class="form-control tiny" style="border: solid 1px black; height: 30px" id="supplier" name="supplier">
+                                <option value=""></option>
+                                {% for supplier in suppliers %}
+                                <option id="{{ supplier.id }}" value="{{ supplier.id }}" {% if supplier.id in session['wsr_filter']['supplier_ids'] %}selected{% endif %}>
+                                    {% if supplier.isfirm %}
+                                        {{ supplier.firmname }}
+                                    {% else %}
+                                        {{ supplier.salutation }} {{ supplier.firstname }} {{ supplier.name }}
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <label for="completed">Abgeschlossen:</label><br>
+                            <i class="fa fa-check-circle-o" aria-hidden="true"></i> <input type="radio" id="completed" name="completed" value="1" style="position: relative;" {% if session['wsr_filter']['completed']==True %}checked{% endif %}>
+                            <i class="fa fa-times-circle-o" aria-hidden="true"></i> <input type="radio" id="completed" name="completed" value="0" style="position: relative;" {% if session['wsr_filter']['completed']==False %}checked{% endif %}>
+                            <i class="fa fa-circle-o" aria-hidden="true"></i> <input type="radio" id="completed" name="completed" value="" style="position: relative;" {% if session['wsr_filter']['completed']==None %}checked{% endif %}>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <label for="inv_status">Rechnungstatus:</label><br>
+                            <div style="width: 20px; height: 20px;" class='float-start mx-1 text-center rounded-circle bg-secondary'> <input type="radio" id="inv_status" name="inv_status" value="-1" style="position: relative" {% if session['wsr_filter']['inv_status']==-1 %}checked{% endif %}></div>
+                            <div style="width: 20px; height: 20px;" class='float-start mx-1 text-center rounded-circle bg-danger'> <input type="radio" id="inv_status" name="inv_status" value="0" style="position: relative" {% if session['wsr_filter']['inv_status']==0 %}checked{% endif %}></div>
+                            <div style="width: 20px; height: 20px;" class='float-start mx-1 text-center rounded-circle bg-warning'> <input type="radio" id="inv_status" name="inv_status" value="1" style="position: relative" {% if session['wsr_filter']['inv_status']==1 %}checked{% endif %}></div>
+                            <div style="width: 20px; height: 20px;" class='float-start mx-1 text-center rounded-circle bg-success'> <input type="radio" id="inv_status" name="inv_status" value="3" style="position: relative" {% if session['wsr_filter']['inv_status']==3 %}checked{% endif %}></div>
+                            <div style="width: 20px; height: 20px;" class='float-start mx-1 text-center rounded-circle'> <input type="radio" id="inv_status" name="inv_status" value="" style="position: relative" {% if session['wsr_filter']['inv_status']==None %}checked{% endif %}></div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <label class="w-100" for="limit_page"> Ergebnisse pro Seite:
+                                <input class="form-control tiny" style="border: solid 1px black;" type="number" name="limit_page" id=limit_page" value="{{ session['wsr_filter']['limit_page'] }}">
+                            </label>
+                        </div>
+                        <div class="col-6 col-lg-3">
+
+                        </div>
+                        <div class="col-6 col-lg-3">
+
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <button class="standardbutton tiny blackbutton visible" style="float: right; margin: 15px 0 0 0 " type="submit" value="filter" name="btn">
+                                <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" name="order_by" id="order_by" value="{{ session['wsr_filter']['order_by'] }}"/>
+            <input type="hidden" name="order_dir" id="order_dir" value="{{ session['wsr_filter']['order_dir'] }}"/>
+            <input type="hidden" name="limit_offset" id="limit_offset" value="{{ session['wsr_filter']['limit_offset'] }}"/>
+        </form>
+    </div>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12 text-center">
+                <div class="box100title" id="results">
+                </div>
+                <div class="box100title">
+                    Seite: <input id="page" type="number" min="1" value="{{ session['wsr_filter']['limit_offset'] + 1 }}" style="width: 50px" onchange="turnpage(this.value)">
+                    / <span id="all_results_upper"></span>
+                </div>
+                <table class="table table-hover tiny text-start" style="text-align: left">
+                    <thead class="black">
+                        <tr class="">
+                            <th class="sortable">
+                            </th>
+                            <th class="sortable">
+                                <div class="sortable" onclick="sort_results('init_dt')">
+                                    Datum
+                                    {% if session['wsr_filter']['order_by'] == 'init_dt' %}
+                                        {% if session['wsr_filter']['order_dir'] == 'ASC' %}
+                                            <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </th>
+                            <th class="sortable">
+                                <div class="sortable" onclick="sort_results('id')">
+                                    ID
+                                    {% if session['wsr_filter']['order_by'] == 'id' %}
+                                        {% if session['wsr_filter']['order_dir'] == 'ASC' %}
+                                            <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </th>
+                            <th class="sortable">
+                                <div class="sortable" onclick="sort_results('name')">
+                                    Bezeichnung
+                                    {% if session['wsr_filter']['order_by'] == 'name' %}
+                                        {% if session['wsr_filter']['order_dir'] == 'ASC' %}
+                                            <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </th>
+                            <th class="sortable">
+                                <div class="sortable" onclick="sort_results('external_id')">
+                                    Order-Nummer
+                                    {% if session['wsr_filter']['order_by'] == 'external_id' %}
+                                        {% if session['wsr_filter']['order_dir'] == 'ASC' %}
+                                            <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </th>
+                            <th class="sortable">
+                                Lieferant
+                            </th>
+                            <th class="sortable">
+                                Status
+                            </th>
+                            <th class="sortable">
+                                <div class="sortable" onclick="sort_results('net_price')">
+                                    Summe netto
+                                    {% if session['wsr_filter']['order_by'] == 'net_price' %}
+                                        {% if session['wsr_filter']['order_dir'] == 'ASC' %}
+                                            <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </th>
+                            <th class="sortable">
+                                <div class="sortable" onclick="sort_results('gross_price')">
+                                    Summe brutto
+                                    {% if session['wsr_filter']['order_by'] == 'gross_price' %}
+                                        {% if session['wsr_filter']['order_dir'] == 'ASC' %}
+                                            <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </th>
+                            <th class="sortable">
+                                Einheiten
+                            </th>
+                            <th class="sortable">
+                            </th>
+                            <th class="sortable">
+                                Absorbieren
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="t_body" style="border-bottom: solid 1px rgb(222, 226, 230);">
+                    </tbody>
+                </table>
+                <div id="loader" class="box100" style="position: relative; height: 200px">
+                    <div class="loader"></div>
+                </div>
+                <div class="box100title">
+                    Seite: <input id="page" type="number" min="1" value="{{ session['wsr_filter']['limit_offset'] + 1 }}" style="width: 50px" onchange="turnpage(this.value)">
+                    / <span id="all_results_lower"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        load_data();
+        function load_data() {
+            fetch('/center/orders/ws_receipts/load').then(function (response) {
+                console.log(response);
+                response.json().then(function (data) {
+                    let table_body = document.getElementById('t_body');
+                    for (let i = 0; i < data.data.length; i++) {
+                        let wsr = data.data[i];
+                        let t_row = table_body.insertRow();
+                        t_row.style.background = (wsr.completed_at !== '' && wsr.inv_status > 2) ? '#caf0c7' : (wsr.completed_at !== '' || wsr.inv_status > 2) ? '#f0e5c7' : '';
+                        t_row.className = "trclick";
+                        t_row.id = "wsr_" + wsr.wsr_id;
+                        t_row.setAttribute('data-wsr_id', wsr.wsr_id);
+                        t_row.onclick = function() {window.open('/center/orders/ws_receipt/' + this.getAttribute('data-wsr_id'));};
+                        let del_cell = t_row.insertCell();
+                        del_cell.innerHTML = '<button class="smallbutton redbutton visible" onclick="delete_wsr([\'' + wsr.wsr_id + '\']); event.cancelBubble=true;"><i class="fa fa-trash"></i></button>';
+                        let init_dt_cell = t_row.insertCell();
+                        init_dt_cell.innerHTML = wsr.init_dt;
+                        let wsr_id_cell = t_row.insertCell();
+                        wsr_id_cell.innerHTML = wsr.wsr_id;
+                        let name_cell = t_row.insertCell();
+                        name_cell.innerHTML = wsr.name;
+                        let external_id_cell = t_row.insertCell();
+                        external_id_cell.innerHTML = wsr.external_id;
+                        let supplier_cell = t_row.insertCell();
+                        supplier_cell.innerHTML = wsr.supplier_name;
+                        let status_cell = t_row.insertCell();
+                        status_cell.innerHTML = (wsr.completed_at !== '') ? 'abgeschlossen am ' + wsr.completed_at : 'offen';
+                        let net_price_cell = t_row.insertCell();
+                        net_price_cell.id = 'net_price_' + wsr.wsr_id;
+                        net_price_cell.innerHTML = wsr.net_price;
+                        let gross_price_cell = t_row.insertCell();
+                        gross_price_cell.id = 'gross_price_' + wsr.wsr_id;
+                        gross_price_cell.innerHTML = wsr.gross_price;
+                        let units_cell = t_row.insertCell();
+                        units_cell.innerHTML = '<span id="parcel_num_' + wsr.wsr_id + '">' + wsr.parcels + '</span> / <span id="units_' + wsr.wsr_id + '">' + wsr.units + '</span>';
+                        let check_inv_cell = t_row.insertCell();
+                        let inv_status = document.createElement('div');
+                        inv_status.style.height = '18px';
+                        inv_status.style.width = '18px';
+                        if (wsr.inv_status <= -1) {
+                            inv_status.className = 'rounded-circle bg-secondary float-start';
+                        }
+                        else if (wsr.inv_status === 0) {
+                            inv_status.className = 'rounded-circle bg-danger float-start';
+                        }
+                        else if (wsr.inv_status === 1 || wsr.inv_status === 2) {
+                            inv_status.className = 'rounded-circle bg-warning float-start';
+                        }
+                        else {
+                            inv_status.className = 'rounded-circle bg-success float-start';
+                        }
+                        check_inv_cell.appendChild(inv_status);
+                        let inv_button = document.createElement('button');
+                        inv_button.className = 'smallbutton blackbutton supertiny visible mx-1 px-1.5 float-start';
+                        inv_button.innerHTML = '<i class="fa fa-list"></i>';
+                        inv_button.setAttribute('data-wsi_id', wsr.wsi_id);
+                        if (wsr.wsi_id !== '') {
+                            inv_button.onclick = function() {event.cancelBubble = true; window.open('/center/orders/ws_invoice/' + this.getAttribute('data-wsi_id'));};
+                            inv_button.title = 'Rechnung ' + wsr.wsi_id;
+                        }
+                        else {
+                            inv_button.onclick = function() {event.cancelBubble = true; alert('Keine Rechnung zugeordnet.');};
+                            inv_button.title = 'Keine Rechnung zugeordnet.';
+                        }
+                        check_inv_cell.appendChild(inv_button);
+                        let absorb_cell = t_row.insertCell();
+                        let absorb = '<input style="width: 50px" id="absorb_' + wsr.wsr_id + '" onclick="event.cancelBubble=true;">';
+                        absorb += '<button class="smallbutton blackbutton supertiny visible mx-1 px-1.5" onclick="absorb_wsr(\'' + wsr.wsr_id + '\'); event.cancelBubble=true;"><i class="fa fa-plus"></i></button>';
+                        absorb_cell.innerHTML = absorb;
+                    }
+                    // document.getElementById('all_results_upper').innerText = data.pages;
+                    // document.getElementById('all_results_lower').innerText = data.pages;
+                    // document.getElementById('results').innerText = data.results + ' Treffer';
+                });
+                document.getElementById('loader').style.display = 'None';
+            });
+        }
+        let csrf_token = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrf_token)
+                }
+            }
+        });
+
+        function delete_wsr(wsr_ids) {
+            darken();
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.delete') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(wsr_ids),
+                success: function (response) {
+                    let result = response.result;
+                    for (let i = 0; i < result.length; i++) {
+                        let row = document.getElementById("wsr_" + result[i]);
+                        row.parentNode.removeChild(row);
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.message, 'danger');
+                }
+            });
+        }
+
+        function absorb_wsr(wsr_id) {
+            darken();
+            let absorb_id = document.getElementById('absorb_' + wsr_id).value;
+            let data = {'id': wsr_id, 'absorb_id': absorb_id};
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.absorb') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function (response) {
+                    let result = response.result;
+                    let row = document.getElementById("wsr_" + absorb_id);
+                    row.parentNode.removeChild(row);
+                    document.getElementById('net_price_' + wsr_id).innerHTML = result.net_price;
+                    document.getElementById('gross_price_' + wsr_id).innerHTML = result.gross_price;
+                    document.getElementById('parcel_num_' + wsr_id).innerHTML = result.parcel_num;
+                    document.getElementById('units_' + wsr_id).innerHTML = result.units;
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.message, 'danger');
+                }
+            });
+        }
+
+        function sort_results(val) {
+            let order_by = document.getElementById('order_by');
+            let order_dir = document.getElementById('order_dir');
+            if (order_by.value === val) {
+                if (order_dir.value === 'ASC') {
+                    order_dir.value = 'DESC';
+                } else {
+                    order_dir.value = 'ASC';
+                }
+            } else {
+                order_by.value = val;
+                order_dir.value = 'DESC';
+            }
+            setTimeout(function () {
+                document.filterform.submit();
+            }, 200);
+        }
+
+        function turnpage(val){
+            document.getElementById('limit_offset').value = Number(val) - 1;
+            setTimeout(function() {
+                document.filterform.submit();
+            }, 200);
+        }
+
+        function find_products(val){
+            let letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)) {
+                fetch('/center/product/products/find_products/' + val).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("product-datalist").innerHTML = data.out;
+                    });
+                });
+            }
+        }
+        function refresh_suppliers() {
+            fetch('/center/orders/get_suppliers/').then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("supplier").innerHTML = data.out;
+                });
+            });
+        }
+    </script>
+{%endblock%}

@@ -1,0 +1,47 @@
+{% extends 'center/basis.html' %}
+{% block title %}Settings{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative;">
+        <a class="blackfont" href="{{ url_for('settings.product_.categories') }}">
+            <div class="submenu five">
+                Produkt-Kategorien
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('settings.product_.features') }}">
+            <div class="submenu five">
+                Produkt-Features
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('settings.product_.links') }}">
+            <div class="submenu five">
+                Produkt-Links
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('settings.marketplace.index') }}">
+            <div class="submenu five">
+                Marketplaces
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('settings.shipping.index') }}">
+            <div class="submenu five">
+                Versand
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('settings.shipping.shipping_profiles') }}">
+            <div class="submenu five">
+                Versand-Profile
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('settings.pricing_.index') }}">
+            <div class="submenu five">
+                Pricing
+            </div>
+        </a>
+    </div>
+    {% block ext2 %}{% endblock %}
+{% endblock %}

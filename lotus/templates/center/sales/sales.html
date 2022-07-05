@@ -1,0 +1,446 @@
+{% extends 'center/sales/sales_basis.html' %}
+{% block title %}Sales{% endblock %}
+
+{% block ext2 %}
+    <div class="box100" style="text-align: left">
+        <form action="" method="POST" name="filterform" style="padding-top: 3px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="text" name="checker" value="filter_sales" hidden>
+            <div class="splitleft">
+                <div class="form-group" style="margin-top: 20px">
+                    <label for="product_ids" style="width: 100%">Produkte (IDs an Semikolon trennen!)
+                        <div style="float: right">
+                            <input type="radio" value="id" id="id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['sales_filter'] %}
+                                    {% if session['sales_filter']['product_id_type'] == 'id' %}
+                                        checked
+                                    {% endif %}
+                                    {% else %}
+                                        checked
+                                    {% endif %}
+                            >
+                            <label for="id" style="margin: 0; padding-bottom: 0">ID
+                            </label>
+                            <input type="radio" value="internal_id" id="internal_id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['sales_filter'] %}
+                                    {% if session['sales_filter']['product_id_type'] == 'internal_id' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="internal_id" style="margin: 0; padding-bottom: 0">Interne ID
+                            </label>
+                            <input type="radio" value="hsp_id" id="hsp_id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['sales_filter'] %}
+                                    {% if session['sales_filter']['product_id_type'] == 'hsp_id' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="hsp_id" style="margin: 0; padding-bottom: 0">HSP-ID
+                            </label>
+                            <input hidden name="product_type" id="product_type" value="{{ session['sales_filter']['product_id_type'] if session['sales_filter']['product_id_type'] else 'id' }}">
+                        </div>
+                    </label>
+                    <textarea rows="3" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% for p in session['sales_filter']['product_ids'] %}{{ p }};{% endfor %}</textarea>
+                    <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                    <div style="position:relative;">
+                        <input type="text" name="product" style="border: solid 1px black;"  class="form-control" id="product" list="product-datalist" style="padding-right: 120px" onkeyup="find_products(this.value)">
+                        <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                        <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                    <label for="order_ids" style="width: 100%">Order-IDs
+                    </label>
+                    <textarea rows="2" id="order_ids" style="border: solid 1px black;"  name="order_ids" class="form-control">{% for order_id in session['sales_filter']['order_ids'] %}{{ order_id }};{% endfor %}</textarea>
+                    <label for="mp_order_ids" style="width: 100%">MP-Order-IDs
+                    </label>
+                    <textarea rows="2" id="mp_order_ids" style="border: solid 1px black;"  name="mp_order_ids" class="form-control">{% for mp_order_id in session['sales_filter']['mp_order_ids'] %}{{ mp_order_id }};{% endfor %}</textarea>
+                </div>
+            </div>
+            <div class="splitright">
+                <table class="table tiny" style="margin-bottom: 0; text-align: left; border: none; box-shadow: none">
+                    <thead style="border: none; box-shadow: none">
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                Verkaufsdatum:<br>
+                                <label for="min_sale_date"> Min:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="min_sale_date" id="min_sale_date" value="{{ session['sales_filter']['min_sale_date'].strftime('%Y-%m-%d') if session['sales_filter']['min_sale_date'] else None }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="max_sale_date"> Max:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="max_sale_date" id="max_sale_date" value="{{ session['sales_filter']['max_sale_date'].strftime('%Y-%m-%d') if session['sales_filter']['max_sale_date'] else None }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                Releasedatum:<br>
+                                <label for="min_release_date"> Min:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="min_release_date" id="min_release_date" value="{{ session['sales_filter']['min_release_date'].strftime('%Y-%m-%d') if session['sales_filter']['min_release_date'] else None }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="max_release_date"> Max:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="max_release_date" id="max_release_date" value="{{ session['sales_filter']['max_release_date'].strftime('%Y-%m-%d') if session['sales_filter']['max_release_date'] else None }}">
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                Ziel-Versanddatum:<br>
+                                <label for="min_send_by_date"> Min:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="min_send_by_date" id="min_send_by_date" value="{{ session['sales_filter']['min_send_by_date'].strftime('%Y-%m-%d') if session['sales_filter']['min_send_by_date'] else None }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="max_send_by_date"> Max:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="max_send_by_date" id="max_send_by_date" value="{{ session['sales_filter']['max_send_by_date'].strftime('%Y-%m-%d') if session['sales_filter']['max_send_by_date'] else None }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                Auf Lager:<br>
+                                <label for="min_stock"> Min:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="number" name="min_stock" id="min_stock" value="{{ session['sales_filter']['min_stock'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="max_stock"> Max:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="number" name="max_stock" id="max_stock" value="{{ session['sales_filter']['max_stock'] }}">
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="cancelled">Storno:</label><br>
+                                <i class="fa fa-check-circle-o" aria-hidden="true"></i> <input type="radio" id="cancelled" name="cancelled" value="1" style="position: relative; top: 1.5px" {% if session['sales_filter']['cancelled']==True %}checked{% endif %}>
+                                <i class="fa fa-times-circle-o" aria-hidden="true"></i> <input type="radio" id="cancelled" name="cancelled" value="0" style="position: relative; top: 1.5px" {% if session['sales_filter']['cancelled']==False %}checked{% endif %}>
+                                <i class="fa fa-circle-o" aria-hidden="true"></i> <input type="radio" id="cancelled" name="cancelled" value="" style="position: relative; top: 1.5px" {% if session['sales_filter']['cancelled']==None %}checked{% endif %}>
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="credit">Gutschrift:</label><br>
+                                <i class="fa fa-check-circle-o" aria-hidden="true"></i> <input type="radio" id="credit" name="credit" value="1" style="position: relative; top: 1.5px" {% if session['sales_filter']['credit']==True %}checked{% endif %}>
+                                <i class="fa fa-times-circle-o" aria-hidden="true"></i> <input type="radio" id="credit" name="credit" value="0" style="position: relative; top: 1.5px" {% if session['sales_filter']['credit']==False %}checked{% endif %}>
+                                <i class="fa fa-circle-o" aria-hidden="true"></i> <input type="radio" id="credit" name="credit" value="" style="position: relative; top: 1.5px" {% if session['sales_filter']['credit']==None %}checked{% endif %}>
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="tracking_number">Tracking-Nummer:</label><br>
+                                <i class="fa fa-check-circle-o" aria-hidden="true"></i> <input type="radio" id="tracking_number" name="tracking_number" value="1" style="position: relative; top: 1.5px" {% if session['sales_filter']['tracking_number']==True %}checked{% endif %}>
+                                <i class="fa fa-times-circle-o" aria-hidden="true"></i> <input type="radio" id="tracking_number" name="tracking_number" value="0" style="position: relative; top: 1.5px" {% if session['sales_filter']['tracking_number']==False %}checked{% endif %}>
+                                <i class="fa fa-circle-o" aria-hidden="true"></i> <input type="radio" id="tracking_number" name="tracking_number" value="" style="position: relative; top: 1.5px" {% if session['sales_filter']['tracking_number']==None %}checked{% endif %}>
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="sent">Versandt:</label><br>
+                                <i class="fa fa-check-circle-o" aria-hidden="true"></i> <input type="radio" id="sent" name="sent" value="1" style="position: relative; top: 1.5px" {% if session['sales_filter']['sent']==True %}checked{% endif %}>
+                                <i class="fa fa-times-circle-o" aria-hidden="true"></i> <input type="radio" id="sent" name="sent" value="0" style="position: relative; top: 1.5px" {% if session['sales_filter']['sent']==False %}checked{% endif %}>
+                                <i class="fa fa-circle-o" aria-hidden="true"></i> <input type="radio" id="sent" name="sent" value="" style="position: relative; top: 1.5px" {% if session['sales_filter']['sent']==None %}checked{% endif %}>
+
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="international">International:</label><br>
+                                <i class="fa fa-check-circle-o" aria-hidden="true"></i> <input type="radio" id="international" name="international" value="1" style="position: relative; top: 1.5px" {% if session['sales_filter']['international']==True %}checked{% endif %}>
+                                <i class="fa fa-times-circle-o" aria-hidden="true"></i> <input type="radio" id="international" name="international" value="0" style="position: relative; top: 1.5px" {% if session['sales_filter']['international']==False %}checked{% endif %}>
+                                <i class="fa fa-circle-o" aria-hidden="true"></i> <input type="radio" id="international" name="international" value="" style="position: relative; top: 1.5px" {% if session['sales_filter']['international']==None %}checked{% endif %}>
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="punctual">Pünktlich:</label><br>
+                                <i class="fa fa-check-circle-o" aria-hidden="true"></i> <input type="radio" id="punctual" name="punctual" value="1" style="position: relative; top: 1.5px" {% if session['sales_filter']['punctual']==True %}checked{% endif %}>
+                                <i class="fa fa-times-circle-o" aria-hidden="true"></i> <input type="radio" id="punctual" name="punctual" value="0" style="position: relative; top: 1.5px" {% if session['sales_filter']['punctual']==False %}checked{% endif %}>
+                                <i class="fa fa-circle-o" aria-hidden="true"></i> <input type="radio" id="punctual" name="punctual" value="" style="position: relative; top: 1.5px" {% if session['sales_filter']['punctual']==None %}checked{% endif %}>
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="limit_page"> Ergebnisse pro Seite:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="number" name="limit_page" id=limit_page" value="{{ session['sales_filter']['limit_page'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <button class="standardbutton tiny blackbutton visible" style="float: right; margin: 0" type="submit" value="filter" name="btn">
+                                    <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <input type="hidden" name="order_by" id="order_by" value="{{ session['sales_filter']['order_by'] }}"/>
+            <input type="hidden" name="order_dir" id="order_dir" value="{{ session['sales_filter']['order_dir'] }}"/>
+            <input type="hidden" name="limit_offset" id="limit_offset" value="{{ session['sales_filter']['limit_offset'] }}"/>
+        </form>
+    </div>
+    <div class="box100">
+        <div class="box100title" id="results">
+        </div>
+        <div class="box100title">
+            Seite: <input id="page" type="number" min="1" value="{{ session['sales_filter']['limit_offset'] + 1 }}" style="width: 50px" onchange="turnpage(this.value)">
+            / <span id="all_results_upper"></span>
+        </div>
+        <table id="results" class="table table-striped tiny" style="text-align: left">
+            <thead class="black">
+                <tr>
+                    <th style="vertical-align: top">
+                        <div class="sortable" onclick="sort_results('p_id')">
+                            ID
+                            {% if session['sales_filter']['order_by'] == 'p_id' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="sortable" onclick="sort_results('p_hsp_id')">
+                            HSP-ID
+                            {% if session['sales_filter']['order_by'] == 'p_hsp_id' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="sortable" onclick="sort_results('p_internal_id')">
+                            Interne-ID
+                            {% if session['sales_filter']['order_by'] == 'p_internal_id' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th style="vertical-align: top">
+                        <div class="sortable"  onclick="sort_results('p_name')">
+                            Name
+                            {% if session['sales_filter']['order_by'] == 'p_name' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th style="vertical-align: top">
+                        <div class="sortable"  onclick="sort_results('order_number')">
+                            Order-ID
+                            {% if session['sales_filter']['order_by'] == 'order_number' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="sortable"  onclick="sort_results('mp_order_id')">
+                            MP-Order-ID
+                            {% if session['sales_filter']['order_by'] == 'mp_order_id' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="sortable"  onclick="sort_results('mp_name')">
+                            Marktplatz
+                            {% if session['sales_filter']['order_by'] == 'mp_name' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="sortable"  onclick="sort_results('tracking_number')">
+                            Sendungsnummer
+                            {% if session['sales_filter']['order_by'] == 'tracking_number' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th style="vertical-align: top">
+                        <div class="sortable"  onclick="sort_results('timestamp')">
+                             Bestelldatum
+                            {% if session['sales_filter']['order_by'] == 'timestamp' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="sortable"  onclick="sort_results('send_by')">
+                            Ziel-Versanddatum
+                            {% if session['sales_filter']['order_by'] == 'send_by' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th style="vertical-align: top">
+                        <div class="sortable"  onclick="sort_results('quantity')">
+                            Bestand
+                            {% if session['sales_filter']['order_by'] == 'quantity' %}
+                                {% if session['sales_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th style="vertical-align: top">
+                        Zusatz-Info
+                    </th>
+                    <th style="vertical-align: top">
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="t_body"></tbody>
+        </table>
+        <button class="standardbutton small blackbutton visible" type="button" value="order" name="btn" onclick="to_afterbuy()" style="float: right">
+            <i class="fa fa-external-link" aria-hidden="true"></i> Zu Afterbuy
+        </button>
+        <div id="loader" class="box100" style="position: relative; height: 200px">
+            <div class="loader"></div>
+        </div>
+        <div class="box100title">
+            Seite: <input id="page" type="number" min="1" value="{{ session['sales_filter']['limit_offset'] + 1 }}" style="width: 50px" onchange="turnpage(this.value)">
+            / <span id="all_results_lower"></span>
+        </div>
+    </div>
+    <script>
+        fetch('/center/sales/sales/load').then(function (response) {
+            console.log(response);
+            response.json().then(function (data) {
+                var table_body = document.getElementById('t_body');
+                for (var i = 0; i < data.data.length; i++) {
+                    var t_row = table_body.insertRow();
+                    var p_ids_cell = t_row.insertCell();
+                    p_ids_cell.innerHTML = data.data[i].p_id + '<br>' + data.data[i].p_internal_id + '<br>' + data.data[i].p_hsp_id;
+                    var p_name_cell = t_row.insertCell();
+                    p_name_cell.innerHTML = data.data[i].quantity + ' x ' + data.data[i].p_name;
+                    var mp_cell = t_row.insertCell();
+                    let mp_cell_innerHTML = data.data[i].order_id + '<br>' + data.data[i].mp_order_id + '<br>' + data.data[i].mp_name + '<br>';
+                    mp_cell_innerHTML += '<a onclick="get_shipping_events(\'' + data.data[i].sale_id + '\')">' + data.data[i].tracking_number + '</a>';
+                    mp_cell.innerHTML = mp_cell_innerHTML;
+                    var order_info_cell = t_row.insertCell();
+                    order_info_cell.innerHTML = data.data[i].timestamp + '<br>' + data.data[i].send_by + '<br>' + data.data[i].sendable_by;
+                    if (data.data[i].international === true) {
+                        order_info_cell.innerHTML += '<br>international';
+                    }
+                    else {
+                        order_info_cell.innerHTML += '<br>national';
+                    }
+                    var stock_cell = t_row.insertCell();
+                    stock_cell.innerHTML = data.data[i].stock;
+                    var add_info_cell = t_row.insertCell();
+                    var add_info_list = [];
+                    if (data.data[i].sent_by != '') {
+                        t_row.style.background = '#caf0c7';
+                    }
+                    if (data.data[i].cancelled === true) {
+                        add_info_list.push('STORNO');
+                        t_row.style.background = '#f0cbc7';
+                    }
+                    if (data.data[i].credit === true) {
+                        add_info_list.push('GUTSCHRIFT');
+                        t_row.style.background = '#f0e5c7';
+                    }
+                    add_info_cell.innerHTML = add_info_list.join(', ');
+                    var to_ab_cell = t_row.insertCell();
+                    var to_ab = '<label style="width: 35px; height: 35px; padding: 10px; cursor: pointer" for="' + data.data[i].p_id + '_' + data.data[i].order_id + '">';
+                    to_ab +=  '<input style="cursor: pointer" type="checkbox" value="' + data.data[i].order_id + '" id="' + data.data[i].p_id + '_' + data.data[i].order_id + '" class="check_boxes">';
+                    to_ab += '</label>';
+                    to_ab_cell.innerHTML = to_ab;
+                }
+                document.getElementById('all_results_upper').innerText = data.pages;
+                document.getElementById('all_results_lower').innerText = data.pages;
+                document.getElementById('results').innerText = data.results + ' Treffer';
+            });
+            document.getElementById('loader').style.display = 'None';
+        });
+        function sort_results(val) {
+            var order_by = document.getElementById('order_by');
+            var order_dir = document.getElementById('order_dir');
+            if (order_by.value === val) {
+                if (order_dir.value === 'ASC') {
+                    order_dir.value = 'DESC';
+                } else {
+                    order_dir.value = 'ASC';
+                }
+            } else {
+                order_by.value = val;
+                order_dir.value = 'DESC';
+            }
+            setTimeout(function () {
+                document.filterform.submit();
+            }, 200);
+        }
+
+        function turnpage(val){
+            document.getElementById('limit_offset').value = Number(val) - 1;
+            setTimeout(function() {
+                document.filterform.submit();
+            }, 200);
+        }
+        function to_afterbuy() {
+            var boxes = document.getElementsByClassName('check_boxes');
+            var internal_ids = [];
+            for (var i = 0; i < boxes.length; i++) {
+                if (boxes[i].checked === true){
+                    internal_ids.push(boxes[i].value)
+                }
+            }
+            var ids = internal_ids.join(';');
+            window.open('https://farm02.afterbuy.de/afterbuy/auktionsliste.aspx?AWebayname=&AWFilter=0&AWSuchwort=' + ids + '&AWRENummer=&AWFilter2=0&awmaxart=100&maxgesamt=500&AWEmail=&AWDatumVon=&AWDatumBis=&AWBezug=EndeDerAuktion&AWPLZ=&AWBetrag=&AWBetragBezug=1&AWStammID=&AWLaenderkennung=&AWLaenderkennungBezug=rechnung&AWLabelDynSearchField1=ShippingAddress&AWDynSearchField1=&AWLabelDynSearchField2=PaymentStatus&AWDynSearchField2=&AWDynamicSorting=0&AWLabelDynSearchField3=PaymentShipMethod&AWDynSearchField3=&searchUserTag1=0&searchUserTag2=0&searchUserTag3=0&searchUserTag4=0&killordersession=0&art=SetAuswahl')
+        }
+
+        function get_shipping_events(sale_id) {
+            fetch('/center/sales/get_shipping_events/' + sale_id).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('msg_basic_msg').innerHTML = '';
+                    document.getElementById('msg_basic_title').innerText = 'Shipping-Events';
+                    let se_table = document.createElement('table');
+                    se_table.className = "table";
+                    let se_head = se_table.createTHead();
+                    se_head.innerHTML = '<tr class="black"><th>timestamp</th><th>status</th><th>text</th><th>short_status</th><th>ice</th><th>ric</th><th>location</th><th>country</th><th>_return</th></tr>';
+                    let se_body = se_table.createTBody();
+                    console.log(response.result);
+                    data.data.forEach(function(el) {
+                        let t_row = se_body.insertRow();
+                        t_row.innerHTML = '<td>' + el.timestamp + '</td><td>' + el.status + '</td><td>' + el.text + '</td><td>' + el.short_status + '</td><td>' + el.ice + '</td><td>' + el.ric + '</td><td>' + el.location + '</td><td>' + el.country + '</td><td>' + el._return + '</td>';
+                    });
+                    document.getElementById('msg_basic_msg').appendChild(se_table);
+
+                    document.getElementById("msg_basic").style.display = 'Block';
+                    document.getElementById("msg_basic").style.zIndex = '15002';
+                    document.getElementById("msg_darkener").style.display = 'Block';
+
+                    setTimeout(function() {
+                        document.getElementById("msg_basic").style.opacity = '1';
+                        document.getElementById("msg_darkener").style.opacity = '0.8';
+                    }, 200);
+                    document.getElementById('msg_darkener').innerHTML = '<i class="fa fa-truck" aria-hidden="true"></i> bestellen';
+                })
+            })
+        }
+    </script>
+{% endblock %}
+

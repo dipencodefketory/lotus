@@ -1,0 +1,803 @@
+{% extends 'center/basis.html' %}
+{% block title %}Pricing-Aktionen - {{ product.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="alert alert-success small visible" id="price_update_message" style="position: absolute; left: 25%; width: 50%; top: -100%; z-index: 5000"></div>
+    <div class="white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_product', id=product.id) }}">
+            <div class="submenu five">
+                Produkt-Attribute
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_features', id=product.id) }}">
+            <div class="submenu five">
+                Produkt-Features
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_marketplace_data', id=product.id) }}">
+            <div class="submenu five">
+                Marketplace-Attribute
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Pricing-Aktionen
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_update_logs', p_id=product.id) }}">
+            <div class="submenu five">
+                Update-Logs
+            </div>
+        </a>
+    </div>
+    <div class="visible white small box100 " style="text-align: left; position: relative;">
+        <div class="big box100title" style="text-align: left">
+            {{ product.name }} <span class="small"><i>({{ product.hsp_id_type }}: {{ product.hsp_id }})</i></span><br>
+            <div class="standardbutton blackbutton small visible" onclick="openlinks()" style="margin-left: 0">
+                <i class="fa fa-external-link" aria-hidden="true"></i> Externe Links
+            </div>
+            <a class="blackfont" href="{{ url_for('center_product_add_pricingaction', id=product.id) }}" target="_blank">
+                <div class="standardbutton greenbutton small visible" style="margin-left: 0">
+                    <i class="fa fa-plus" aria-hidden="true"></i> Pricing-Aktion hinzufügen
+                </div>
+            </a>
+        </div>
+        <form action="" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="text" name="checker" value="update_prices" hidden>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>EK-Preis</th>
+                        <th>Auf Lager</th>
+                        <th style="width: 250px">
+                            <label for="nat_shipping_1" style="margin-bottom: 0">
+                                <input type="radio" name="shipping_type" id="nat_shipping_1" value="nat_shipping_1"
+                                       onchange="{% for mpa in product.marketplace_attributes %}get_performance('{{ mpa.id }}', '{{ mpa.marketplace_id }}');{% endfor %}" checked >
+                                Nationaler Versand 1
+                            </label>
+                            <br>
+                            <select class="form-control tiny" id="nat_shipping_1" name="nat_shipping_1" onchange="update_shipping(this, 'nat_shipping_1')">
+                                <option value="0"></option>
+                                {% for ss in nat_shipping_services %}
+                                    <option value="{{ ss.id }}" {% if product.nat_shipping_1_id == ss.id %}selected{% endif %}>{{ ss.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th style="width: 250px">
+                            <label for="nat_shipping_2" style="margin-bottom: 0">
+                                <input type="radio" name="shipping_type" id="nat_shipping_2" value="nat_shipping_2"
+                                       onchange="{% for mpa in product.marketplace_attributes %}get_performance('{{ mpa.id }}', '{{ mpa.marketplace_id }}');{% endfor %}">
+                                Nationaler Versand 2
+                            </label>
+                            <br>
+                            <select class="form-control tiny" id="nat_shipping_2" name="nat_shipping_2" onchange="update_shipping(this, 'nat_shipping_2')">
+                                <option value="0"></option>
+                                {% for ss in nat_shipping_services %}
+                                    <option value="{{ ss.id }}" {% if product.nat_shipping_2_id == ss.id %}selected{% endif %}>{{ ss.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th style="width: 250px">
+                            <label for="int_shipping_1_radio" style="margin-bottom: 0">
+                                <input type="radio" name="shipping_type" id="int_shipping_1_radio" value="int_shipping_1"
+                                       onchange="{% for mpa in product.marketplace_attributes %}get_performance('{{ mpa.id }}', '{{ mpa.marketplace_id }}');{% endfor %}">
+                                Internationaler Versand 1
+                            </label>
+                            <br>
+                            <select class="form-control tiny" id="int_shipping_1" name="int_shipping_1" onchange="update_shipping(this, 'int_shipping_1')">
+                                <option value="0"></option>
+                                {% for ss in int_shipping_services %}
+                                    <option value="{{ ss.id }}" {% if product.int_shipping_1_id == ss.id %}selected{% endif %}>{{ ss.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th style="width: 250px">
+                            <label for="shipping_hermes" style="margin-bottom: 0">
+                                <input type="radio" name="shipping_type" id="int_shipping_2_radio" value="int_shipping_2"
+                                       onchange="{% for mpa in product.marketplace_attributes %}get_performance('{{ mpa.id }}', '{{ mpa.marketplace_id }}');{% endfor %}">
+                                Internationaler Versand 2
+                            </label>
+                            <br>
+                            <select class="form-control tiny" id="int_shipping_2" name="int_shipping_2" onchange="update_shipping(this, 'int_shipping_2')">
+                                <option value="0"></option>
+                                {% for ss in int_shipping_services %}
+                                    <option value="{{ ss.id }}" {% if product.int_shipping_2_id == ss.id %}selected{% endif %}>{{ ss.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th>
+                            Versandprofil<br>
+                            <select class="form-control tiny" id="shipping_profile" name="shipping_profile" onchange="update_shipping(this, 'all')">
+                                {% for sp in shipping_profiles %}
+                                    <option value="{{ sp.id }}" {% if product.shipping_profile_id == sp.id %}selected{% endif %}>{{ sp.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                        <tr>
+                            <td>
+                                Kosten
+                            </td>
+                            <td>
+                                {{ '%.2f'% product.cheapest_buying_price + ' €' if product.cheapest_buying_price != None else 'Keine Bestellung vorhanden' }}
+                                {{ '(' + product.cheapest_stock().get_supplier_label() + ')' if product.cheapest_stock()}}
+                                <br>
+                                {{ '%.2f'% product.buying_price + ' €' if product.buying_price != None else 'Keine Bestellung vorhanden' }}
+                            </td>
+                            <td>
+                                {{ product.get_own_stock() }}
+                            </td>
+                            <td>
+                                <span id="nat_shipping_1_own" data-value="{{ '%.2f'% product.nat_shipping_1.get_shipping_prices(product.shipping_profile_id)['own'] + ' €'
+                                if product.shipping_profile_id and product.nat_shipping_1 else '' }}">
+                                    {{ '%.2f'% product.nat_shipping_1.get_shipping_prices(product.shipping_profile_id)['own'] + ' €'
+                                    if product.shipping_profile_id and product.nat_shipping_1 else '' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span id="nat_shipping_2_own" data-value="{{ '%.2f'% product.nat_shipping_2.get_shipping_prices(product.shipping_profile_id)['own'] + ' €'
+                                if product.shipping_profile_id and product.nat_shipping_2 else '' }}">
+                                    {{ '%.2f'% product.nat_shipping_2.get_shipping_prices(product.shipping_profile_id)['own'] + ' €'
+                                    if product.shipping_profile_id and product.nat_shipping_2 else '' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span id="int_shipping_1_own" data-value="{{ '%.2f'% product.int_shipping_1.get_shipping_prices(product.shipping_profile_id)['own'] + ' €'
+                                if product.shipping_profile_id and product.int_shipping_1 else '' }}">
+                                    {{ '%.2f'% product.int_shipping_1.get_shipping_prices(product.shipping_profile_id)['own'] + ' €'
+                                    if product.shipping_profile_id and product.int_shipping_1 else '' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span id="int_shipping_2_own" data-value="{{ '%.2f'% product.int_shipping_2.get_shipping_prices(product.shipping_profile_id)['own'] + ' €'
+                                if product.shipping_profile_id and product.int_shipping_2 else '' }}">
+                                    {{ '%.2f'% product.int_shipping_2.get_shipping_prices(product.shipping_profile_id)['own'] + ' €'
+                                    if product.shipping_profile_id and product.int_shipping_2 else '' }}
+                                </span>
+                            </td>
+                            <td>
+
+                            </td>
+                            <td>
+
+                            </td>
+                        </tr>
+                </tbody>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>VK-Preis</th>
+                        <th>Marketplace-Bestand</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th>Provision</th>
+                        <th>Marge</th>
+                    </tr>
+                </thead>
+                <tbody>
+                        {% for mpa in product.marketplace_attributes %}
+                            <tr>
+                                <td>{{ mpa.marketplace.name }}</td>
+                                <td>
+                                    <div style="position: relative; padding-left: 30px">
+                                        <input style="position: absolute; left: 0; top: 10px" type="checkbox" name="block_selling_price{{ mpa.id }}" id="block_selling_price{{ mpa.id }}"
+                                               {% if mpa.block_selling_price==True %}checked{% endif %} onchange="block_price('{{ mpa.id }}')">
+                                        <input type="number" step="0.01" id="selling_price{{ mpa.id }}" name="selling_price{{ mpa.id }}" class="form-control tiny" value="{{ mpa.selling_price }}"
+                                               onkeyup="get_performance('{{ mpa.id }}', '{{ mpa.marketplace_id }}')" {% if mpa.block_selling_price==True %}readonly {% endif %}
+                                                style="min-width: 100px"/>
+                                        <div class="fromfield_button five" style="font-size: 16px; padding: 3px 15px" onclick="update_price('{{ mpa.marketplace_id }}', 'selling_price{{ mpa.id }}')"><i class="fa fa-arrow-circle-o-up" aria-hidden="true"></i></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {{ mpa.curr_stock }}
+                                </td>
+                                <td>
+                                    <span id="nat_shipping_1_{{ mpa.marketplace_id }}"
+                                            {% if product.nat_shipping_1 and product.shipping_profile_id %}
+                                                data-value="{{ product.nat_shipping_1.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) }}">
+                                                {% if product.nat_shipping_1.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) != None %}
+                                                    {{ '%.2f'% product.nat_shipping_1.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) }} €
+                                                {% endif %}
+                                            {% else %}
+                                                data-value="">
+                                            {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span id="nat_shipping_2_{{ mpa.marketplace_id }}"
+                                            {% if product.nat_shipping_2 and product.shipping_profile_id %}
+                                                data-value="{{ product.nat_shipping_2.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) }}">
+                                                {% if product.nat_shipping_2.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) != None %}
+                                                    {{ '%.2f'% product.nat_shipping_2.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) }} €
+                                                {% endif %}
+                                            {% else %}
+                                                data-value="">
+                                            {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span id="int_shipping_1_{{ mpa.marketplace_id }}"
+                                            {% if product.int_shipping_1 and product.shipping_profile_id %}
+                                                data-value="{{ product.int_shipping_1.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) }}">
+                                                {% if product.int_shipping_1.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) != None %}
+                                                    {{ '%.2f'% product.int_shipping_1.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) }} €
+                                                {% endif %}
+                                            {% else %}
+                                                data-value="">
+                                            {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span id="int_shipping_1_{{ mpa.marketplace_id }}"
+                                            {% if product.int_shipping_2 and product.shipping_profile_id %}
+                                                data-value="{{ product.int_shipping_2.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) }}">
+                                                {% if product.int_shipping_2.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) != None %}
+                                                    {{ '%.2f'% product.int_shipping_2.get_shipping_price_mp(product.shipping_profile_id, mpa.marketplace_id) }} €
+                                                {% endif %}
+                                            {% else %}
+                                                data-value="">
+                                            {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" id="commission{{ mpa.id }}" name="commission{{ mpa.id }}" class="form-control tiny"  value="{{ mpa.commission }}"
+                                           onkeyup="get_performance('{{ mpa.id }}', '{{ mpa.marketplace_id }}')"/>
+                                </td>
+                                <td>
+                                    <span id="priceformula{{ mpa.id }}">
+                                        {{ product.get_performance_by_mp(mpa.marketplace_id) }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td colspan="2"></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>
+                            <button name="btn" type="submit" class="standardbutton blackbutton visible" style="display: inline-block;float: right;">
+                                <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </form>
+    </div>
+    <div class="visible grey regbig box100" style="text-align: left; position: relative">
+        <div class="box100title">Preisentwicklung</div>
+    </div>
+    <div class="box100 visible white tiny" style="text-align: left">
+        <table class="table">
+            {% for mpa in product.marketplace_attributes %}
+                <thead>
+                    <tr class="black">
+                        <th colspan="11">
+                            {{ mpa.marketplace.name }} // Nächstes Update: {{ mpa.pr_update_ts.strftime('%d.%m.%Y - %H:%M') if product.get_own_stock() > 0 else 'Nicht geplant (Kein Bestand)' }} //
+                            Intervall: {{ mpa.pr_update_dur if product.get_own_stock() > 0 else '-' }} h
+                        </th>
+                    </tr>
+                </thead>
+                <tr>
+                    <td>
+                        Ursache
+                    </td>
+                {% for entry in product.get_last_10_prices_mp(mpa.marketplace_id) %}
+                    <td>
+                    {% if entry %}
+                        {{ 'Aktion ' + entry.pricingstrategy.pricingaction.id|string if entry.pricingstrategy else 'Manuell' }}
+                    {% endif %}
+                    </td>
+                {% endfor %}
+                </tr>
+                <tr>
+                    <td>
+                        Timestamp
+                    </td>
+                {% for entry in product.get_last_10_prices_mp(mpa.marketplace_id) %}
+                    <td>
+                        {{ entry.set_date.strftime('%d.%m.%y - %H:%M') if entry else '' }}
+                    </td>
+                {% endfor %}
+                </tr>
+                <tr>
+                    <td>
+                        Preis
+                    </td>
+                {% for entry in product.get_last_10_prices_mp(mpa.marketplace_id) %}
+                    <td>
+                        {{ '%.2f'% entry.selling_price + ' €' if entry else '' }}
+                        {% if entry %}
+                        {% if entry.product_stock_attributes %}
+                        {% if entry.product_stock_attributes.stock %}
+                        {% if entry.product_stock_attributes.stock.supplier %}
+                            ({{ entry.product_stock_attributes.stock.supplier.get_name() }})
+                        {% endif %}
+                        {% endif %}
+                        {% endif %}
+                        {% endif %}
+                    </td>
+                {% endfor %}
+                </tr>
+                <tr>
+                    <td>
+                        Verkäufe
+                    </td>
+                {% for entry in product.get_last_10_prices_mp(mpa.marketplace_id) %}
+                    <td>
+                        {{ entry.get_num_sales() if entry else ''  }}
+                    </td>
+                {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div class="visible grey regbig box100" style="text-align: left; position: relative">
+        <div class="box100title">Pricing-Aktionen</div>
+    </div>
+    <div class="box100 visible white" id="PricingActionsHolder" style="position: relative;">
+        <table class="table table-hover">
+            <thead class="black">
+                <tr>
+                    <th>
+                        Archivieren
+                    </th>
+                    <th>
+                        ID
+                    </th>
+                    <th>
+                        Name
+                    </th>
+                    <th>
+                        Start
+                    </th>
+                    <th>
+                        Ende
+                    </th>
+                    <th>
+                        Aktionsmenge
+                    </th>
+                    <th>
+                        Plattformen
+                    </th>
+                    <th>
+                        Aktiv
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for action in product.actions if not action.archived %}
+                <tr style="cursor: pointer" onclick="show_pricingaction('{{ action.id }}')">
+                    <td>
+                        <div class="smallbutton blackbutton visible" onclick="window.open('{{ url_for("center_product_archive_pricingaction", pricingaction_id=action.id) }}', '_self'); event.cancelBubble=true;">
+                            <i class="fa fa-archive" aria-hidden="true"></i>
+                        </div>
+                    </td>
+                    <td>
+                        {{ action.id }}
+                    </td>
+                    <td>
+                        {{ action.name }}
+                    </td>
+                    <td>
+                        {{ action.start.strftime('%d.%m.%Y') }}
+                    </td>
+                    <td>
+                        {{ action.end.strftime('%d.%m.%Y') }}
+                    </td>
+                    <td>
+                        {{ action.promotion_quantity }}
+                    </td>
+                    <td>
+                        <table style="display: inline;">
+                            <tr>
+                                {% for strategy in action.strategies %}
+                                <td style="padding: 0; border: None" {% if strategy.marketplace.get_productlink(action.product.id).link!='' and strategy.marketplace.get_productlink(action.product.id).link!='-' %}class="glow" onclick="window.open('{{ strategy.marketplace.get_productlink(action.product.id).link }}', '_blank'); event.cancelBubble=true;"{% endif %}>
+                                    <img src="{{ url_for('static', filename='images/foreignicons/' + strategy.marketplace.name + '_icon.png') }}" style="height:20px; width: 20px; margin: 0 2px 0 2px">
+                                </td>
+                                {% endfor %}
+                            </tr>
+                        </table>
+                    </td>
+                    <td>
+                        {% if action.active %}
+                            <a href="{{ url_for('center_product_pricingactions_activate_pricingaction', id=action.id) }}" onclick="event.cancelBubble=true;">
+                                <div class="tiny seven green smallbutton visible" style="cursor: default">
+                                    <i class="fa fa-thumbs-up" aria-hidden="true"></i> <i>aktiv</i>
+                                </div>
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('center_product_pricingactions_activate_pricingaction', id=action.id) }}" onclick="event.cancelBubble=true;">
+                                <div class="tiny seven redbutton smallbutton visible" style="">
+                                    <i class="fa fa-thumbs-down" aria-hidden="true"></i> <i>inaktiv</i>
+                                </div>
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="visible grey regbig box100" style="text-align: left; position: relative">
+        <div class="box100title">Pricing-Bundles</div>
+    </div>
+    <div class="box100 visible white" id="PricingActionsHolder" style="position: relative;">
+        <label for="pricing_bundle">Pricing-Bundle wählen</label>
+        <select id="pricing_bundle">
+            <option value="" selected></option>
+            {% for pb in pricing_bundles %}
+                <option value="{{ pb.id }}" {% if product.pricing_bundle_id == pb.id %}selected{% endif %}>{{ pb.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="button" class="standardbutton green greenbutton tiny visible" onclick="update_pricing_bundle()" style="margin-top: 5px">
+            <i class="fa fa-check" aria-hidden="true"></i>
+        </button>
+        <div id="ScreenDarkener">
+            <div class="loader"></div>
+        </div>
+    </div>
+    {% for mpa in product.marketplace_attributes %}
+        {% if mpa.marketplace.name in ['Idealo'] %}
+            <div class="visible grey regbig box100" style="text-align: left; position: relative">
+                <div class="box100title">
+                    Konkurrenz-Angebote
+                </div>
+            </div>
+            <div class="visible white tiny box100" style="text-align: left; position: relative;">
+                <div class="box100title reg five" style="text-align: left">
+                    {{  mpa.marketplace.name }}
+                    {% if mpa.marketplace.get_productlink(product.id) and mpa.marketplace.name=='Idealo' %}
+                        <div style="float: right">
+                            <label for="ext_idealo_watch_active">
+                                <input type="checkbox" id="ext_idealo_watch_active" {% if mpa.marketplace.get_productlink(product.id).ext_idealo_watch_active %}checked{% endif %} onchange="ext_idealo_watch();event.cancelBubble=true;">
+                                Konkurrenz-Beobachtung aktiv
+                            </label>
+                        </div>
+                    {% endif %}
+                </div>
+                <form action="" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="text" name="checker" value="filter_extoffers" hidden/>
+                    <input type="text" name="marketplace" value="{{ mpa.marketplace.id }}" hidden/>
+                    <table class="table" style="margin-bottom: 0">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px">
+                                    <span class="regbig"><i>Filter:</i></span>
+                                </th>
+                                <th style="width: 180px">
+                                    <div class="table_top_filter" id="start-top_filter" onclick="show_filter_options('start')" onmouseover="show_filter_options('start')" onmouseleave="hide_filter_options('start')">
+                                        <span id="start-filter_inner"><i class="fa fa-caret-down" aria-hidden="true"></i> Start{% if start != '' %}: {{ start }}{% endif %}</span>
+                                        <div class="table_top_filter-dropdown" id="start-top_filter-dropdown" onmouseover="show_filter_options('start')" onmouseleave="hide_filter_options('start')">
+                                            <input id="start" type="date" name="start" class="form-control tiny" onchange="defocus('start')" value="{{ start }}">
+                                        </div>
+                                    </div>
+                                </th>
+                                <th style="width: 180px">
+                                    <div class="table_top_filter" id="end-top_filter" onclick="show_filter_options('end')" onmouseover="show_filter_options('end')" onmouseleave="hide_filter_options('end')">
+                                        <span id="end-filter_inner"><i class="fa fa-caret-down" aria-hidden="true"></i> Ende{% if end != '' %}: {{ end }}{% endif %}</span>
+                                        <div class="table_top_filter-dropdown" id="end-top_filter-dropdown" onmouseover="show_filter_options('end')" onmouseleave="hide_filter_options('end')">
+                                            <input id="end" type="date" name="end" class="form-control tiny" onchange="defocus('end')" value="{{ end }}">
+                                        </div>
+                                    </div>
+                                </th>
+                                <th>
+                                    <button class="standardbutton tiny blackbutton visible" style="margin:0" type="submit" value="filter" name="btn">
+                                        <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                                    </button>
+                                </th>
+                            </tr>
+                        </thead>
+                    </table>
+                    <div class="box100">
+                        <div class="box100title">
+                            <span class="small seven">{{ offers|length }} Ergebnisse</span>
+                        </div>
+                    </div>
+                    <table class="table table-hover tiny sortable" style="text-align: left; margin-top: 0">
+
+                        <thead class="black">
+                            <tr>
+                                <th class="sortable">
+                                    ID
+                                </th>
+                                <th class="sortable">
+                                    Verkäufer
+                                </th>
+                                <th class="sortable">
+                                    Plattform
+                                </th>
+                                <th class="sortable">
+                                    Preis (inkl. Versand)
+                                </th>
+                                <th class="sortable">
+                                    Preis (ohne Versand)
+                                </th>
+                                <th class="sortable">
+                                    Versandkosten
+                                </th>
+                                <th class="sortable">
+                                    Lieferzeit
+                                </th>
+                                <th class="sortable">
+                                    Eintragsdatum
+                                </th>
+                                <th class="sortable">
+                                    Zuletzt gesehen
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                            {% for offer in offerdict[mpa.marketplace.id] %}
+                            <tr>
+                                <td>{{ offer.id }}</td>
+                                <td>{{ offer.extseller.name }}</td>
+                                <td>{{ offer.extplatform.name }}</td>
+                                <td>{{'%0.2f' % (offer.selling_price+offer.shipping_price)|float if offer.selling_price!=None and offer.shipping_price != None else '?'}}</td>
+                                <td>{{'%0.2f' % (offer.selling_price)|float}}</td>
+                                <td>{{ '%0.2f' % offer.shipping_price|float }}</td>
+                                <td>{{  offer.delivery_time }}</td>
+                                <td>{{  offer.init_date.strftime('%d.%m.%Y - %H:%M') }}</td>
+                                <td>{{  offer.last_seen.strftime('%d.%m.%Y - %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </form>
+            </div>
+        {% endif %}
+    {% endfor %}
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+
+        function get_pricing_rule(pr_rule_id) {
+            $.ajax({
+                url: "/api/pricing/rule/" + pr_rule_id,
+                type: "GET",
+                success: function (data) {
+                    document.getElementById('if_strategy').innerText = data.if_strategy;
+                    document.getElementById('then_strategy').innerText = data.then_strategy;
+                    document.getElementById('if_sale_suc_h').innerText = data.if_sale_suc_h;
+                    document.getElementById('if_sale_fail_h').innerText = data.if_sale_fail_h;
+                    document.getElementById('if_sale_num').innerText = data.if_sale_num;
+                    document.getElementById('if_sale_rev').innerText = data.if_sale_rev;
+                },
+                error: function () {
+                }
+            });
+        }
+
+        function update_pricing_bundle() {
+            darken();
+            let data = {};
+            data[{{ product.id }}] = {
+                'name': null,
+                'mpn': null,
+                'brand': null,
+                'spec_trait_0': null,
+                'spec_trait_1': null,
+                'spec_trait_2': null,
+                'spec_trait_3': null,
+                'length': null,
+                'width': null,
+                'height': null,
+                'weight': null,
+                'release_date': null,
+                'main_group_id': null,
+                'category_id': null,
+                'features': [],
+                'descriptions': [],
+                'pricing_bundle_id': document.getElementById('pricing_bundle').value};
+            $.ajax({
+                url: "{{ url_for('api.product.patch') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function() {
+                    lighten();
+                },
+                error: function() {
+                    lighten();
+                }
+            });
+        }
+
+        function update_shipping(ss_id, column){
+            var profile_id = document.getElementById("shipping_profile").value;
+            if (column === 'all'){
+                update_shipping(document.getElementById("nat_shipping_1"), "nat_shipping_1");
+                update_shipping(document.getElementById("nat_shipping_2"), "nat_shipping_2");
+                update_shipping(document.getElementById("int_shipping_1"), "int_shipping_1");
+                update_shipping(document.getElementById("int_shipping_2"), "int_shipping_2");
+            }
+            else{
+                if (ss_id.value !== "0") {
+                    fetch('/center/product/pricingactions/get_shipping_dict/' + ss_id.value + ',' + profile_id).then(function (response) {
+                        response.json().then(function (data) {
+                            document.getElementById(column + '_own').innerHTML = data.own + ' €';
+                            {% for marketplace in marketplaces %}
+                                if (data.mp_{{ marketplace.id }} !== undefined) {
+                                    document.getElementById(column + '_{{ marketplace.id }}').innerHTML = data.mp_{{ marketplace.id }} + ' €';
+                                }
+                                else {
+                                    document.getElementById(column + '_{{ marketplace.id }}').innerHTML = "Undefined <a class='blackfont' href='/center/settings/shipping_profile/" + profile_id + "' " +
+                                        "target='_blank' style='text-decoration: underline'>(Jetzt setzen)</a>"
+                                }
+                            {% endfor %}
+                        });
+                    });
+                }
+            }
+        }
+        function block_price(mpa_id) {
+            var obj = document.getElementById('block_selling_price'+mpa_id);
+            document.getElementById('selling_price' + mpa_id).readOnly = obj.checked === true;
+            fetch('/center/product/block_selling_price/' + mpa_id);
+        }
+
+        function ext_idealo_watch() {
+            fetch('{{ url_for('center_product_ext_idealo_watch', product_id=product.id) }}');
+        }
+
+        function get_performance(mpa_id, marketplace_id) {
+            var shipping_type = document.getElementsByName('shipping_type');
+            for (var j = 0; j < shipping_type.length; j++) {
+                if (shipping_type[j].checked === true){
+                    var customer_shipping = document.getElementById(shipping_type[j].value + '_' + marketplace_id).getAttribute('data-value');
+                    var customer_shipping_pythonfloat = customer_shipping.replace(",", ".").replace("€", "");
+                    var own_shipping = document.getElementById(shipping_type[j].value + '_' + 'own').getAttribute('data-value');
+                    var own_shipping_pythonfloat = own_shipping.replace(",", ".").replace("€", "");
+                }
+            }
+            var commission = document.getElementById('commission' + mpa_id).value;
+            var commission_pythonfloat = commission.replace(",", ".").replace("€", "");
+            var price = document.getElementById('selling_price' + mpa_id).value;
+            var price_pythonfloat = price.replace(",", ".").replace("€", "");
+            fetch('/center/product/get_performance/' + {{ product.id }} + ',' + marketplace_id + ',' + price_pythonfloat + ',' + customer_shipping_pythonfloat + ',' + own_shipping_pythonfloat + ',' + commission_pythonfloat).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("priceformula"+mpa_id).innerText = data.out.slice(1, -1);
+                    });
+                });
+        }
+
+        function update_price(marketplace_id, pricefield_id) {
+            document.getElementById('price_update_message').className = 'alert alert-success small visible';
+            var price = document.getElementById(pricefield_id).value;
+            var price_pythonfloat = price.replace(",", ".").replace("€", "");
+            fetch('/center/product/marketplace_data/update_price/' + {{ product.id }} + ',' + marketplace_id + ',' + price_pythonfloat).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('price_update_message').innerText = data.msg;
+                    document.getElementById('price_update_message').className = 'alert alert-success small visible messagedown';
+                    setTimeout(function () {
+                        document.getElementById('price_update_message').className = 'alert alert-success small visible';
+                    }, 6000)
+                });
+            });
+        }
+
+        function checkform(){
+            start = document.getElementById('strat_start');
+            end = document.getElementById('strat_end');
+            margin = document.getElementById('margin');
+
+            if (start.value == ''
+                || end.value == ''
+                || margin.value == ''
+            ){
+                if(start.value == '') {
+                    document.getElementById('start_warning').style.opacity = '1';
+                    start.style.borderColor = '#a54843';
+                }
+                if(end.value == '') {
+                    document.getElementById('end_warning').style.opacity = '1';
+                    end.style.borderColor = '#a54843';
+                }
+                if(margin.value == '') {
+                    document.getElementById('margin_warning').style.opacity = '1';
+                    margin.style.borderColor = '#a54843';
+                }
+            }else{
+                margin = margin.value;
+                margin = margin.replace(',','.').replace(' ','');
+                margin = Number(margin);
+                if (!isNaN(margin)) {
+                    document.getElementById('form_2').submit();
+                }else{
+                    document.getElementById('margin_format_warning').style.opacity = '1';
+                    document.getElementById('margin').style.borderColor = '#a54843';
+
+                }
+            }
+        }
+        function defocus(type){
+            document.activeElement.blur();
+            obj = document.getElementById(type);
+            setTimeout(function () {
+                if (! $(obj).is(':focus')){
+                    document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                    setTimeout(function () {
+                        document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                    }, 100);
+                }}, 200);
+            if (type =='start'){
+                document.getElementById('start-filter_inner').innerHTML = '<i class="fa fa-caret-down" aria-hidden="true"></i> Start: '+obj.value;
+                document.getElementById('end').setAttribute("min", obj.value);
+            }
+            else if (type =='end'){
+                document.getElementById('end-filter_inner').innerHTML = '<i class="fa fa-caret-down" aria-hidden="true"></i> Ende: '+obj.value;
+                document.getElementById('start').setAttribute("max", obj.value);
+            }
+        }
+
+        function selectall(check, type) {
+            all = document.getElementsByClassName(type+"_filter");
+            if (check==true){
+                for (i=0; i < all.length ; i++){
+                    all[i].checked = true;
+                    }
+                }
+            else{
+                for (i=0; i < all.length ; i++){
+                    all[i].checked = false;
+                    }
+                }
+
+        }
+        function show_filter_options(type){
+            document.getElementById(type+'-top_filter-dropdown').style.display = 'Block';
+            setTimeout(function () {
+                document.getElementById(type+'-top_filter-dropdown').style.opacity = '1.0';
+            }, 100);
+        }
+
+        function hide_filter_options(type){
+            obj = document.getElementById(type);
+            setTimeout(function () {
+                if (! $(obj).is(':focus')){
+                    document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                    setTimeout(function () {
+                        document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                    }, 100);
+                }}, 200);
+            if (! $(obj).is(':focus')){
+                document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                setTimeout(function () {
+                    document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                }, 100);
+            }
+        }
+        function show_pricingaction(id){
+            window.open('/center/product/pricingaction/'+ id, '_blank');
+        }
+
+        function openlinks(){
+            {% for link in product.links if link and link.link!='-' and link.link!=''%}
+            window.open('{{ link.link|safe }}', '_blank');
+            {% endfor %}
+        }
+    </script>
+{%endblock%}

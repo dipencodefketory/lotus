@@ -1,0 +1,27 @@
+name: lotusicafe
+
+# Trading API Sandbox - https://www.x.com/developers/ebay/products/trading-api
+api.sandbox.ebay.com:
+    compatability: 719
+    appid: BardiaHa-lotusica-PRD-9ca83364c-2ec8f5e7
+    certid: PRD-ca83364c583b-a7ad-4afd-9cc1-401f
+    devid: e98ebb32-5792-44e7-b8a3-bd285cfa2368
+    token: AgAAAA**AQAAAA**aAAAAA**WWRFXg**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wJloOlCZmCpAmdj6x9nY+seQ**AjgGAA**AAMAAA**rGqpIyNsY+gfqCG7Doyr+BMXkimH3ni5sry+oPz/wta+DaEnMY02svSuARrCE+NlXuWUJQAjR+pO3crdTKsR9/o5ZvzwCrvqjb/npP9eTveUM1hcsA+gvNCuKSeYGR55X3r7jH1aOUv0eeMvyqSQUfVItfmB6/iz09RFRZU45XaZmk1GJgtQE/HEWpcMaZaK97d010+0XxVUAlzCSrN4dQymSc68nUkx/izGsXWZFhXOzyBr3XYjIPl7FNMB+ia7myJRdvghQpoJUkpw1noQvUykJ9Y1J6umIuLZ/ZCX6+Ry74iN9Japvpvv9QoZcicCTFu+HqDUL8YiuYK/sTDudy/h+pwvsPv00AXfUU5mID79kXfZ6Srh6czOaRpz3qGKDNJ8tnM/xrn1STaQeJNrmjT16xi0B5f6pJyaKhMi6lsXbLmqFGZAefiR42qwF+dyxl70P4g7RQh4Fvjj8zlVQzSy5EcYiRt74WiMuhs32usQCVU0h/MyUy1Jr6RnqBWkAzoqfjn1zjRad8sP4QNki5QmoVMlzyCaJADcikkhPUhaRz45c0NF/VC6uhK05xfj/jX6ir2RLsaRW8eHLQamVdyt/SpvboBM73dq7HITV47s3FOVALf/KWT0NllnVeU+97PbJOS98MSiELUrtnxlXrpZxPyO+5mHbKtjppvaDSGnntt0rubbf5vHZhnqRuXYA/YPcemlc8K3NwgkXz7o41y/cwi+Hm/jONxLs2EPJpdJ9KQL4/BSWTQVipOB8Aba
+
+# Trading API - https://www.x.com/developers/ebay/products/trading-api
+api.ebay.com:
+    compatability: 719
+    appid: BardiaHa-lotusica-PRD-9ca83364c-2ec8f5e7
+    certid: PRD-ca83364c583b-a7ad-4afd-9cc1-401f
+    devid: e98ebb32-5792-44e7-b8a3-bd285cfa2368
+    token: AgAAAA**AQAAAA**aAAAAA**WWRFXg**nY+sHZ2PrBmdj6wVnY+sEZ2PrA2dj6wJloOlCZmCpAmdj6x9nY+seQ**AjgGAA**AAMAAA**rGqpIyNsY+gfqCG7Doyr+BMXkimH3ni5sry+oPz/wta+DaEnMY02svSuARrCE+NlXuWUJQAjR+pO3crdTKsR9/o5ZvzwCrvqjb/npP9eTveUM1hcsA+gvNCuKSeYGR55X3r7jH1aOUv0eeMvyqSQUfVItfmB6/iz09RFRZU45XaZmk1GJgtQE/HEWpcMaZaK97d010+0XxVUAlzCSrN4dQymSc68nUkx/izGsXWZFhXOzyBr3XYjIPl7FNMB+ia7myJRdvghQpoJUkpw1noQvUykJ9Y1J6umIuLZ/ZCX6+Ry74iN9Japvpvv9QoZcicCTFu+HqDUL8YiuYK/sTDudy/h+pwvsPv00AXfUU5mID79kXfZ6Srh6czOaRpz3qGKDNJ8tnM/xrn1STaQeJNrmjT16xi0B5f6pJyaKhMi6lsXbLmqFGZAefiR42qwF+dyxl70P4g7RQh4Fvjj8zlVQzSy5EcYiRt74WiMuhs32usQCVU0h/MyUy1Jr6RnqBWkAzoqfjn1zjRad8sP4QNki5QmoVMlzyCaJADcikkhPUhaRz45c0NF/VC6uhK05xfj/jX6ir2RLsaRW8eHLQamVdyt/SpvboBM73dq7HITV47s3FOVALf/KWT0NllnVeU+97PbJOS98MSiELUrtnxlXrpZxPyO+5mHbKtjppvaDSGnntt0rubbf5vHZhnqRuXYA/YPcemlc8K3NwgkXz7o41y/cwi+Hm/jONxLs2EPJpdJ9KQL4/BSWTQVipOB8Aba
+
+# Finding API - https://www.x.com/developers/ebay/products/finding-api
+svcs.ebay.com:
+    appid: BardiaHa-lotusica-PRD-9ca83364c-2ec8f5e7
+    version: 1.0.0
+
+# Shopping API - https://www.x.com/developers/ebay/products/shopping-api
+open.api.ebay.com:
+    appid: BardiaHa-lotusica-PRD-9ca83364c-2ec8f5e7
+    version: 671

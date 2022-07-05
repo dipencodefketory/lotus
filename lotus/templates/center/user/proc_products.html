@@ -1,0 +1,67 @@
+{% extends 'center/user/user_foundation.html' %}
+{% block title %}User{% endblock %}
+
+{% block ext2 %}
+    <div class="box100" style="padding-top: 10px">
+        <div class="box100title big" style="text-align: left">
+            Bearbeitete Produkte
+        </div>
+        <form action="" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <label for="start">
+                    Start:
+                </label>
+                <input type="date" id="start" name="start" class="form-control" value="{{ start.strftime('%Y-%m-%d') }}">
+            </div>
+            <div class="splitright">
+                <label for="end">
+                    Ende:
+                </label>
+                <input type="date" id="end" name="end" class="form-control" value="{{ end.strftime('%Y-%m-%d') }}">
+                <button type="submit" class="standardbutton blackbutton" style="float: right">
+                    <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                </button>
+            </div>
+        </form>
+        <div class="box100title">
+            {{ proc_ps|length }} Ergebniss{% if proc_ps|length != 1 %}e{% endif %}
+        </div>
+        <table class="table">
+            <thead class="black">
+                <tr>
+                    <th>
+                        ID
+                    </th>
+                    <th>
+                        Name
+                    </th>
+                    <th>
+                        Bearbeitet
+                    </th>
+                    <th>
+                        Bestätigt
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for proc_p in proc_ps %}
+                    <tr {% if proc_p.review %}style="background: #e0b5ab"{% endif %}>
+                        <td>
+                            {{ proc_p.product_id }}
+                        </td>
+                        <td>
+                            {{ proc_p.product.name }}
+                        </td>
+                        <td>
+                            {{ proc_p.proc_timestamp.strftime('%d.%m.%y-%H:%M') }}
+                        </td>
+                        <td>
+                            {{ proc_p.conf_timestamp.strftime('%d.%m.%y-%H:%M') if proc_p.conf_timestamp else '-' }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{%endblock%}

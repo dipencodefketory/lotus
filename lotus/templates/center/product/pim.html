@@ -1,0 +1,811 @@
+{% extends 'center/basis.html' %}
+{% block title %}PIM{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="alert alert-success small visible" id="price_update_message" style="position: absolute; left: 25%; width: 50%; top: -100%; z-index: 5000"></div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_products') }}">
+            <div class="submenu five">
+                Produkte
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_groups') }}">
+            <div class="submenu five">
+                Produkt-Gruppen
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            PIM
+        </div>
+        {% if 'Produkt-Management' in session.roles %}
+            <a class="blackfont" href="{{ url_for('center_product_dynamic_pricing') }}">
+                <div class="submenu five">
+                    Dynamic Pricing
+                </div>
+            </a>
+        {% endif %}
+    </div>
+    <div class="box100 visible five" style="text-align: left">
+        <div class="big seven" style="padding: 15px 0 10px 20px"><i>Filter</i></div>
+        <form action="" method="POST" name="filterform" style="padding-top: 3px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <div class="form-group">
+                    <label for="keywords" style="width: 100%;">
+                        Suchworte
+                        <input type="text" id="keywords" name="keywords" style="border: solid 1px black; width: 100%; display: block;" value="{{ session['product_pim_filter']['keywords'] }}">
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="product_ids" style="width: 100%">Produkt-IDs
+                        <div style="float: right">
+                            <input type="radio" value="id" id="id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['product_pim_filter'] %}
+                                    {% if session['product_pim_filter']['product_id_type'] == 'id' %}
+                                        checked
+                                    {% endif %}
+                                    {% else %}
+                                        checked
+                                    {% endif %}
+                            >
+                            <label for="id" style="margin: 0; padding-bottom: 0">ID
+                            </label>
+                            <input type="radio" value="Internal_ID" id="Internal_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['product_pim_filter'] %}
+                                    {% if session['product_pim_filter']['product_id_type'] == 'Internal_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="Internal_ID" style="margin: 0; padding-bottom: 0">Interne ID
+                            </label>
+                            <input type="radio" value="HSP_ID" id="HSP_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['product_pim_filter'] %}
+                                    {% if session['product_pim_filter']['product_id_type'] == 'HSP_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="HSP_ID" style="margin: 0; padding-bottom: 0">HSP-ID
+                            </label>
+                            <input hidden name="product_type" id="product_type" value="{{ session['product_pim_filter']['product_id_type'] if session['product_pim_filter']['product_id_type'] else 'id' }}">
+                        </div>
+                    </label>
+                    <textarea rows="2" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% for p in session['product_pim_filter']['product_ids'] %}{{ p }};{% endfor %}</textarea>
+                    <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                    <div style="position:relative;">
+                        <input type="text" name="product" style="border: solid 1px black; padding-right: 120px" class="form-control" id="product" list="product-datalist"onkeyup="find_products(this.value)">
+                        <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                        <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 20px">
+                    <label for="group_ids" style="width: 100%">Gruppen-IDs</label>
+                    <textarea rows="2" id="group_ids" style="border: solid 1px black;"  name="group_ids" class="form-control">{% for gr_id in session['product_pim_filter']['group_ids'] %}{{ gr_id }};{% endfor %}</textarea>
+                    <div style="position:relative; margin-top: 15px">
+                        <input type="text" name="group" class="form-control" id="group" list="group-datalist" style="border: solid 1px black; padding-right: 120px" onkeyup="find_group(this.value)">
+                        <datalist id="group-datalist" onmouseover="show_filter_options('group')" onmouseleave="hide_filter_options('group')" >
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_groups()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="splitright">
+                <div class="splitleft tiny">
+                    <div style="overflow-y: scroll; height: 413px; padding: 5px; border: solid black 1px">
+                        {% for main_cat in main_cats %}
+                            <div style="cursor: pointer; width: 100%; transition: 200ms" data-chv="{% if main_cat.id in session['product_pim_filter']['cat_pre_ids'] %}true{% else %}false{% endif %}" onclick="show_children(this, '{{ main_cat.id }}')">
+                                <input name="cat_boxes" value="{{ main_cat.id }}" type="checkbox"
+                                        {% if main_cat.id in session['product_pim_filter']['cat_ids'] %} checked {% endif %}
+                                       onclick="event.cancelBubble=true;"
+                                >
+                                &nbsp;{{ main_cat.name }}{% if main_cat.children %} &#9660; {% endif %}
+                            </div>
+                            {% for cat in main_cat.get_family_tree() %}
+                                <div style="cursor: pointer; width: 100%; {% if cat[0].parent_id in session['product_pim_filter']['cat_pre_ids'] %}height: 1.1rem; opacity: 1; display: block;{% else %}height: 0; opacity: 0; display: None;{% endif %} transition: 200ms" data-chv="{% if cat.id in session['product_pim_filter']['cat_pre_ids'] %}true{% else %}false{% endif %}" data-par_id="{{ cat[0].id }}" class="{{ cat[2] }}_child" onclick="show_children(this, '{{ cat[0].id }}')">
+                                    <input name="cat_boxes" value="{{ cat[0].id }}" type="checkbox"
+                                           {% if cat[0].id in session['product_pim_filter']['cat_ids'] %}checked{% endif %}
+                                           onclick="event.cancelBubble=true;"
+                                    >
+                                    {{ (cat[1] + 1)*"&nbsp;&nbsp;&nbsp;&nbsp;"|safe }}{{ cat[0].name }}{% if cat[0].children %} &#9660; {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="splitright">
+                    <table class="tiny" style="width: 100%">
+                        <thead>
+                            <tr style="width: 100%">
+                                <th class="small five" colspan="4" style="padding-bottom: 5px">
+                                    Nur Produkte mit fehlenden Werten anzeigen
+                                </th>
+                            </tr>
+                            <tr>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="length" style="margin-right: 5px" {% if session['product_pim_filter']['length'] != None %}checked{% endif %}>Länge
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="width" style="margin-right: 5px" {% if session['product_pim_filter']['width'] != None %}checked{% endif %}>Breite
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="height" style="margin-right: 5px" {% if session['product_pim_filter']['height'] != None %}checked{% endif %}>Höhe
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="weight" style="margin-right: 5px" {% if session['product_pim_filter']['weight'] != None %}checked{% endif %}>Gewicht
+                                    </label>
+                                </th>
+                            </tr>
+                            <tr>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="spec_trait_0" style="margin-right: 5px" {% if session['product_pim_filter']['spec_trait_0'] != None %}checked{% endif %}>Merkmal 0
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="spec_trait_1" style="margin-right: 5px" {% if session['product_pim_filter']['spec_trait_1'] != None %}checked{% endif %}>Merkmal 1
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="spec_trait_2" style="margin-right: 5px" {% if session['product_pim_filter']['spec_trait_2'] != None %}checked{% endif %}>Merkmal 2
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="spec_trait_3" style="margin-right: 5px" {% if session['product_pim_filter']['spec_trait_3'] != None %}checked{% endif %}>Merkmal 3
+                                    </label>
+                                </th>
+                            </tr>
+                            <tr>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="mpn" style="margin-right: 5px" {% if session['product_pim_filter']['mpn'] != None %}checked{% endif %}>MPN
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="brand" style="margin-right: 5px" {% if session['product_pim_filter']['brand'] != None %}checked{% endif %}>Marke
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                    <label>
+                                        <input type="checkbox" name="attr_set" value="group" style="margin-right: 5px" {% if session['product_pim_filter']['group'] != None %}checked{% endif %}>Gruppe
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                </th>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                            <tr>
+                                <th style="width: 25%"></th>
+                                <th style="width: 25%"></th>
+                                <th style="width: 25%">
+                                    <label for="limit_page"> Anzeige pro Seite:
+                                        <input style="border: solid 1px black; display: block; width: 100%;" type="number" step="1" min="1" id="limit_page" name="limit_page" value="{{ session['product_pim_filter']['limit_page'] }}">
+                                    </label>
+                                </th>
+                                <th style="width: 25%">
+                                    <button class="standardbutton tiny blackbutton visible" style="float: right; margin: 0" type="submit" value="filter" name="btn">
+                                        <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                                    </button>
+                                </th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+            <input type="hidden" name="limit_offset" id="limit_offset" value="{{ session['product_pim_filter']['limit_offset'] }}"/>
+            <input type="hidden" name="order_by" id="order_by" value="{{ session['product_pim_filter']['order_by'] }}"/>
+            <input type="hidden" name="order_dir" id="order_dir" value="{{ session['product_pim_filter']['order_dir'] }}"/>
+        </form>
+    </div>
+    <div class="box100">
+        <div class="box100title">
+        </div>
+    </div>
+    <div class="box100">
+        <div class="box100title">
+            Seite: <input id="page" type="number" min="1" value="{{ session['product_pim_filter']['limit_offset'] + 1 }}" style="width: 50px" onchange="turnpage(this.value)">
+            / <span id="all_results_upper"></span>
+        </div>
+        <table class="table tiny" style="text-align: left">
+            <thead>
+                <tr class="black">
+                    <td class="five reg" colspan="7" style="text-align: center">Schablone</td>
+                </tr>
+                <tr>
+                    <td>
+                        <br>
+                        <br>
+                        <br>
+                        <input type="text" id="mpn_transfer" value=""><br>
+                        <input type="text" id="release_transfer" value=""><br>
+                    </td>
+                    <td>
+                        <div class="supertiny" style="overflow-y: scroll; height: 120px; padding: 5px; border: solid black 1px">
+                            {% for main_cat in main_cats %}
+                                <div style="cursor: pointer; width: 100%; transition: 200ms" data-chv="false" onclick="show_children(this, '{{ main_cat.id }}_transfer')">
+                                    <input name="cat_transfer" type="radio" value="{{ main_cat.id }}" onclick="event.cancelBubble=true;" >
+                                    &nbsp;{{ main_cat.name }}{% if main_cat.children %} &#9660; {% endif %}
+                                </div>
+                                {% for cat in main_cat.get_family_tree() %}
+                                    <div style="cursor: pointer; width: 100%; height: 0; opacity: 0; display: None; transition: 200ms" data-chv="false" data-par_id="{{ cat[0].id }}" class="{{ cat[2] }}_transfer_child" onclick="show_children(this, '{{ cat[0].id }}_transfer')">
+                                        <input name="cat_transfer" type="radio" value="{{ cat[0].id }}" onclick="event.cancelBubble=true;">
+                                        {{ (cat[1] + 1)*"&nbsp;&nbsp;&nbsp;&nbsp;"|safe }}{{ cat[0].name }}{% if cat[0].children %} &#9660; {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" id="brand_transfer"><br>
+                        <input type="text" id="spec_trait_0_transfer"><br>
+                        <input type="text" id="spec_trait_1_transfer"><br>
+                        <input type="text" id="spec_trait_2_transfer"><br>
+                        <input type="text" id="spec_trait_3_transfer">
+                    </td>
+                    <td>
+                        <table>
+                            <tr>
+                                <td style="border: None; padding: 0 .4rem .4rem .4rem; width: 20px">L</td>
+                                <td style="border: None; padding: 0 .25rem .25rem .25rem">
+                                    <input type="number" step="1" style="width: 60px" id="length_transfer">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border: None; padding:.4rem; width: 20px">B</td>
+                                <td style="border: None; padding:.25rem">
+                                    <input type="number" step="1" style="width: 60px" id="width_transfer">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border: None; padding:.4rem; width: 20px">H</td>
+                                <td style="border: None; padding:.25rem">
+                                    <input type="number" step="1" style="width: 60px" id="height_transfer">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="border: None; padding:.4rem; width: 20px">G</td>
+                                <td style="border: None; padding:.25rem">
+                                    <input type="number" step=".001" style="width: 60px" id="weight_transfer">
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td>
+                        <input type="text" id="mg_transfer" style="width: 300px; margin-bottom: 5px" list="mg_list"><br>
+                        <input type="checkbox" id="only_member_tranfer"> Nur an ausgewählte Gruppe übertragen.
+                    </td>
+                    <td>
+                        <button class="smallbutton blackbutton tiny visible" onclick="transfer_data()"><i class="fa fa-caret-down" aria-hidden="true"></i> übertragen</button>
+                    </td>
+                    <td>
+
+                    </td>
+                </tr>
+                <tr class="black">
+                    <th style="vertical-align: top">
+                        ID<br>
+                        Interne ID<br>
+                        HSP-ID<br>
+                        MPN<br>
+                        Release-Datum
+                    </th>
+                    <th style="vertical-align: top; max-width: 400px">
+                        Name<br>
+                        Kategorie
+                    </th>
+                    <th style="vertical-align: top">
+                        Marke<br>
+                        Merkmal 0<br>
+                        Merkmal 1<br>
+                        Merkmal 2<br>
+                        Merkmal 3<br>
+                    </th>
+                    <th style="vertical-align: top">
+                        Länge (mm)<br>
+                        Breite (mm)<br>
+                        Höhe (mm)<br>
+                        Gewicht (kg)
+                    </th>
+                    <th style="vertical-align: top">
+                        Produkt-Gruppe
+                    </th>
+                    <th style="vertical-align: top">
+
+                    </th>
+                    <th style="vertical-align: top">
+
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="table_body" style="border-bottom: solid 1px rgb(222, 226, 230);">
+            </tbody>
+        </table>
+        <button class="standardbutton blackbutton visible" onclick="save_all()"><i class="fa fa-floppy-o" aria-hidden="true"></i> alle speichern</button>
+        <datalist id="mg_list">
+            {% for mg in main_groups %}
+                <option>{{ mg.id }} - {{ mg.name }}</option>
+            {% endfor %}
+        </datalist>
+        <div class="box100title">
+            Seite: <input id="page" type="number" min="1" value="{{ session['product_pim_filter']['limit_offset'] + 1 }}" style="width: 50px" onchange="turnpage(this.value)">
+            / <span id="all_results_lower"></span>
+        </div>
+        <div id="loader" class="box100" style="position: relative; height: 200px">
+            <div class="loader"></div>
+        </div>
+        <div id="ScreenDarkener">
+            <div class="loader"></div>
+        </div>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+
+        var product_ids = [];
+
+        var table_body = document.getElementById('table_body');
+        fetch('/center/product/pim/load').then(function (response) {
+            response.json().then(function (data) {
+                document.getElementById('loader').style.display = 'None';
+                for (var i = 0; i < data.data.length; i++) {
+                    var t_row = table_body.insertRow();
+                    var p_ids_cell = t_row.insertCell();
+                    product_ids.push(data.data[i].p_id);
+                    var p_ids = data.data[i].p_id + '<br>' + data.data[i].p_internal_id + '<br>' + data.data[i].p_hsp_id + '<br>';
+                    p_ids += '<input type="text" id="mpn_' + data.data[i].p_id + '" value="' + data.data[i].p_mpn + '" ><br>';
+                    p_ids += '<input type="text" id="release_' + data.data[i].p_id + '" value="' + data.data[i].p_release + '" ><br>';
+                    p_ids += data.data[i].p_images + ' x ' + '<i class="fa fa-image" aria-hidden="true"></i>';
+                    p_ids_cell.innerHTML = p_ids;
+                    var p_name_cell = t_row.insertCell();
+                    var p_name = '<div style="height:40px; overflow-y: hidden">' + data.data[i].p_name + '</div>';
+                    p_name += '<div class="supertiny" style="overflow-y: scroll; height: 80px; padding: 5px; border: solid black 1px">';
+                    {% for main_cat in main_cats %}
+                        var open_list = [];
+                        p_name += '<div style="cursor: pointer; width: 100%; transition: 200ms" data-chv="';
+                        if (data.data[i].cat_pre_ids.includes({{ main_cat.id }}) === true){
+                            p_name += 'true';
+                            open_list.push({{ main_cat.id }})
+                        }
+                        else {
+                            p_name += 'false';
+                        }
+                        p_name += '" onclick="show_children(this, ';
+                        p_name += "'" + data.data[i].p_id + "_{{ main_cat.id }}'";
+                        p_name += ')">';
+                        p_name += '<input name="cat_' + data.data[i].p_id + '" id="cat_{{ main_cat.id }}_' + data.data[i].p_id + '" value="{{ main_cat.id }}" type="radio"';
+                        if (data.data[i].cat_id === {{ main_cat.id }}){
+                            p_name += ' checked ';
+                        }
+                        p_name += 'onclick="event.cancelBubble=true;">&nbsp;{{ main_cat.name }}{% if main_cat.children %} &#9660; {% endif %}</div>';
+                        {% for cat in main_cat.get_family_tree() %}
+                            p_name += '<div style="cursor: pointer; width: 100%;';
+                            if (open_list.includes({{ cat[0].parent_id }}) === true){
+                                p_name += 'height: 1.1rem; opacity: 1; display: block; ';
+                            }
+                            else {
+                                p_name += 'height: 0; opacity: 0; display: None; ';
+                            }
+                            p_name += 'transition: 200ms" data-chv="';
+                            if (data.data[i].cat_pre_ids.includes({{ cat[0].id }})===true){
+                                p_name += 'true';
+                                if (data.data[i].cat_id !== {{ cat[0].id }}){
+                                    open_list.push({{ cat[0].id }})
+                                }
+                            }
+                            else {
+                                p_name += 'false';
+                            }
+                            p_name += '" data-par_id="' + data.data[i].p_id + '_{{ cat[0].id }}" class="' + data.data[i].p_id + '_{{ cat[2] }}_child" onclick="show_children(this, ';
+                            p_name += "'" + data.data[i].p_id + "_{{ cat[0].id }}'";
+                            p_name += ')">';
+                            p_name += '<input name="cat_' + data.data[i].p_id + '" id="cat_{{ cat[0].id }}_' + data.data[i].p_id + '" value="{{ cat[0].id }}" type="radio"';
+                            if (data.data[i].cat_id === {{ cat[0].id }}){
+                                p_name += ' checked ';
+                            }
+                            p_name += 'onclick="event.cancelBubble=true;">&nbsp;{{ (cat[1] + 1)*"&nbsp;&nbsp;&nbsp;&nbsp;"|safe }}{{ cat[0].name }}{% if cat[0].children %} &#9660; {% endif %}</div>';
+                        {% endfor %}
+                    {% endfor %}
+                    p_name += '</div>';
+                    p_name_cell.innerHTML = p_name;
+                    var p_brand_cell = t_row.insertCell();
+                    var p_brand = '<input type="text" id="brand_' + data.data[i].p_id + '" value="' + data.data[i].p_brand + '" ><br>';
+                    p_brand += '<input type="text" id="spec_trait_0_' + data.data[i].p_id + '" value="' + data.data[i].p_spec_trait_0 + '" ><br>';
+                    p_brand += '<input type="text" id="spec_trait_1_' + data.data[i].p_id + '" value="' + data.data[i].p_spec_trait_1 + '" ><br>';
+                    p_brand += '<input type="text" id="spec_trait_2_' + data.data[i].p_id + '" value="' + data.data[i].p_spec_trait_2 + '" ><br>';
+                    p_brand += '<input type="text" id="spec_trait_3_' + data.data[i].p_id + '" value="' + data.data[i].p_spec_trait_3 + '" >';
+                    p_brand_cell.innerHTML = p_brand;
+                    var p_meas_cell = t_row.insertCell();
+                    var p_meas = '<table>';
+                    p_meas += '<tr>';
+                    p_meas += '<td style="border: None; padding: 0 .4rem .4rem .4rem; width: 20px">L</td>';
+                    p_meas += '<td style="border: None; padding: 0 .25rem .25rem .25rem">';
+                    p_meas += '<input type="number" step="1" style="width: 60px" id="length_' + data.data[i].p_id + '" value="' + data.data[i].p_length + '">';
+                    p_meas += '</td>';
+                    p_meas += '</tr>';
+                    p_meas += '<tr>';
+                    p_meas += '<td style="border: None; padding:.4rem; width: 20px">B</td>';
+                    p_meas += '<td style="border: None; padding:.25rem">';
+                    p_meas += '<input type="number" step="1" style="width: 60px" id="width_' + data.data[i].p_id + '" value="' + data.data[i].p_width + '">';
+                    p_meas += '</td>';
+                    p_meas += '</tr>';
+                    p_meas += '<tr>';
+                    p_meas += '<td style="border: None; padding:.4rem; width: 20px">H</td>';
+                    p_meas += '<td style="border: None; padding:.25rem">';
+                    p_meas += '<input type="number" step="1" style="width: 60px" id="height_' + data.data[i].p_id + '" value="' + data.data[i].p_height + '">';
+                    p_meas += '</td>';
+                    p_meas += '</tr>';
+                    p_meas += '<tr>';
+                    p_meas += '<td style="border: None; padding:.4rem; width: 20px">G</td>';
+                    p_meas += '<td style="border: None; padding:.25rem">';
+                    p_meas += '<input type="number" step=".001" style="width: 60px" id="weight_' + data.data[i].p_id + '" value="' + data.data[i].p_weight + '">';
+                    p_meas += '</td>';
+                    p_meas += '</tr>';
+                    p_meas += '</table>';
+                    p_meas_cell.innerHTML = p_meas;
+                    var mg_name_cell = t_row.insertCell();
+                    var mg_name = '<input type="text" id="mg_' + data.data[i].p_id + '" style="width: 300px; margin-bottom: 5px" list="mg_list" value="' + data.data[i].mg_id + ' - ' + data.data[i].mg_name + '"><br>';
+                    mg_name += '<span id="mg_sugg_' + data.data[i].p_id + '"><button class="smallbutton blackbutton tiny visible" onclick="match_5(';
+                    mg_name += "'" + data.data[i].p_id + "'";
+                    mg_name += ')">Vorschläge generieren</button></span>';
+                    mg_name_cell.innerHTML = mg_name;
+                    var put_cell = t_row.insertCell();
+                    var put = '<button class="smallbutton blackbutton tiny visible" style="margin-bottom: 5px" onclick="patch_product(';
+                    put += "'" + data.data[i].p_id + "'";
+                    put += ')"><i class="fa fa-floppy-o" aria-hidden="true"></i> speichern</button><br>';
+                    put += '<button class="smallbutton blackbutton tiny visible" onclick="transfer_data_up(';
+                    put += "'" + data.data[i].p_id + "'";
+                    put += ')"><i class="fa fa-caret-up" aria-hidden="true"></i> übertragen</button>';
+                    put_cell.innerHTML = put;
+                    var check_cell = t_row.insertCell();
+                    var checked = '';
+                    if (data.data[i].proc === false) {checked=' checked';}
+                    check_cell.innerHTML = '<input class="p_check" type="checkbox" id="check_' + data.data[i].p_id + '"' + checked +'>';
+                }
+                document.getElementById('all_results_upper').innerText = data.pages;
+                document.getElementById('all_results_lower').innerText = data.pages;
+            });
+        });
+
+        function transfer_data_up(p_id) {
+            document.getElementById('mpn_transfer').value = document.getElementById('mpn_' + p_id).value;
+            document.getElementById('release_transfer').value = document.getElementById('release_' + p_id).value;
+            document.getElementById('brand_transfer').value = document.getElementById('brand_' + p_id).value;
+            document.getElementById('spec_trait_0_transfer').value = document.getElementById('spec_trait_0_' + p_id).value;
+            document.getElementById('spec_trait_1_transfer').value = document.getElementById('spec_trait_1_' + p_id).value;
+            document.getElementById('spec_trait_2_transfer').value = document.getElementById('spec_trait_2_' + p_id).value;
+            document.getElementById('spec_trait_3_transfer').value = document.getElementById('spec_trait_3_' + p_id).value;
+            document.getElementById('length_transfer').value = document.getElementById('length_' + p_id).value;
+            document.getElementById('width_transfer').value = document.getElementById('width_' + p_id).value;
+            document.getElementById('height_transfer').value = document.getElementById('height_' + p_id).value;
+            document.getElementById('weight_transfer').value = document.getElementById('weight_' + p_id).value;
+            document.getElementById('mg_transfer').value = document.getElementById('mg_' + p_id).value;
+        }
+
+        function transfer_data() {
+            var mpn = document.getElementById('mpn_transfer').value;
+            var release = document.getElementById('release_transfer').value;
+            var cat = document.querySelector('input[name="cat_transfer"]:checked');
+            var brand = document.getElementById('brand_transfer').value;
+            var spec_trait_0 = document.getElementById('spec_trait_0_transfer').value;
+            var spec_trait_1 = document.getElementById('spec_trait_1_transfer').value;
+            var spec_trait_2 = document.getElementById('spec_trait_2_transfer').value;
+            var spec_trait_3 = document.getElementById('spec_trait_3_transfer').value;
+            var length = document.getElementById('length_transfer').value;
+            var width = document.getElementById('width_transfer').value;
+            var height = document.getElementById('height_transfer').value;
+            var weight = document.getElementById('weight_transfer').value;
+            var mg = document.getElementById('mg_transfer').value;
+            for (var i = 0; i < product_ids.length; i++) {
+                if (document.getElementById('check_' + product_ids[i]).checked === true) {
+                    if (document.getElementById('only_member_tranfer').checked === true) {
+                        if (document.getElementById('mg_' + product_ids[i]).value !== mg) {
+                            continue;
+                        }
+                    }
+                    if (mpn !== '') {document.getElementById('mpn_' + product_ids[i]).value = mpn;}
+                    if (release !== '') {document.getElementById('release_' + product_ids[i]).value = release;}
+                    if (cat !== null) {document.getElementById('cat_' + cat.value + '_' + product_ids[i]).checked = true;}
+                    if (brand !== '') {document.getElementById('brand_' + product_ids[i]).value = brand;}
+                    if (spec_trait_0 !== '') {document.getElementById('spec_trait_0_' + product_ids[i]).value = spec_trait_0;}
+                    if (spec_trait_1 !== '') {document.getElementById('spec_trait_1_' + product_ids[i]).value = spec_trait_1;}
+                    if (spec_trait_2 !== '') {document.getElementById('spec_trait_2_' + product_ids[i]).value = spec_trait_2;}
+                    if (spec_trait_3 !== '') {document.getElementById('spec_trait_3_' + product_ids[i]).value = spec_trait_3;}
+                    if (length !== '') {document.getElementById('length_' + product_ids[i]).value = length;}
+                    if (width !== '') {document.getElementById('width_' + product_ids[i]).value = width;}
+                    if (height !== '') {document.getElementById('height_' + product_ids[i]).value = height;}
+                    if (weight !== '') {document.getElementById('weight_' + product_ids[i]).value = weight;}
+                    if (mg !== '') {document.getElementById('mg_' + product_ids[i]).value = mg;}
+                }
+            }
+        }
+
+        function show_children(obj, par_id) {
+            var children = document.getElementsByClassName(par_id + '_child');
+            if (obj.getAttribute('data-chv') === 'false'){
+                for (var i = 0; i < children.length; i++) {
+                    children[i].style.display = 'block';
+                    children[i].style.opacity = '1';
+                    children[i].style.height = '1.1rem';
+                }
+                obj.setAttribute('data-chv', 'true');
+            }
+            else {
+                for (var j = 0; j < children.length; j++) {
+                    if (children[j].getAttribute('data-chv') === 'true') {
+                        show_children(children[j], children[j].getAttribute('data-par_id'));
+                    }
+                        children[j].style.opacity = '0';
+                        children[j].style.height = '0';
+                        children[j].style.display = 'None';
+                }
+                obj.setAttribute('data-chv', 'false');
+            }
+        }
+
+        function match_5(p_id){
+            fetch('/center/product/pim/match_5/' + p_id).then(function (response) {
+                response.json().then(function (data) {
+                    var sugg = '';
+                    for (var i = 0; i < data.length; i++) {
+                        sugg += data[i].pg_name + ' (' + data[i].score + ' %)<br>';
+                    }
+                    document.getElementById('mg_sugg_' + p_id).innerHTML = sugg;
+                });
+            });
+        }
+
+        function patch_product(p_id){
+            var main_group = document.getElementById('mg_' + p_id).value;
+            var main_group_id = main_group.split(' - ')[0];
+            if (main_group_id === ''){
+                main_group_id = null;
+            }
+            var data = {};
+            var cat = document.querySelector('input[name="cat_' + p_id + '"]:checked');
+            var cat_id = null;
+            if (cat !== null) {
+                cat_id = cat.value;
+            }
+            data[p_id] = {
+                'name': null,
+                'mpn': document.getElementById('mpn_' + p_id).value,
+                'release_date': document.getElementById('release_' + p_id).value,
+                'brand': document.getElementById('brand_' + p_id).value,
+                'spec_trait_0': document.getElementById('spec_trait_0_' + p_id).value,
+                'spec_trait_1': document.getElementById('spec_trait_1_' + p_id).value,
+                'spec_trait_2': document.getElementById('spec_trait_2_' + p_id).value,
+                'spec_trait_3': document.getElementById('spec_trait_3_' + p_id).value,
+                'length': document.getElementById('length_' + p_id).value,
+                'width': document.getElementById('width_' + p_id).value,
+                'height': document.getElementById('height_' + p_id).value,
+                'weight': document.getElementById('weight_' + p_id).value,
+                'main_group_id': main_group_id,
+                'category_id': cat_id,
+                'features': [],
+                'descriptions': [],
+                'pricing_rules': []
+            };
+            $.ajax({
+                url: "{{ url_for('api.product.patch') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function() {
+                },
+                error: function() {
+                }
+            });
+        }
+
+        function save_all() {
+            document.getElementById("ScreenDarkener").style.display = 'Block';
+            setTimeout(function() {
+                document.getElementById("ScreenDarkener").style.opacity = '0.8';
+            }, 200);
+            var proc = 0;
+            for (var i = 0; i < product_ids.length; i++) {
+                if (document.getElementById('check_' + product_ids[i]).checked === true) {
+                    patch_product(product_ids[i]);
+                    proc += 1;
+                }
+            }
+            var checkboxes = document.getElementsByClassName('p_check');
+            var checked = 0;
+            for (var j = 0; j < checkboxes.length; j++){
+                if (checkboxes[j].checked === true) {
+                    checked += 1;
+                }
+            }
+            function check() {
+                if (proc === checked) {
+                    document.getElementById("ScreenDarkener").style.opacity = '0';
+                    setTimeout(function () {
+                        document.getElementById("ScreenDarkener").style.display = 'None';
+                    }, 200);
+                }
+                else {
+                    return setTimeout(check, 1000);
+                }
+            }
+            check();
+        }
+
+        function turnpage(page){
+            document.getElementById('limit_offset').value = Number(page) - 1;
+            setTimeout(function() {
+                document.filterform.submit();
+            }, 200);
+        }
+
+        function transform_ids(val) {
+            old_type = document.getElementById('product_type').value;
+            document.getElementById('product_type').value = val;
+            ids = document.getElementById('product_ids').value.replace(/(?:\r\n|\r|\n|,)/g, ';');
+            fetch('/center/product/dynamic_pricing/transform_ids/'+ids+','+old_type+','+val).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('product_ids').value = data.ids;
+                    if(data.not_found!==''){
+                        alert("Die IDs "+data.not_found+" konnten nicht umgewandelt werden.");
+                    }
+                });
+            });
+        }
+
+        function transform_ids(val) {
+            old_type = document.getElementById('product_type').value;
+            document.getElementById('product_type').value = val;
+            ids = document.getElementById('product_ids').value.replace(/(?:\r\n|\r|\n|,)/g, ';');
+            fetch('/center/product/dynamic_pricing/transform_ids/'+ids+','+old_type+','+val).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('product_ids').value = data.ids;
+                    if(data.not_found!==''){
+                        alert("Die IDs "+data.not_found+" konnten nicht umgewandelt werden.");
+                    }
+                });
+            });
+        }
+
+        function find_products(val){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)) {
+                fetch('/center/product/products/find_products/' + val).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("product-datalist").innerHTML = data.out;
+                    });
+                });
+            }
+        }
+
+        function add_product() {
+            var value = document.getElementById('product').value;
+            var values = value.split(' - ');
+            var type = document.getElementById('product_type').value;
+            if (values.length > 2 && !isNaN(Number(values[0])) && !isNaN(Number(values[1])) && !isNaN(Number(values[2]))) {
+                if (type === 'id') {
+                    var prod_id = document.getElementById('product').value.split(" - ")[0];
+                } else if (type === 'Internal_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[1];
+                } else if (type === 'HSP_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[2];
+                }
+                var prod_ids = document.getElementById('product_ids');
+                if (prod_ids.value.replace(' ', '') === '') {
+                    prod_ids.value = prod_id;
+                }
+                else {
+                    prod_ids.value += ';' + prod_id;
+                }
+            } else {
+                var list = document.getElementById("product-datalist").children;
+                for (var i = 0; i < list.length; i++) {
+                    if (type === 'id') {
+                        prod_id = list[i].value.split(" - ")[0];
+                    } else if (type === 'Internal_ID') {
+                        prod_id = list[i].value.split(" - ")[1];
+                    } else if (type === 'HSP_ID') {
+                        prod_id = list[i].value.split(" - ")[2];
+                    }
+                    prod_ids = document.getElementById('product_ids');
+                    if (prod_ids.value.replace(' ', '') === '') {
+                        prod_ids.value = prod_id;
+                    }
+                    else {
+                        prod_ids.value += ';' + prod_id;
+                    }
+                }
+            }
+        }
+
+        function find_group(keywords){
+            fetch('/api/product_group/search/' + keywords).then(function (response) {
+                response.json().then(function (data) {
+                    var data_list = document.getElementById("group-datalist");
+                    data_list.innerHTML = '';
+                    for (var i=0; i < data.length; i++ ) {
+                        var opt = document.createElement('option');
+                        opt.value = data[i].gr_id;
+                        opt.innerHTML = data[i].gr_id + ' - ' + data[i].gr_name;
+                        data_list.appendChild(opt);
+                    }
+                });
+            });
+        }
+
+        function add_groups() {
+            var value = document.getElementById('group').value;
+            var values = value.split(' - ');
+            var gr_ids = document.getElementById('group_ids');
+            if (values.length > 1 && !isNaN(Number(values[0]))) {
+                var gr_id = values[0];
+                if (gr_ids.value.replace(' ', '') === '') {
+                    gr_ids.value = gr_id;
+                }
+                else {
+                    gr_ids.value += ';' + gr_id;
+                }
+            }
+            else {
+                var list = document.getElementById("group-datalist").children;
+                for (var i = 0; i < list.length; i++) {
+                    if (gr_ids.value.replace(' ', '') === '') {
+                        gr_ids.value = list[i].value;
+                    }
+                    else {
+                        gr_ids.value += ';' + list[i].value;
+                    }
+                }
+            }
+        }
+    </script>
+{% endblock %}

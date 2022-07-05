@@ -1,0 +1,14 @@
+Hallo {{ user.firstname }},
+
+Vielen Dank für deine Registrierung. Hier deine Zugangsdaten:
+
+Username:   {{ user.username }}
+Passwort:   {{ password }}
+
+Bevor du dich einloggen kannst, muss dein Account bestätigt werden. Drücke dazu bitte auf folgenden Link:
+
+{{ url_for("center_confirm_user", user_id=user.id, confirmation_code=confirmation_code, _external=True) }}
+
+Vielen Dank und beste Grüße
+
+Dein LotusiCafe-Team

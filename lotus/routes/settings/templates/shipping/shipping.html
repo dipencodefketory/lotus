@@ -1,0 +1,111 @@
+{% extends 'index.html' %}
+{% block title %}Versand{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div id="productcategories" class="visible white small box100" style="text-align: left; padding-bottom: 10px">
+        <div class="big box100title" style="text-align: left">
+            Versand
+        </div>
+        <table class="table table-hover tiny">
+            <thead class="black">
+                <tr>
+                    <th>Dienstleister</th>
+                    <th>Typ</th>
+                    <th>Bezeichnung</th>
+                    <th>Unterschrift</th>
+                    <th>Tracking</th>
+                    <th>Preis</th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+            {% for shipping_service in shipping_services %}
+                <tr class="trclick" onclick="open_shipping('{{ shipping_service.id }}')">
+                    <td>{{ shipping_service.provider.name }}</td>
+                    <td>{% if shipping_service.international %}international{% else %}national{% endif %}</td>
+                    <td>{{ shipping_service.name }}</td>
+                    <td>{{ shipping_service.signature }}</td>
+                    <td>{{ shipping_service.tracking }}</td>
+                    <td>{{ '%0.2f' % shipping_service.price }} €</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="box100title big" style="text-align: left;">
+            Neue Versandart
+        </div>
+        <form action="" method="POST" style="text-align: left">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="width: 100%; padding: 0 530px 0 370px; position: relative">
+                <div style="position: absolute; left:10px; width: 200px">
+                    <label for="provider">Dienstleister:</label>
+                    <input id="provider" type="text" name="provider" maxlength="80" class="form-control tinyhead" list="shipping_providers" onkeyup="lowerbound_warning(this,1)" required>
+                    <datalist id="shipping_providers">
+                        {% for provider in shipping_providers %}
+                        <option value="{{ provider.name }}">{{ provider.name }}</option>
+                        {% endfor %}
+                    </datalist>
+                    <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                </div>
+                <div style="position: absolute; left:225px; width: 130px">
+                    <label for="shipping_type">Typ:</label>
+                    <select id="shipping_type" name="shipping_type" class="form-control tinyhead">
+                        <option value="national">national</option>
+                        <option value="international">international</option>
+                    </select>
+                </div>
+                <label for="name">Bezeichnung:</label>
+                <input id="name" type="text" name="name" maxlength="100" class="form-control tinyhead" required>
+                <div style="position: absolute; right: 425px; top: 18px; width: 100px">
+                    <label for="signature"><input id="signature" type="checkbox" name="check" value="signature"> Unterschrift</label><br>
+                    <label for="tracking"><input id="tracking" type="checkbox" name="check" value="tracking"> Tracking</label>
+                </div>
+                <div style="position: absolute; right: 315px; top:0; width: 100px">
+                    <label for="min_days">Min. Tage:</label>
+                    <input id="min_days" type="number" step="1" name="min_days" class="form-control tinyhead" min="0" required>
+                </div>
+                <div style="position: absolute; right: 200px; top:0; width: 100px">
+                    <label for="max_days">Max. Tage:</label>
+                    <input id="max_days" type="number" step="1" name="max_days" class="form-control tinyhead" min="0" required>
+                </div>
+                <div style="position: absolute; right: 85px; top:0; width: 100px">
+                    <label for="price">Preis:</label>
+                    <input id="price" type="number" step="0.01" name="price" class="form-control tinyhead" min="0" required>
+                </div>
+            </div>
+            <div style="width: 100%; padding: 10px 75px 0 0; position: relative">
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="internal_id">Interne ID:</label>
+                    <input id="internal_id" type="text" name="internal_id" class="form-control tinyhead">
+                </div>
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="weight_kg">Gewicht in kg:</label>
+                    <input id="weight_kg" type="number" step="0.001" name="weight_kg" class="form-control tinyhead" min="0" required>
+                </div>
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="length_mm">Länge in mm.:</label>
+                    <input id="length_mm" type="number" step="1" name="length_mm" class="form-control tinyhead" min="0" required>
+                </div>
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="width_mm">Breite in mm.:</label>
+                    <input id="width_mm" type="number" step="1" name="width_mm" class="form-control tinyhead" min="0" required>
+                </div>
+                <div style="float: left; width: 20%; padding: 0 10px">
+                    <label for="height_mm">Höhe in mm.:</label>
+                    <input id="height_mm" type="number" step="1" name="height_mm" class="form-control tinyhead" min="0" required>
+                </div>
+                <button name="btn" type="submit" class="standardbutton green greenbutton tiny" style="position: absolute; right: 0; top: 0">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        function open_shipping(id) {
+            window.open('/settings/shipping/shipping_service/'+ id, '_self');
+        }
+    </script>
+{%endblock%}

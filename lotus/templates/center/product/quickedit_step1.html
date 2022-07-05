@@ -1,0 +1,240 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkte{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="box100">
+        <div class="big seven" style="padding: 15px 0 10px 20px; text-align: left">Schnelles Einstellen</div>
+    </div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_proc_sources') }}">
+            <div class="submenu five">
+                Quellen auswerten
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Schritt 1
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step2') }}">
+            <div class="submenu five">
+                Schritt 2
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step3') }}">
+            <div class="submenu five">
+                Schritt 3
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step4') }}">
+            <div class="submenu five ">
+                Schritt 4
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_upload') }}">
+            <div class="submenu five">
+                Upload
+            </div>
+        </a>
+    </div>
+    <div class="box100">
+        <form id="red_form" action="{{ url_for('center_product_quickedit_step1_worker') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <table class="table table-hover tiny" style="text-align: left">
+                <thead class="black">
+                    <tr>
+                        <th class="black" style="width: 100px">
+                            ID<br>
+                            EAN<br>
+                            Interne ID<br>
+                            <br>
+                            <br>
+                        </th>
+                        <th class="black" style="width: 400px">
+                            Name<br>
+                            Merkmal 0<br>
+                            Merkmal 1<br>
+                            Merkmal 2<br>
+                            Merkmal 3
+                        </th>
+                        <th>
+                            Marke<br>
+                            Kategorie<br>
+                            MPN<br>
+                            Release-Datum<br>
+                            <br>
+                        </th>
+                        <th>
+                            Beschreibung 2<br><br><br><br>
+                            <br>
+                        </th>
+                        <th>
+                            Beschreibung 3<br><br><br><br>
+                            <br>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% for row in query %}
+                    {% if loop.index%2 == 1 %}
+                        <tr id="{{ row[0].id }}">
+                            <td>
+                                {{ row[0].id }}<br>
+                                {{ row[0].hsp_id }}<br>
+                                {{ row[0].internal_id }}
+                            </td>
+                            <td>
+                                <input type="text" id="name_{{ row[0].id }}" name="name_{{ row[0].id }}" class="form-control tiny" value="{{ row[0].name }}" readonly>
+                                <input type="text" id="st_0_{{ row[0].id }}" name="st_0_{{ row[0].id }}" class="form-control tiny" value="{{ row[0].spec_trait_0 if row[0].spec_trait_0 else '' }}">
+                                <input type="text" id="st_1_{{ row[0].id }}" name="st_1_{{ row[0].id }}" class="form-control tiny" value="{{ row[0].spec_trait_1 if row[0].spec_trait_1 else '' }}">
+                                {% if row[0].category_id in st2_dict %}
+                                    <select class="form-control tiny" id="st_2_{{ row[0].id }}" name="st_2_{{ row[0].id }}">
+                                        <option value=""></option>
+                                        {% for el in st2_dict[row[0].category_id] %}
+                                            <option value="{{ el }}" {% if el==row[0].spec_trait_2 %}selected{% endif %}>{{ el }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="text" id="st_2_{{ row[0].id }}" name="st_2_{{ row[0].id }}" class="form-control tiny" value="{{ row[0].spec_trait_2 if row[0].spec_trait_2 else '' }}">
+                                {% endif %}
+                                {% if row[0].category_id in st3_dict %}
+                                    <select class="form-control tiny" id="st_3_{{ row[0].id }}" name="st_3_{{ row[0].id }}">
+                                        <option value=""></option>
+                                        {% for el in st3_dict[row[0].category_id] %}
+                                            <option value="{{ el }}" {% if el==row[0].spec_trait_3 %}selected{% endif %}>{{ el }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="text" id="st_3_{{ row[0].id }}" name="st_3_{{ row[0].id }}" class="form-control tiny" value="{{ row[0].spec_trait_3 if row[0].spec_trait_3 else '' }}">
+                                {% endif %}
+                            </td>
+                            <td>
+                                <input class="tiny form-control" id="brand_{{ row[0].id }}" name="brand_{{ row[0].id }}" value="{{ row[0].brand }}"/>
+                                <select class="tiny form-control" id="category_{{ row[0].id }}" name="category_{{ row[0].id }}" style="padding-bottom: 5px; padding-top: 5px; height: 35px">
+                                    <option value=""></option>
+                                    {% for cat in productcategories %}
+                                        <option value="{{ cat.id }}" {% if row[0].category_id %}{% if row[0].category_id == cat.id %}selected{% endif %}{% endif %}>{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="text" id="mpn_{{ row[0].id }}" name="mpn_{{ row[0].id }}" class="form-control tiny" value="{{ row[0].mpn if row[0].mpn }}">
+                                <input {% if row[0].block_release_date %}disabled{% endif %} placeholder="dd.mm.yyyy" type="text" id="release_date_{{ row[0].id }}" name="release_date_{{ row[0].id }}" class="form-control tiny" minlength="10" maxlength="10" value="{{ row[0].release_date.strftime('%d.%m.%Y') if row[0].release_date }}">
+                                <span class="supertiny formwarning" id="release_date_{{ row[0].id }}_warning">Ungültiges Format!</span>
+                            </td>
+                            <td>
+                                <textarea rows="7" id="description_2_{{ row[0].id }}" data-value="{{ row[1].id }}" name="description_2_{{ row[0].id }}" class="form-control">{{ row[1].text }}</textarea>
+                            </td>
+                    {% else %}
+                            <td>
+                                <textarea rows="7" id="description_3_{{ row[0].id }}" data-value="{{ row[1].id }}" name="description_3_{{ row[0].id }}" class="form-control">{{ row[1].text }}</textarea>
+                            </td>
+                        </tr>
+                        <tr class="trclick" id="load_{{ row[0].id }}" style="display: None">
+                            <td>
+                                {{ row[0].id }}<br>
+                                {{ row[0].hsp_id }}
+                            </td>
+                            <td>
+                                {{ row[0].name }}
+                            </td>
+                            <td colspan="6">
+                                <div style="width: 100%; height: 60px; position: relative;">
+                                    <div class="loader" style="height: 50px; width: 50px; margin: -25px"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="trclick" id="error_{{ row[0].id }}" style="display: None">
+                            <td>
+                                {{ row[0].id }}<br>
+                                {{ row[0].hsp_id }}
+                            </td>
+                            <td>
+                                {{ row[0].name }}
+                            </td>
+                            <td colspan="6">
+                                <b>FEHLER</b>
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+            <button name="button" type="button" id="real_button" class="standardbutton visible blackbutton" style="float: right; margin-top: 0" onclick="submit_form()">
+                <i class="fa fa-play-circle-o" aria-hidden="true"></i> Ausführen
+            </button>
+
+            <div id="ScreenDarkener">
+                <div class="loader"></div>
+            </div>
+        </form>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+        function submit_form(){
+            {% for row in query %}
+                var release_date_{{ row[0].id }} = document.getElementById('release_date_{{ row[0].id }}');
+                var date_list = release_date_{{ row[0].id }}.value.split('.');
+                var new_date = '';
+                for (var i=0; i < date_list.length ; i++) {
+                    new_date += date_list[date_list.length-i-1];
+                    if (i<2){
+                        new_date+='-'
+                    }
+                }
+                var check_date_{{ row[0].id }} = new Date(new_date);
+                if (isNaN(check_date_{{ row[0].id }}.getTime())){
+                    document.getElementById('release_date_{{ row[0].id }}_warning').style.opacity = '1';
+                    release_date_{{ row[0].id }}.style.borderColor = '#a54843';
+                }else {
+                    document.getElementById("{{ row[0].id }}").style.display = 'None';
+                    document.getElementById("load_{{ row[0].id }}").style.display = 'table-row';
+                }
+            {% endfor %}
+            {% for row in query %}
+                if (isNaN(check_date_{{ row[0].id }}.getTime())){
+                    document.getElementById('release_date_{{ row[0].id }}_warning').style.opacity = '1';
+                    release_date_{{ row[0].id }}.style.borderColor = '#a54843';
+                }else {
+                    $.ajax({
+                        url: "{{ url_for('center_product_quickedit_step1_worker') }}",
+                        type: "POST",
+                        data: {
+                            product_id: {{row[0].id}},
+                            st_0: document.getElementById("st_0_{{ row[0].id }}").value,
+                            st_1: document.getElementById("st_1_{{ row[0].id }}").value,
+                            st_2: document.getElementById("st_2_{{ row[0].id }}").value,
+                            st_3: document.getElementById("st_3_{{ row[0].id }}").value,
+                            category_id: document.getElementById("category_{{ row[0].id }}").value,
+                            brand: document.getElementById("brand_{{ row[0].id }}").value,
+                            mpn: document.getElementById("mpn_{{ row[0].id }}").value,
+                            release_date: release_date_{{ row[0].id }}.value,
+                            description_2: document.getElementById("description_2_{{ row[0].id }}").value,
+                            description_2_id: document.getElementById("description_2_{{ row[0].id }}").getAttribute('data-value'),
+                            description_3: document.getElementById("description_3_{{ row[0].id }}").value,
+                            description_3_id: document.getElementById("description_3_{{ row[0].id }}").getAttribute('data-value')
+                        },
+                        success: function () {
+                            document.getElementById("{{ row[0].id }}").style.display = 'table-row';
+                            document.getElementById("load_{{ row[0].id }}").style.display = 'None';
+                        },
+                        error: function () {
+                            document.getElementById("error_{{ row[0].id }}").style.display = 'table-row';
+                            document.getElementById("load_{{ row[0].id }}").style.display = 'None';
+                        }
+                    });
+                }
+            {% endfor %}
+        }
+    </script>
+{%endblock%}
+
+

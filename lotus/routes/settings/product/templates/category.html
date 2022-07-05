@@ -1,0 +1,292 @@
+{% extends 'center/basis.html' %}
+{% block title %}Kategorie - {{ category.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext %}
+    <div class="white tiny box100 visible" style="text-align: left; position: relative">
+    {% for cat in main_cats %}
+        <a class="blackfont"  href="{{ url_for("center_settings_products_category", category_id=cat.id) }}">
+            <div class="submenu five">
+                {{ cat.name }}
+            </div>
+        </a>
+    {% endfor %}
+    </div>
+    <div class="white small box100" style="text-align: left; overflow: hidden;">
+        <div class="box100title" style="text-align: left">
+            <span class="small">
+                {% for pred in category.get_predecessors() %}
+                    <a href="{{ url_for("center_settings_products_category", category_id=pred.id) }}">{{ pred.name }}</a> >
+                {% endfor %}
+                {{ category.name }}
+            </span><br>
+            <span class="regbig">Name: {{ category.name }}</span>
+            <form action="{{ url_for('center_settings_products_edit_category_name', category_id=category.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input style="border: solid 1px black; width: 300px" type="text" name="name">
+                <button class="blackbutton visible standardbutton" type="submit" style="width: 250px">
+                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i> Namen ändern
+                </button>
+            </form>
+            <form action="{{ url_for('center_settings_products_edit_category_parent', category_id=category.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <select name="category" style="border: solid 1px black; width: 300px" >
+                    <option value="" {% if category.parent_id == None %}selected{% endif %}></option>
+                    {% for parent in adopt_parents %}
+                        <option  value="{{ parent.id }}" {% if category.parent_id == parent.id %}selected{% endif %}>{{ parent.name }}</option>
+                    {% endfor %}
+                </select>
+                <button class="blackbutton visible standardbutton" type="submit" style="width: 250px">
+                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i> Eltern-Kategorie ändern
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="box100 white">
+        <form action="{{ url_for('center_settings_products_category_update_mp_codes', category_id=category.id) }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft regbig" style="height: 40px; padding: 0 25px 25px 25px">
+                Marketplace-IDs
+            </div>
+            <table class="table">
+                <tr>
+                {% for mp in mps %}
+                    <td style="text-align: left">
+                        <label for="mp_code_{{ mp.id }}">{{ mp.name }}</label><br>
+                        <input class="form-control" id="mp_code_{{ mp.id }}" name="mp_code_{{ mp.id }}" value="{{ category.get_marketplace_code(mp.id) if category.get_marketplace_code(mp.id) }}">
+                    </td>
+                {% endfor %}
+                </tr>
+            </table>
+            <button name="button" type="button" id="real_button" class="standardbutton visible blackbutton" style="float: right" onclick="submit_form()">
+                <i class="fa fa-floppy-o" aria-hidden="true"></i> Speichern
+            </button>
+        </form>
+    </div>
+    <div class="box100 white">
+        <div class="splitleft regbig" style="height: 40px; padding: 0 25px 25px 25px">
+            Kinder
+        </div>
+        <div class="splitright regbig" style="height: 40px; padding: 0 25px 25px 25px">
+            Nicht zugeordnet
+        </div>
+        <div class="splitleft" style="height: 300px; overflow-y: scroll; padding: 25px; border: inset 2px #ced4da">
+            {% for successor in category.get_successor_tree() %}
+                <div class="whitebutton" style="width: 100%; transition: 200ms">
+                    <span style="padding-left: {{ successor[1]*25 }}px">
+                        <a href="{{ url_for("center_settings_products_category", category_id=successor[0].id) }}">{{ successor[0].name }}</a>
+                    </span>
+                    <span style="float: right">
+                        <a href="{{ url_for("center_settings_products_detach_category", category_id=successor[0].id) }}">lösen</a>  |
+                        <a href="{{ url_for("center_settings_products_detach_successors", category_id=successor[0].id) }}">inkl. Nachfolger lösen</a>
+                    </span>
+                </div>
+            {% endfor %}
+            <div style="height: 25px; width: 100%"></div>
+        </div>
+        <div class="splitright" style="height: 300px; overflow-y: scroll; padding: 25px; border: inset 2px #ced4da">
+            {% for orphan in orphans %}
+                <div class="whitebutton" style="width: 100%; transition: 200ms">
+                    <a href="{{ url_for("center_settings_products_category", category_id=orphan.id) }}">{{ orphan.name }}</a>
+
+                    <span style="float: right">
+                        <a href="{{ url_for("center_settings_products_category_adopt_child", category_id=category.id, child_id=orphan.id) }}">hinzufügen</a>
+                    </span>
+                </div>
+            {% endfor %}
+            <div style="height: 25px; width: 100%"></div>
+        </div>
+    </div>
+    <div class="visible black regbig box100" style="text-align: left; position: relative">
+        <div class="box100title">Features</div>
+    </div>
+    <div class="box100">
+        <div class="box100title" style="text-align: left">
+            <label for="category">
+                Von Kategorie übernehmen<br>
+                <select name="category" id="category" style="border: solid 1px black; width: 300px" onchange="change_category(this)">
+                    <option value="" selected></option>
+                    <optgroup label="Eigene Familie">
+                    {% for member in category.get_family_tree() %}
+                        <option value="{{ member[0].id }}">
+                            {{ member[1]*"&nbsp;&nbsp;&nbsp;&nbsp;"|safe }}{{ member[0].name }}
+                        </option>
+                    {% endfor %}
+                    </optgroup>
+                    <optgroup label="Andere">
+                    {% for cat in other_cats %}
+                        <option value="{{ cat.id }}">
+                            {{ cat.name }}
+                        </option>
+                    {% endfor %}
+                    </optgroup>
+                </select>
+            </label>
+        </div>
+        <div>
+            <div class="splitleft regbig" style="height: 40px; padding: 0 25px 25px 25px">
+                Zugeordnete Features
+            </div>
+            <div class="splitright regbig" style="height: 40px; padding: 0 25px 25px 25px">
+                Nicht zugeordnete Features
+            </div>
+            <div id="own_feature_holder" class="splitleft" style="height: 300px; overflow-y: scroll; padding: 25px; border: inset 2px #ced4da">
+                {% for feature in category.productfeatures %}
+                    <div id="detach_feat_{{ category.id }}_{{ feature.productfeature.id }}" class="whitebutton" style="width: 100%; transition: 200ms">
+                        {{ feature.productfeature.name }}
+                        <span style="float: right">
+                            <a href="#own_feature_holder" onclick="detach_feature('{{ category.id }}', '{{ feature.productfeature.id }}')">lösen</a>
+                        </span><br>
+                    </div>
+                {% endfor %}
+                <div style="height: 25px; width: 100%"></div>
+            </div>
+            <div id="other_feature_holder" class="splitright" style="height: 300px; overflow-y: scroll; padding: 25px; border: inset 2px #ced4da">
+                {% for feature in poss_features %}
+                    <div id="add_feat_{{ category.id }}_{{ feature.id }}" class="whitebutton" style="width: 100%; transition: 200ms">
+                        {{ feature.name }}
+                        <span style="float: right">
+                            <a href="#own_feature_holder" onclick="add_feature('{{ category.id }}', '{{ feature.id }}')">hinzufügen</a>
+                        </span><br>
+                    </div>
+                {% endfor %}
+                <div style="height: 25px; width: 100%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="visible white regbig box100" style="text-align: left; position: relative; height: 100px">
+
+    </div>
+    <div id="ScreenDarkener">
+
+    </div>
+    <div class="white visible small" id="cat_feature_field">
+        <div class="box100">
+            <a onclick="hide_cat_feature_field()" class="blackfont" style="position: absolute; right: 10px; top:10px; width: 25px; height: 25px; z-index: 1002">
+                <div>
+                    <img src="{{ url_for('static', filename='images/X.png') }}" style="width: 100%;">
+                </div>
+            </a>
+        </div>
+        <div class="splitleft regbig" style="height: 40px; padding: 0 25px 25px 25px">
+            Zugeordnete Features
+        </div>
+        <div class="splitright regbig" style="height: 40px; padding: 0 25px 25px 25px">
+            Nicht zugeordnete Features
+        </div>
+        <div id="hidden_own_feature_holder" class="splitleft" style="height: 300px; overflow-y: scroll; padding: 25px; border: inset 2px #ced4da">
+        </div>
+        <div id="hidden_other_feature_holder" class="splitright" style="height: 300px; overflow-y: scroll; padding: 25px; border: inset 2px #ced4da">
+        </div>
+        <div id="hidden_cat" data-value="" hidden></div>
+        <a onclick="transfer_features()">
+            <button type="button" class="standardbutton blackbutton visible" style="display: inline-block; margin-right: 15px; float: right">
+                <i class="fa fa-floppy-o" aria-hidden="true"></i> übernehmen
+            </button>
+        </a>
+        <a onclick="hide_cat_feature_field()">
+            <button type="button" class="standardbutton redbutton visible" style="display: inline-block; ; float: right">
+                <i class="fa fa-times" aria-hidden="true"></i> abbrechen
+            </button>
+        </a>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+        function submit_form() {
+            var data = {};
+            {% for mp in mps %}
+                data['mp_code_{{ mp.id }}'] = document.getElementById('mp_code_{{ mp.id }}').value;
+            {% endfor %}
+            $.ajax({
+                url: "{{ url_for('center_settings_products_category_update_mp_codes', category_id=category.id) }}",
+                type: "POST",
+                data: data,
+                success: function () {
+                    alert('Gespeichert.')
+                },
+                error: function () {
+                    alert('Error.')
+                }
+            });
+        }
+        function add_feature(cat_id, feature_id){
+            fetch('/center/settings/products/category/add_feature/'+cat_id+','+feature_id).then(function (response) {
+                response.json().then(function (data) {
+                    if (data.status_code === 200){
+                        var obj = document.getElementById("add_feat_"+cat_id+"_"+feature_id);
+                        obj.parentElement.removeChild(obj);
+                        var own_holder = document.getElementById("own_feature_holder");
+                        own_holder.removeChild(own_holder.lastElementChild);
+                        own_holder.innerHTML += '<div id="detach_feat_' + cat_id + '_' + feature_id + '" class="whitebutton" style="width: 100%; transition: 200ms">' + data.feature_name + '' + '' +
+                            '<span style="float: right">' +
+                            '<a href="#own_feature_holder" onclick="detach_feature(' + cat_id + ', ' + feature_id + ')">lösen</a>' +
+                            '</span><br>' +
+                            '</div>' +
+                            '<div style="height: 25px; width: 100%"></div>';
+                    }
+                });
+            });
+        }
+        function detach_feature(cat_id, feature_id){
+            fetch('/center/settings/products/category/detach_feature/'+cat_id+','+feature_id).then(function (response) {
+                response.json().then(function (data) {
+                    if (data.status_code === 200){
+                        var obj = document.getElementById("detach_feat_"+cat_id+"_"+feature_id);
+                        obj.parentElement.removeChild(obj);
+                        var other_holder = document.getElementById("other_feature_holder");
+                        other_holder.removeChild(other_holder.lastElementChild);
+                        other_holder.innerHTML += '<div id="add_feat_' + cat_id + '_' + feature_id + '" class="whitebutton" style="width: 100%; transition: 200ms">' + data.feature_name + '' + '' +
+                            '<span style="float: right">' +
+                            '<a href="#own_feature_holder" onclick="add_feature(' + cat_id + ', ' + feature_id + ')">hinzufügen</a>' +
+                            '</span><br>' +
+                            '</div>' +
+                            '<div style="height: 25px; width: 100%"></div>';
+                    }
+                });
+            });
+        }
+        function change_category(cat){
+            document.getElementById('hidden_cat').setAttribute('data-value', category.value);
+            fetch('/center/settings/products/category/change_category/' + category.value).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("hidden_own_feature_holder").innerHTML = data.own_feature_html;
+                    document.getElementById("hidden_other_feature_holder").innerHTML = data.other_feature_html;
+                    document.getElementById("cat_feature_field").style.display = 'Block';
+                    document.getElementById("cat_feature_field").style.zIndex = '15002';
+                    document.getElementById("ScreenDarkener").style.display = 'Block';
+
+                    setTimeout(function() {
+                        document.getElementById("cat_feature_field").style.opacity = '1';
+                        document.getElementById("ScreenDarkener").style.opacity = '0.8';
+                    }, 200);
+                });
+            });
+        }
+
+        function hide_cat_feature_field() {
+            document.getElementById("cat_feature_field").style.opacity = '0';
+            document.getElementById("cat_feature_field").style.zIndex = '15000';
+            document.getElementById("ScreenDarkener").style.opacity = '0';
+            setTimeout(function () {
+                document.getElementById("cat_feature_field").style.display = 'None';
+                document.getElementById("ScreenDarkener").style.display = 'None';
+            }, 200);
+        }
+
+        function transfer_features(){
+            var cat_id = document.getElementById('hidden_cat').getAttribute('data-value');
+            window.open('/center/settings/products/category/transfer_features/{{ category.id }},' + cat_id, "_self");
+        }
+    </script>
+{%endblock%}

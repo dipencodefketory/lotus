@@ -1,0 +1,138 @@
+#Demand_Table_Holder{
+    overflow-y: scroll;
+    max-height: 160px;
+}
+
+@media screen and (max-width: 640px) {
+
+    .splitleft {
+        position: relative;
+        width: 100%;
+        padding: 0 10px 0 10px;
+    }
+
+    .splitright {
+        position: relative;
+        width: 100%;
+        padding: 0 10px 0 10px;
+    }
+
+    #SellinInfo{
+        position: absolute;
+        top: 0;
+        width: 100%;
+        min-height: 500px;
+        display: none;
+        opacity: 0;
+        transition: 200ms;
+        z-index: 15001;
+    }
+
+    #SellinBoxLeft{
+        width: 100%;
+        display: inline-block;
+        text-align: left;
+        padding: 10px 10px 0 10px;
+    }
+
+    #SellinBoxRight{
+        width: 100%;
+        display: inline-block;
+        text-align: left;
+        padding: 0 10px 10px 10px;
+    }
+
+    #SellinBoxBottom{
+        border-top: solid 1px #CCCCCC;
+        display: inline-block;
+        width: 100%;
+        min-height: 200px;
+    }
+
+    #SellinBoxBottomLeft{
+        width: 100%;
+        display: inline-block;
+        text-align: left;
+        padding: 10px 10px 0 10px;
+    }
+
+    #SellinBoxBottomRight{
+        width: 100%;
+        display: inline-block;
+        text-align: left;
+        padding: 0 10px 10px 10px;
+    }
+
+}
+
+@media screen and (min-width: 640px) {
+
+    #SellinInfo {
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 100%;
+        display: none;
+        opacity: 0;
+        transition: 200ms;
+        z-index: 15001;
+        border-bottom: solid 1px;
+    }
+
+    #SellinBoxLeft{
+        width: 50%;
+        float: left;
+        display: inline-block;
+        text-align: left;
+        padding: 20px;
+    }
+
+    #SellinBoxRight{
+        width: 50%;
+        float: left;
+        display: inline-block;
+        text-align: left;
+        padding: 20px;
+    }
+
+    #SellinBoxBottom{
+        border-top: solid 1px #CCCCCC;
+        display: inline-block;
+        width: 100%;
+        min-height: 200px;
+        overflow-y: scroll;
+    }
+
+    #SellinBoxBottomLeft{
+        width: 50%;
+        float: left;
+        display: inline-block;
+        text-align: left;
+        padding: 20px;
+    }
+
+    #SellinBoxBottomRight{
+        width: 50%;
+        float: left;
+        display: inline-block;
+        text-align: left;
+        padding: 20px;
+    }
+
+}
+
+@media screen and (min-width: 960px) {
+
+    #SellinInfo {
+        position: fixed;
+        left: 15%;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 70%;
+        display: none;
+        opacity: 0;
+        transition: 200ms;
+        z-index: 15001;
+    }
+
+}

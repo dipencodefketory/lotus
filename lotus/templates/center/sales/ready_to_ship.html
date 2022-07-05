@@ -1,0 +1,62 @@
+{% extends 'center/sales/sales_basis.html' %}
+{% block title %}Versandfertige Bestellungen{% endblock %}
+
+{% block ext2 %}
+    <div class="box100">
+        <div class="box100title regbig" style="text-align: left">
+            Versandfertige Bestellungen
+        </div>
+        <table class="table" style="text-align: left">
+            <thead class="black">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Platform</th>
+                    <th>Order-ID</th>
+                    <th>Order-Datum</th>
+                    <th>Ziel-Versand-Datum</th>
+                    <th>Verfügbar</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="info">
+                {% for row in data %}
+                    <tr>
+                        <td>
+                            {{ row['p_id'] }}<br>
+                            {{ row['p_hsp_id'] }}<br>
+                            {{ row['p_internal_id'] }}
+                        </td>
+                        <td>{{ row['p_name'] }}</td>
+                        <td>{{ row['platform'] }}</td>
+                        <td>{{ row['order_id'] }}</td>
+                        <td>{{ row['order_date'][:10] }}</td>
+                        <td>{{ row['target_date'].strftime('%d.%m.%Y') }}</td>
+                        <th>{{ row['psa_quant'] }}</th>
+                        <td style="padding: 0">
+                            <label style="width: 35px; height: 35px; padding: 10px; cursor: pointer" for="{{ row['p_id'] }}_{{ row['order_id'] }}" >
+                                <input style="cursor: pointer" type="checkbox" value="{{ row['p_internal_id'] }}" id="{{ row['p_id'] }}_{{ row['order_id'] }}" class="check_boxes">
+                            </label>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button class="standardbutton small blackbutton visible" type="button" value="order" name="btn" onclick="to_afterbuy()" style="float: right">
+            <i class="fa fa-external-link" aria-hidden="true"></i> Zu Afterbuy
+        </button>
+    </div>
+    <script>
+        function to_afterbuy() {
+            var boxes = document.getElementsByClassName('check_boxes');
+            var internal_ids = [];
+            for (var i = 0; i < boxes.length; i++) {
+                if (boxes[i].checked === true){
+                    internal_ids.push(boxes[i].value)
+                }
+            }
+            var ids = internal_ids.join(';');
+            window.open('https://farm02.afterbuy.de/afterbuy/auktionsliste.aspx?AWebayname=&AWFilter=0&AWSuchwort=&AWRENummer=&AWFilter2=0&awmaxart=100&maxgesamt=500&AWEmail=&AWDatumVon=&AWDatumBis=&AWBezug=EndeDerAuktion&AWPLZ=&AWBetrag=&AWBetragBezug=1&AWStammID=' + ids + '&AWLaenderkennung=&AWLaenderkennungBezug=rechnung&AWLabelDynSearchField1=ShippingAddress&AWDynSearchField1=&AWLabelDynSearchField2=PaymentStatus&AWDynSearchField2=&AWDynamicSorting=0&AWLabelDynSearchField3=PaymentShipMethod&AWDynSearchField3=&searchUserTag1=0&searchUserTag2=0&searchUserTag3=0&searchUserTag4=0&killordersession=0&art=SetAuswahl')
+        }
+    </script>
+{%endblock%}

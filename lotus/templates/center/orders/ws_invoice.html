@@ -1,0 +1,501 @@
+{% extends 'center/orders/index.html' %}
+{% block title %}Rechnung {{ wsi.id }}{% endblock %}
+
+{% block ext2 %}
+    <div class="big seven container-fluid text-start py-3">
+        <div class="row">
+            <div class="col-6">
+                Rechnung {{ wsi.id }}
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid text-start">
+        <div class="row">
+            <div class="col-3">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input class="form-control" type="text" id="name" name="name" value="{{ wsi.name }}">
+                </div>
+                <div class="form-group">
+                    <label for="invoice_number">Rechnungsnummer</label>
+                    <input class="form-control" type="text" id="invoice_number" name="invoice_number" value="{{ wsi.invoice_number if wsi.invoice_number else '' }}">
+                </div>
+                <div class="row">
+                    <div class="form-group col-12 col-xl-4">
+                        <label for="net_price">Netto-Preis</label>
+                        <input class="form-control" type="number" step=".01" min="0" id="net_price" name="net_price" value="{{ wsi.net_price }}" {% if wsi.products %}readonly{% endif %}>
+                    </div>
+                    <div class="form-group col-12 col-xl-4">
+                        <label for="gross_price">Brutto-Preis</label>
+                        <input class="form-control" type="number" step=".01" min="0" id="gross_price" name="gross_price" value="{{ wsi.gross_price }}" {% if wsi.products %}readonly{% endif %}>
+                    </div>
+                    <div class="form-group col-12 col-xl-4">
+                        <label for="add_cost">Zusatzkosten</label>
+                        <input class="form-control" type="number" step=".01" min="0" id="add_cost" name="add_cost" value="{{ wsi.add_cost }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="form-group col-12 col-lg-6">
+                        <label for="positions">Positionen</label>
+                        <input class="form-control" type="number" step="1" min="0" id="positions" name="positions" value="{{ wsi.positions }}" {% if wsi.products %}readonly{% endif %}>
+                    </div>
+                    <div class="form-group col-12 col-lg-6">
+                        <label for="num_products">Stückzahl</label>
+                        <input class="form-control" type="number" step="1" min="0" id="num_products" name="num_products" value="{{ wsi.num_products }}" {% if wsi.products %}readonly{% endif %}>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="form-group col-12 col-xl-6">
+                        <label for="invoice_dt">Rechnungsdatum</label>
+                        <input class="form-control" type="date" id="invoice_dt" name="invoice_dt" value="{{ wsi.invoice_dt.strftime('%Y-%m-%d') if wsi.invoice_dt }}">
+                    </div>
+                    <div class="form-group col-12 col-xl-6">
+                        <label for="target_dt">Ziel-Datum</label>
+                        <input class="form-control" type="date" id="target_dt" name="target_dt" value="{{ wsi.target_dt.strftime('%Y-%m-%d') if wsi.target_dt }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="paid_at">Zahl-Datum</label>
+                    <input class="form-control" type="date" id="paid_at" name="paid_at" value="{{ wsi.paid_at.strftime('%Y-%m-%d') if wsi.paid_at }}">
+                </div>
+                <div class="form-group">
+                    <label for="supplier">
+                        Lieferant *
+                        <button type="button" style="margin: 0 5px; padding: 2px 7px" class="supertiny standardbutton visible blackbutton" onclick="refreshsuppliers()">
+                            <i class="fa fa-refresh" aria-hidden="true"></i>
+                        </button>
+                    </label>
+                    <a href="{{ url_for('center_addsupplier') }}" style="float: right" target="_blank">
+                        <button type="button" class="standardbutton supertiny greenbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px">
+                            <i class="fa fa-plus" aria-hidden="true"></i> neu anlegen
+                        </button>
+                    </a>
+                    <select id="supplier" name="supplier" class="form-control">
+                        <option value=""></option>'
+                        {% for supplier in suppliers %}
+                        <option id="{{ supplier.id }}" value="{{ supplier.id }}" {% if supplier.id==wsi.supplier_id %}selected{% endif %}>
+                            {% if supplier.isfirm %}
+                                {{ supplier.firmname }}
+                            {% else %}
+                                {{ supplier.salutation }} {{ supplier.firstname }} {{ supplier.name }}
+                            {% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ws_receipt">
+                        Waren-Eingang *
+                    </label>
+                    <select id="ws_receipt" name="ws_receipt" class="form-control">
+                        <option value=""></option>'
+                        {% for wsr in ws_receipts %}
+                            <option id="{{ wsr.id }}" value="{{ wsr.id }}" {% if wsr.id==wsi.receipt.id %}selected{% endif %}>
+                                {{ wsr.name }} ({{ wsr.external_id if wsr.external_id else '-' }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="comment">Kommentar</label>
+                    <textarea class="form-control" id="comment" name="comment">{{ wsi.comment if wsi.comment != None else ''}}</textarea>
+                </div>
+            </div>
+            <div class="col-9">
+                <table class="table">
+                    <thead>
+                        <tr class="black">
+                            <th>
+                            </th>
+                            <th>
+                                ID<br>
+                                Interne ID<br>
+                                HSP-ID
+                            </th>
+                            <th>
+                                Name
+                            </th>
+                            <th>
+                                Anzahl
+                            </th>
+                            <th>
+                                Steuer
+                            </th>
+                            <th>
+                                Netto
+                            </th>
+                            <th>
+                                Brutto
+                            </th>
+                            <th>
+                                Gesamt
+                            </th>
+                            <th>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in wsi.products %}
+                            <tr id="row_{{ p.id }}" style="{% if p.complete == True %}background: #caf0c7{% endif %}">
+                                <input type="hidden" class="product_ident" value="{{ p.id }}"/>
+                                <td>
+                                    <button class="smallbutton redbutton visible" onclick="delete_wsi_products(['{{ p.id }}'])"><i class="fa fa-trash"></i></button>
+                                </td>
+                                <td>
+                                    {{ p.product.id }}<br>
+                                    {{ p.product.internal_id }}<br>
+                                    {{ p.product.hsp_id }}
+                                </td>
+                                <td>
+                                    {{ p.product.name }}
+                                </td>
+                                <td id="wsi_product_{{ p.id }}_quantity">
+                                    <input {% if p.complete == True %}readonly {% endif %}type="number" step="1" id="wsi_p_{{ p.id }}_quantity" name="wsi_p_{{ p.id }}_quantity" value="{{ p.quantity }}"
+                                           onchange="update_product_inputs('{{ p.id }}', 'one')" style="width: 80px">
+                                </td>
+                                <td id="wsi_product_{{ p.id }}_tax">
+                                    <input {% if p.complete == True %}readonly {% endif %}type="number" step=".01" id="wsi_p_{{ p.id }}_tax" name="wsi_p_{{ p.id }}_tax" value="{{ '%0.2f' % (p.tax * 100) }}"
+                                           onchange="update_product_inputs('{{ p.id }}', 'both')" style="width: 80px"> %
+                                </td>
+                                <td id="wsi_product_{{ p.id }}_net_price">
+                                    <input {% if p.complete == True %}readonly {% endif %}type="number" step=".01" id="wsi_p_{{ p.id }}_net_price" name="wsi_p_{{ p.id }}_net_price" value="{{ '%0.2f' % (p.price) }}"
+                                           onchange="update_product_inputs('{{ p.id }}', 'both')" style="width: 80px"> €
+                                </td>
+                                <td id="wsi_product_{{ p.id }}_gross_price">
+                                    {{ '%0.2f' % (p.price * (1 + p.tax)) }} €
+                                </td>
+                                <td id="wsi_product_{{ p.id }}_full_price">
+                                    {{ '%0.2f' % (p.price * (1 + p.tax) * p.quantity) }} €
+                                </td>
+                                <td>
+                                    <button class="smallbutton blackbutton tiny visible" onclick="patch_wsi_product('{{ p.id }}')"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        <tr id="add_row">
+                            <td class="reg font-weight-bold border-dark">ADD</td>
+                            <td class="border-dark">
+                                <input type="hidden" id="add_hsp_id">
+                                <input type="hidden" id="add_p_id">
+                                <input type="text" id="add_id" class="add_id w-100" onkeyup="update_add_name(this)">
+                            </td>
+                            <td class="border-dark">
+                                <input type="text" id="add_name" class="add_name w-100">
+                            </td>
+                            <td class="border-dark text-nowrap">
+                                <input type="number" step="1" id="add_quantity" class="add_quantity" value="1" style="width: 80px" onchange="update_add_inputs(this)">
+                            </td>
+                            <td class="border-dark text-nowrap">
+                                <input type="number" step=".01" id="add_tax" class="add_tax" value="{{ base_tax }}" style="width: 80px" onchange="update_add_inputs(this)"> %
+                            </td>
+                            <td class="border-dark text-nowrap">
+                                <input type="number" step=".01" id="add_net_price" class="add_net_price" value="" style="width: 80px" onchange="update_add_inputs(this)"> €
+                            </td>
+                            <td class="border-dark text-nowrap">
+                                <input type="number" step=".01" id="add_gross_price" class="add_gross_price" value="" style="width: 80px" onchange="update_add_inputs(this)"> €
+                            </td>
+                            <td class="border-dark text-nowrap">
+                                <div id="add_full_price" class="add_full_price my-1" style="width: 80px">-</div>
+                            </td>
+                            <td class="border-dark text-nowrap text-right">
+                                <button class="smallbutton blackbutton tiny visible" onclick="add_wsi_product()"><i class="fa fa-plus" aria-hidden="true"></i></button>
+                            </td>
+                        </tr>
+                        <tr class="lightgrey font-weight-bold">
+                            <td colspan="7" class="text-right">
+                            </td>
+                            <td class="text-right">
+                                <span id="wsi_net_price">{{ '%0.2f' % (wsi.net_price) if wsi.net_price else '-'}}</span> €<br>
+                                <span id="wsi_gross_price">{{ '%0.2f' % (wsi.gross_price) if wsi.gross_price else '-' }}</span> €<br>
+                                <span id="wsi_product_positions">{{ wsi.positions }}</span><br>
+                                <span id="wsi_product_quantity">{{ wsi.num_products }}</span>
+                            </td>
+                            <td>
+                                Netto<br>
+                                Brutto<br>
+                                Pos.<br>
+                                Stk.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 text-center">
+               <button class="standardbutton blackbutton small visible" onclick="patch_wsi()"><i class="fa fa-floppy-o" aria-hidden="true"></i> Speichern</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+
+        function patch_wsi() {
+            darken();
+            let data = {
+                'id': {{ wsi.id }},
+                'name': document.getElementById('name').value,
+                'invoice_number': document.getElementById('invoice_number').value,
+                'invoice_dt': document.getElementById('invoice_dt').value,
+                'target_dt': document.getElementById('target_dt').value,
+                'paid_at': document.getElementById('paid_at').value,
+                'paid': document.getElementById('paid_at').value,
+                'net_price': document.getElementById('net_price').value,
+                'gross_price': document.getElementById('gross_price').value,
+                'positions': document.getElementById('positions').value,
+                'num_products': document.getElementById('num_products').value,
+                'add_cost': document.getElementById('add_cost').value,
+                'supplier_id': document.getElementById('supplier').value,
+                'ws_receipt_id': document.getElementById('ws_receipt').value,
+                'comment': document.getElementById('comment').value,
+                'products': []
+            };
+            data['products'] = Array.prototype.map.call(document.getElementsByClassName('product_ident'), function f(product) {
+                return {
+                    'id': product.value,
+                    'quantity': document.getElementById('wsi_p_' + product.value + '_quantity').value,
+                    'tax': document.getElementById('wsi_p_' + product.value + '_tax').value,
+                    'price': document.getElementById('wsi_p_' + product.value + '_net_price').value
+                }
+            });
+            console.log(data);
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_invoice.patch') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    let result = response.result;
+                    document.getElementById('wsi_net_price').innerText = result.net_price;
+                    document.getElementById('wsi_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsi_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsi_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('net_price').value = result.gross_price;
+                    document.getElementById('gross_price').value = result.net_price;
+                    document.getElementById('positions').value = result.product_positions;
+                    document.getElementById('num_products').value = result.product_quantity;
+                    for (let j=0; j < result.products.length; j++){
+                        let p = result.products[j];
+                        document.getElementById('wsi_product_' + p.id + '_gross_price').innerHTML = p.gross_price + ' €';
+                        document.getElementById('wsi_product_' + p.id + '_full_price').innerHTML = p.full_price + ' €';
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.message, 'danger');
+                }
+            });
+        }
+
+        function add_wsi_product() {
+            darken();
+            let data = {
+                'id': {{ wsi.id }},
+                'products':
+                    [
+                        {
+                            'id': document.getElementById("add_p_id").value,
+                            'ean': document.getElementById("add_hsp_id").value,
+                            'name': document.getElementById("add_name").value,
+                            'quantity': document.getElementById("add_quantity").value,
+                            'tax': document.getElementById("add_tax").value,
+                            'price': document.getElementById("add_net_price").value
+                        }
+                    ]
+            };
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_invoice.add_products') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    let result = response.result;
+                    document.getElementById('wsi_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsi_net_price').innerText = result.net_price;
+                    document.getElementById('wsi_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsi_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('net_price').value = result.gross_price;
+                    document.getElementById('gross_price').value = result.net_price;
+                    document.getElementById('positions').value = result.product_positions;
+                    document.getElementById('num_products').value = result.product_quantity;
+                    document.getElementById('net_price').readOnly = true;
+                    document.getElementById('gross_price').readOnly = true;
+                    document.getElementById('positions').readOnly = true;
+                    document.getElementById('num_products').readOnly = true;
+                    for (let j=0; j < result.products.length; j++) {
+                        let wsi_p = result.products[j];
+                        let new_row = document.createElement('tr');
+                        new_row.id = "row_" + wsi_p.id;
+                        let product_ident = document.createElement('input');
+                        product_ident.type = 'hidden';
+                        product_ident.className = 'product_ident';
+                        product_ident.value = wsi_p.id;
+                        new_row.appendChild(product_ident);
+                        let td_1 = new_row.insertCell();
+                        td_1.innerHTML = '<button class="smallbutton redbutton visible" onclick="delete_wsi_products([\'' + wsi_p.id + '\'])"><i class="fa fa-trash"></i></button>';
+                        let td_3 = new_row.insertCell();
+                        td_3.innerHTML = wsi_p.p_id + '<br>' + wsi_p.p_internal_id + '<br>' + wsi_p.p_hsp_id;
+                        let td_4 = new_row.insertCell();
+                        td_4.innerHTML = wsi_p.p_name;
+                        let td_5 = new_row.insertCell();
+                        td_5.className = 'text-nowrap';
+                        td_5.id = 'wsi_product_' + wsi_p.id + '_quantity';
+                        td_5.innerHTML = '<input type="number" step="1" id="wsi_p_' + wsi_p.id + '_quantity" name="wsi_p_' + wsi_p.id + '_quantity" value="' + wsi_p.quantity + '" onchange="update_product_inputs(\'' + wsi_p.id + '\', \'one\')" style="width: 80px">';
+                        let td_6 = new_row.insertCell();
+                        td_6.className = 'text-nowrap';
+                        td_6.id = 'wsi_product_' + wsi_p.id + '_tax';
+                        td_6.innerHTML = '<input type="number" step=".01" id="wsi_p_' + wsi_p.id + '_tax" name="wsi_p_' + wsi_p.id + '_tax" value="' + wsi_p.tax + '" onchange="update_product_inputs(\'' + wsi_p.id + '\', \'both\')" style="width: 80px"> %';
+                        let td_7 = new_row.insertCell();
+                        td_7.className = 'text-nowrap';
+                        td_7.id = 'wsi_product_' + wsi_p.id + '_net_price';
+                        td_7.innerHTML = '<input type="number" step=".01" id="wsi_p_' + wsi_p.id + '_net_price" name="wsi_p_' + wsi_p.id + '_net_price" value="' + wsi_p.net_price + '" onchange="update_product_inputs(\'' + wsi_p.id + '\', \'both\')" style="width: 80px"> €';
+                        let td_8 = new_row.insertCell();
+                        td_8.className = 'text-nowrap';
+                        td_8.id = 'wsi_product_' + wsi_p.id + '_gross_price';
+                        td_8.innerHTML = '<div class="my-1">' + wsi_p.gross_price + '€</div>';
+                        let td_9 = new_row.insertCell();
+                        td_9.className = 'text-nowrap';
+                        td_9.id = 'wsi_product_' + wsi_p.id + '_full_price';
+                        td_9.innerHTML = '<div class="my-1">' + wsi_p.full_price + '€</div>';
+                        let td_10 = new_row.insertCell();
+                        td_10.className = 'text-nowrap';
+                        td_10.innerHTML = '<button class="smallbutton blackbutton tiny visible" onclick="patch_wsi_product(\'' + wsi_p.id + '\')"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>';
+                        let target = document.getElementById('add_row');
+                        target.parentNode.insertBefore(new_row, target);
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.message, 'danger');
+                }
+            });
+        }
+
+        function patch_wsi_product(wsi_p_id) {
+            darken();
+            let data = {
+                'id': {{ wsi.id }},
+                'products': [
+                    {
+                        'id': wsi_p_id,
+                        'quantity': document.getElementById('wsi_p_' + wsi_p_id + '_quantity').value,
+                        'tax': document.getElementById('wsi_p_' + wsi_p_id + '_tax').value,
+                        'price': document.getElementById('wsi_p_' + wsi_p_id + '_net_price').value
+                    }
+                ]
+            };
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_invoice.patch') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    let result = response.result;
+                    document.getElementById('wsi_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsi_net_price').innerText = result.net_price;
+                    document.getElementById('wsi_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsi_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('net_price').value = result.gross_price;
+                    document.getElementById('gross_price').value = result.net_price;
+                    document.getElementById('positions').value = result.product_positions;
+                    document.getElementById('num_products').value = result.product_quantity;
+                    for (let j=0; j < result.products.length; j++){
+                        let p = result.products[j];
+                        document.getElementById('wsi_product_' + p.id + '_gross_price').innerHTML = p.gross_price + ' €';
+                        document.getElementById('wsi_product_' + p.id + '_full_price').innerHTML = p.full_price + ' €';
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.message, 'danger');
+                }
+            });
+        }
+
+        function delete_wsi_products(wsi_p_ids) {
+            darken();
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_invoice.delete_products') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(wsi_p_ids),
+                success: function(response) {
+                    let result = response.result[0];
+                    document.getElementById('wsi_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsi_net_price').innerText = result.net_price;
+                    document.getElementById('wsi_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsi_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('net_price').value = result.gross_price;
+                    document.getElementById('gross_price').value = result.net_price;
+                    document.getElementById('positions').value = result.product_positions;
+                    document.getElementById('num_products').value = result.product_quantity;
+                    if (result.read_only_off === true) {
+                        document.getElementById('net_price').readOnly = false;
+                        document.getElementById('gross_price').readOnly = false;
+                        document.getElementById('positions').readOnly = false;
+                        document.getElementById('num_products').readOnly = false;
+                    }
+                    for (let i=0; i < wsi_p_ids.length; i++){
+                        let row = document.getElementById('row_' + wsi_p_ids[i]);
+                        row.parentNode.removeChild(row);
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.message, 'danger');
+                }
+            });
+        }
+
+        function update_add_inputs(obj) {
+            if (obj.className ==='add_tax' || obj.className ==='add_net_price') {
+                document.getElementById('add_gross_price').value = (document.getElementById('add_net_price').value * (1 + document.getElementById('add_tax').value / 100)).toFixed(2);
+            }
+            if (obj.className ==='add_gross_price') {
+                document.getElementById('add_net_price').value = (document.getElementById('add_gross_price').value / (1 + document.getElementById('add_tax').value / 100)).toFixed(2);
+            }
+            document.getElementById('add_full_price').innerText = (document.getElementById('add_gross_price').value * document.getElementById('add_quantity').value).toFixed(2) + ' €';
+        }
+
+        function update_product_inputs(p_id, mode) {
+            let quantity = document.getElementById('wsi_p_' + p_id + '_quantity').value;
+            let tax = document.getElementById('wsi_p_' + p_id + '_tax').value;
+            let net_price = document.getElementById('wsi_p_' + p_id + '_net_price').value;
+            let gross_price = net_price * (1 +  tax / 100);
+            if (mode ==='both') {
+                document.getElementById('wsi_product_' + p_id + '_gross_price').innerHTML = gross_price.toFixed(2) + ' €';
+            }
+            document.getElementById('wsi_product_' + p_id + '_full_price').innerHTML = (quantity * gross_price).toFixed(2) + ' €';
+        }
+
+        function update_add_name(obj) {
+            fetch('/center/orders/get_hsp_id_name/'+obj.value).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("add_name").value = data.product_name;
+                    document.getElementById("add_p_id").value = data.product_id;
+                    document.getElementById("add_hsp_id").value = data.hsp_id;
+                });
+            });
+        }
+    </script>
+{%endblock%}
+

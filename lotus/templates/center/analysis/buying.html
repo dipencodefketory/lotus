@@ -1,0 +1,419 @@
+{% extends 'center/analysis/index.html' %}
+{% block title %}Einkauf{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div class="box100 visible five" style="text-align: left">
+        <div class="big seven" style="padding: 15px 0 10px 20px"><i>Filter</i></div>
+        <form action="" method="POST" name="filterform" style="padding-top: 3px">
+            <input type="text" name="checker" value="filter" hidden>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <div class="form-group" style="margin-top: 20px">
+                    <label for="product_ids" style="width: 100%">Produkte
+                        <div style="float: right">
+                            <input type="radio" value="id" id="id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['analysis_buy_filter'] %}
+                                    {% if session['analysis_buy_filter']['product_id_type'] == 'id' %}
+                                        checked
+                                    {% endif %}
+                                    {% else %}
+                                        checked
+                                    {% endif %}
+                            >
+                            <label for="id" style="margin: 0; padding-bottom: 0">ID
+                            </label>
+                            <input type="radio" value="Internal_ID" id="Internal_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['analysis_buy_filter'] %}
+                                    {% if session['analysis_buy_filter']['product_id_type'] == 'Internal_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="Internal_ID" style="margin: 0; padding-bottom: 0">Interne ID
+                            </label>
+                            <input type="radio" value="HSP_ID" id="HSP_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['analysis_buy_filter'] %}
+                                    {% if session['analysis_buy_filter']['product_id_type'] == 'HSP_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="HSP_ID" style="margin: 0; padding-bottom: 0">HSP-ID
+                            </label>
+                            <input hidden name="product_type" id="product_type" value="{{ session['analysis_buy_filter']['product_id_type'] if session['analysis_buy_filter']['product_id_type'] else 'id' }}">
+                        </div>
+                    </label>
+                    <textarea rows="4" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% for p in session['analysis_buy_filter']['product_ids'] %}{{ p }};{% endfor %}</textarea>
+                    <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                    <div style="position:relative;">
+                        <input type="text" name="product" style="border: solid 1px black;"  class="form-control" id="product" list="product-datalist" style="padding-right: 120px" onkeyup="find_products(this.value)">
+                        <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                        <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="splitright">
+                <table class="table tiny" style="margin-bottom: 0; text-align: left; border: none; box-shadow: none">
+                    <thead style="border: none; box-shadow: none">
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px; position: relative">
+                                Bestandsänderung:<br>
+                                <label for="sd_factor"> Faktor:
+                                </label>
+                                <input style="border: solid 1px black; width: 100%; display: block" id="sd_factor" step="0.01" type="number" min="0" name="sd_factor" class="form-control tiny" value="{{ session['analysis_buy_filter']['sd_factor'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="sd_min_ts"> Von:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="sd_min_ts" id="sd_min_ts" value="{{ session['analysis_buy_filter']['sd_min_ts'].strftime('%Y-%m-%d') if session['analysis_buy_filter']['sd_min_ts'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px; position: relative">
+                                Preisänderung:<br>
+                                <label for="bp_factor"> Faktor:
+                                </label>
+                                <input style="border: solid 1px black; width: 100%; display: block" id="bp_factor" step="0.01" type="number" min="0" name="bp_factor" class="form-control tiny" value="{{ session['analysis_buy_filter']['bp_factor'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="bp_min_ts"> Von:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="bp_min_ts" id="bp_min_ts" value="{{ session['analysis_buy_filter']['bp_min_ts'].strftime('%Y-%m-%d') if session['analysis_buy_filter']['bp_min_ts'] }}">
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px; position: relative">
+                                Bestand:<br>
+                                <label for="min_quant"> Min.:
+                                </label>
+                                <input style="border: solid 1px black; width: 100%; display: block" id="min_quant" step="1" type="number" name="min_quant" class="form-control tiny" value="{{ session['analysis_buy_filter']['min_quant'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="max_quant"> Max.:
+                                </label>
+                                <input style="border: solid 1px black; width: 100%; display: block" id="max_quant" step="1" type="number" name="max_quant" class="form-control tiny" value="{{ session['analysis_buy_filter']['max_quant'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                EK:<br>
+                                <label for="min_price"> Min.:
+                                </label>
+                                <input style="border: solid 1px black; width: 100%; display: block" id="min_price" step="0.01" type="number" min="0" name="min_price" class="form-control tiny" value="{{ session['analysis_buy_filter']['min_price'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="max_price"> Max.:
+                                </label>
+                                <input style="border: solid 1px black; width: 100%; display: block" id="max_price" step="0.01" type="number" min="0" name="max_price" class="form-control tiny" value="{{ session['analysis_buy_filter']['max_price'] }}">
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <div class="table_top_filter white" id="category-top_filter" onclick="show_filter_options('category')" onmouseover="show_filter_options('category')" onmouseleave="hide_filter_options('category')">
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i> Haupt-Kategorien
+                                    <div class="table_top_filter-dropdown visible" id="category-top_filter-dropdown" onmouseover="show_filter_options('category')" onmouseleave="hide_filter_options('category')">
+                                        <table class="table">
+                                            <tbody>
+                                                <tr style="padding: 0; margin: 0">
+                                                    <td style="padding: 0; margin: 0">
+                                                        <label for="category" class="clickable_rowbox" style="height:100%; padding:5px; width: 100%">
+                                                            <input type="checkbox" id="category" style="cursor: pointer; margin: 5px; position: relative; top:1.5px" onchange="selectall(this.checked, 'category')" checked>
+                                                            <i>Alle</i>
+                                                        </label>
+                                                    </td>
+                                                </tr>
+                                                {% for cat in main_cats %}
+                                                    <tr style="padding: 0; margin: 0">
+                                                        <td style="padding: 0; margin: 0">
+                                                            <label for="category{{ cat.id }}" style="height:100%; padding:5px; width: 100%">
+                                                                <input type="checkbox" value="{{ cat.id }}" style="margin: 5px; position: relative; top:1.5px" class="category_filter" name="category_filter" id="category{{ cat.id }}"
+                                                                    {% if cat.id in session['analysis_buy_filter']['main_cat_ids'] or not session['analysis_buy_filter']['main_cat_ids'] %}
+                                                                   checked
+                                                                   {% endif %}> {{ cat.name }}
+                                                            </label>
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <div class="table_top_filter white" id="supplier-top_filter" onclick="show_filter_options('supplier')" onmouseover="show_filter_options('supplier')" onmouseleave="hide_filter_options('supplier')">
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i> Lieferanten
+                                    <div class="table_top_filter-dropdown visible" id="supplier-top_filter-dropdown" onmouseover="show_filter_options('supplier')" onmouseleave="hide_filter_options('supplier')">
+                                        <table class="table">
+                                            <tbody>
+                                                <tr style="padding: 0; margin: 0">
+                                                    <td style="padding: 0; margin: 0">
+                                                        <label for="supplier" class="clickable_rowbox" style="height:100%; padding:5px; width: 100%">
+                                                            <input type="checkbox" id="supplier" style="cursor: pointer; margin: 5px; position: relative; top:1.5px" onchange="selectall(this.checked, 'supplier')" checked>
+                                                            <i>Alle</i>
+                                                        </label>
+                                                    </td>
+                                                </tr>
+                                                {% for sup in sups %}
+                                                    <tr style="padding: 0; margin: 0">
+                                                        <td style="padding: 0; margin: 0">
+                                                            <label for="supplier{{ sup.id }}" style="height:100%; padding:5px; width: 100%">
+                                                                <input type="checkbox" value="{{ sup.id }}" style="margin: 5px; position: relative; top:1.5px" class="supplier_filter" name="supplier_filter" id="supplier{{ sup.id }}"
+                                                                    {% if sup.id in session['analysis_buy_filter']['sup_ids'] or not session['analysis_buy_filter']['sup_ids'] %}
+                                                                   checked
+                                                                   {% endif %}> {{ sup.get_name() }}
+                                                            </label>
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;"></th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <button class="standardbutton tiny blackbutton visible" style="float: right; margin: 0" type="submit" value="filter" name="btn">
+                                    <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <input type="hidden" name="order_by" id="order_by" value="{{ session['analysis_buy_filter']['order_by'] }}"/>
+            <input type="hidden" name="order_dir" id="order_dir" value="{{ session['analysis_buy_filter']['order_dir'] }}"/>
+        </form>
+    </div>
+    <div class="visible white small box100">
+        <form name="order_form" action="" method="POST">
+            <input type="hidden" name="checker" value="order"/>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <table class="table tiny sortable" style="text-align: left">
+                <thead class="black">
+                    <tr>
+                        <th class="sortable" onclick="sort('p_id')">ID
+                            {% if session['analysis_buy_filter']['order_by'] == 'p_id' %}
+                                {% if session['analysis_buy_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable">Name
+                        </th>
+                        <th class="sortable">Haupt-Kategorie
+                        </th>
+                        <th class="sortable" onclick="sort('p_release_date')">Release-Datum
+                            {% if session['analysis_buy_filter']['order_by'] == 'p_release_date' %}
+                                {% if session['analysis_buy_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('idealo_curr_rank')">Idealo-Platzierung
+                            {% if session['analysis_buy_filter']['order_by'] == 'idealo_curr_rank' %}
+                                {% if session['analysis_buy_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable">Lieferant
+                        </th>
+                        <th class="sortable" onclick="sort('psa_quantity')">Akt. Stck.
+                            {% if session['analysis_buy_filter']['order_by'] == 'psa_quantity' %}
+                                {% if session['analysis_buy_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('abs_q_diff')">&#916;<sub>abs</sub> Stck.
+                            {% if session['analysis_buy_filter']['order_by'] == 'abs_q_diff' %}
+                                {% if session['analysis_buy_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('rel_q_diff')">&#916;<sub>rel</sub> Stck.
+                            {% if session['analysis_buy_filter']['order_by'] == 'rel_q_diff' %}
+                                {% if session['analysis_buy_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('old_price')">Urspr. EK
+                            {% if session['analysis_buy_filter']['order_by'] == 'old_price' %}
+                                {% if session['analysis_buy_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('psa_buying_price')">Akt. EK
+                            {% if session['analysis_buy_filter']['order_by'] == 'psa_buying_price' %}
+                                {% if session['analysis_buy_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('rel_p_diff')">&#916;<sub>rel</sub> EK
+                            {% if session['analysis_buy_filter']['order_by'] == 'rel_p_diff' %}
+                                {% if session['analysis_buy_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable"></th>
+                    </tr>
+                </thead>
+                <tbody id="table_body">
+
+                </tbody>
+            </table>
+            <div id="loader" class="box100" style="position: relative; height: 200px">
+                <div class="loader"></div>
+            </div>
+            <input name="active_order_fields" id="active_order_fields" hidden>
+            <button class="standardbutton tiny blackbutton visible" type="button" value="order" name="btn" onclick="add_orders()">
+                <i class="fa fa-floppy-o" aria-hidden="true"></i> Bestellungen anlegen
+            </button>
+        </form>
+    </div>
+    <script>
+        var table_body = document.getElementById('table_body');
+        fetch('/center/analysis/buying/filter').then(function (response) {
+            response.json().then(function (data) {
+                document.getElementById('loader').style.display = 'None';
+                for (var i = 0; i < data.results.length; i++) {
+                    var t_row = table_body.insertRow();
+                    var p_id_cell = t_row.insertCell();
+                    p_id_cell.innerText = data.results[i].p_id;
+                    var p_name_cell = t_row.insertCell();
+                    p_name_cell.innerText = data.results[i].p_name;
+                    var p_category_cell = t_row.insertCell();
+                    p_category_cell.innerText = data.results[i].p_category;
+                    var p_release_cell = t_row.insertCell();
+                    p_release_cell.innerText = data.results[i].p_release;
+                    var idealo_rank_cell = t_row.insertCell();
+                    idealo_rank_cell.innerText = data.results[i].idealo_rank;
+                    var supplier_cell = t_row.insertCell();
+                    supplier_cell.innerText = data.results[i].supplier;
+                    var curr_quant_cell = t_row.insertCell();
+                    curr_quant_cell.innerText = data.results[i].curr_quant;
+                    var abs_q_diff_cell = t_row.insertCell();
+                    abs_q_diff_cell.innerText = data.results[i].abs_q_diff;
+                    var rel_q_diff_cell = t_row.insertCell();
+                    rel_q_diff_cell.innerText = data.results[i].rel_q_diff;
+                    var old_p_diff_cell = t_row.insertCell();
+                    old_p_diff_cell.innerText = data.results[i].old_price;
+                    var curr_price_cell = t_row.insertCell();
+                    curr_price_cell.innerText = data.results[i].curr_price;
+                    var rel_p_diff_cell = t_row.insertCell();
+                    rel_p_diff_cell.innerText = data.results[i].rel_p_diff;
+                    var order_cell = t_row.insertCell();
+                    var order_input = '<input class="order_field" required min="0" value="0" style="width: 60px;" type="number" name="' + data.results[i].supplier_id + '_' + data.results[i].p_id + '">';
+                    order_input += '<input hidden name="' + data.results[i].supplier_id + '_' + data.results[i].p_id + '_price" value="' + data.results[i].curr_price_float + '">';
+                    order_cell.innerHTML = order_input;
+                }
+            });
+        });
+
+        function add_orders() {
+            var order_fields = document.getElementsByClassName('order_field');
+            var active_order_fields = [];
+            for (var i = 0; i < order_fields.length; i++) {
+                if (order_fields[i].value !== '0' && order_fields[i].value !== '') {
+                    active_order_fields.push(order_fields[i].name)
+                }
+            }
+            document.getElementById('active_order_fields').value = active_order_fields.join();
+            document.order_form.submit();
+        }
+
+        function transform_ids(val) {
+            old_type = document.getElementById('product_type').value;
+            document.getElementById('product_type').value = val;
+            ids = document.getElementById('product_ids').value.replace(/(?:\r\n|\r|\n|,)/g, ';');
+            fetch('/center/product/dynamic_pricing/transform_ids/'+ids+','+old_type+','+val).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('product_ids').value = data.ids;
+                    if(data.not_found!==''){
+                        alert("Die IDs "+data.not_found+" konnten nicht umgewandelt werden.");
+                    }
+                });
+            });
+        }
+
+        function sort(val){
+            fetch('/center/analysis/buying/sort/' + val).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('order_by').value = val;
+                    document.getElementById('order_dir').value = data.order_dir;
+                    document.filterform.submit();
+                });
+            });
+        }
+
+        function show_filter_options(type){
+            document.getElementById(type+'-top_filter-dropdown').style.display = 'Block';
+            setTimeout(function () {
+                document.getElementById(type+'-top_filter-dropdown').style.opacity = '1.0';
+            }, 100);
+        }
+
+        function hide_filter_options(type){
+            obj = document.getElementById(type);
+            setTimeout(function () {
+                if (! $(obj).is(':focus')){
+                    document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                    setTimeout(function () {
+                        document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                    }, 100);
+                }}, 200);
+            if (! $(obj).is(':focus')){
+                document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                setTimeout(function () {
+                    document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                }, 100);
+            }
+        }
+
+        function selectall(check, type) {
+            all = document.getElementsByClassName(type+"_filter");
+            if (check==true){
+                for (i=0; i < all.length ; i++){
+                    all[i].checked = true;
+                    }
+                }
+            else{
+                for (i=0; i < all.length ; i++){
+                    all[i].checked = false;
+                    }
+                }
+        }
+
+    </script>
+{%endblock%}

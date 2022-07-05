@@ -1,0 +1,354 @@
+{% extends 'center/basis.html' %}
+{% block title %}Marketplace-Attribute - {{ product.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="alert alert-success small visible" id="price_update_message" style="position: absolute; left: 25%; width: 50%; top: -100%; z-index: 5000"></div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_product', id=product.id) }}">
+            <div class="submenu five">
+                Produkt-Attribute
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_features', id=product.id) }}">
+            <div class="submenu five">
+                Produkt-Features
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Marketplace-Attribute
+        </div>
+        {% if 'Produkt-Management' in session.roles %}
+            <a class="blackfont" href="{{ url_for('center_product_pricingactions', id=product.id) }}">
+                <div class="submenu five">
+                    Pricing-Aktionen
+                </div>
+            </a>
+            <a class="blackfont" href="{{ url_for('center_product_update_logs', p_id=product.id) }}">
+                <div class="submenu five">
+                    Update-Logs
+                </div>
+            </a>
+        {% endif %}
+    </div>
+    <div class="visible white small box100 " style="text-align: left; position: relative; overflow: hidden;">
+        <div class="big box100title" style="text-align: left">
+            {{ product.name }} <span class="small"><i>({{ product.hsp_id_type }}: {{ product.hsp_id }})</i></span><br>
+            <div class="standardbutton blackbutton small visible" onclick="open_pictures()" style="margin-left: 0">
+                <i class="fa fa-image" aria-hidden="true"></i> Produkt-Bilder
+            </div>
+            <div class="standardbutton blackbutton small visible" onclick="openlinks()" style="margin-left: 0">
+                <i class="fa fa-external-link" aria-hidden="true"></i> Externe Links
+            </div>
+            {% if mp_attributes %}
+                <div class="standardbutton blackbutton small visible" onclick="window.open('{{ url_for("center_product_marketplace_data_generate_description", product_id=product.id, marketplace_id=marketplace.id) }}', '_self')" style="margin-left: 0">
+                    <i class="fa fa-refresh" aria-hidden="true"></i> Beschreibung generieren
+                </div>
+                <div class="standardbutton blackbutton small visible" onclick="upload_data()" style="margin-left: 0">
+                    <i class="fa fa-upload" aria-hidden="true"></i> {{ marketplace.name }}-Upload
+                </div>
+            {% endif %}
+        </div>
+        <div class="small three box100title" style="text-align: left">
+            <form action="" method="POST" name="marketplace_chooser">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="text" name="checker" value="marketplace_chooser" hidden>
+                <label for="marketplace_chooser">
+                    Marketplace wählen:
+                </label>
+                <select style="border: solid 1px black; width: 200px" name="marketplace_chooser" id="marketplace_chooser" onchange="change_marketplace()">
+                    <option value="" selected></option>
+                    {% for mp in marketplaces %}
+                    <option value="{{ mp.id }}" {% if mp==marketplace %}selected{% endif %}>{{ mp.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% if mp_attributes %}
+                <table>
+                    <tr>
+                        <td>
+                            <input name="upload_clearance" id="upload_clearance" type="checkbox" {% if mp_attributes.upload_clearance==True %}checked{% endif %} style="left: 0" onchange="update_clearance()">
+                        </td>
+                        <td style="padding-top: 10px">
+                            <label for="upload_clearance">
+                                <span>Upload-Freigabe</span>
+                            </label>
+                        </td>
+                    </tr>
+                </table>
+            {% endif %}
+        </div>
+    </div>
+    <div class="visible white small box100 " style="text-align: left; position: relative; overflow: hidden;">
+        {% if mp_attributes %}
+            <div id="MarketplaceAttributeHolder" style="position: relative; padding-top: 20px">
+                <form id="form" action="" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="marketplace" id="marketplace">
+                    <div class="splitleft">
+                        <div class="form-group">
+                            <input hidden name="marketplace_id" value="{{ marketplace.id }}">
+                            <div style="width: 25%; padding: 0 10px 1px 0; float: left;">
+                                <label for="marketplace_system_id">Marketplace-ID </label>
+                                <input type="text" id="marketplace_system_id" name="marketplace_system_id" class="form-control" value="{{ mp_attributes.marketplace_system_id if mp_attributes.marketplace_system_id }}">
+                                <span class="supertiny formwarning" id="marketplace_system_id_warning">Keine Eingabe!</span>
+                            </div>
+                            <div style="width: 75%; padding: 0 0 1px 10px; float: left;">
+                                <label for="name">Name * </label>
+                                <input type="text" id="name" name="name" maxlength="
+                                    {% if marketplace.name == 'Idealo' %}
+                                    255
+                                    {% elif marketplace.name == 'Ebay' %}
+                                    80
+                                    {% endif %}
+                                    " class="form-control" value="{{ mp_attributes.name if mp_attributes.name }}">
+                                <span class="supertiny formwarning" id="name_warning">Keine Eingabe!</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <input hidden name="marketplace_id" value="{{ marketplace.id }}">
+                            <div style="width: 25%; padding: 0 10px 1px 0; float: left;">
+                                <label for="mp_hsp_id">Marketplace-HSP-ID </label>
+                                <input type="text" id="mp_hsp_id" name="mp_hsp_id" class="form-control" value="{{ mp_attributes.mp_hsp_id if mp_attributes.mp_hsp_id else mp_attributes.product.hsp_id}}">
+                                <span class="supertiny formwarning" id="mp_hsp_id_warning">Keine Eingabe!</span>
+                            </div>
+                            <div style="width: 75%; padding: 0 0 1px 10px; float: left;">
+                                <label for="search_term">Suchwort</label>
+                                <input type="text" id="search_term" name="search_term" maxlength="100" class="form-control" value="{{ mp_attributes.search_term if mp_attributes.search_term }}">
+                            </div>
+                        </div>
+                        <div class="form-group" style="position: relative">
+                            <div style="width: 25%; padding: 0 10px 1px 0; float: left; position: relative">
+                            </div>
+                            <div style="width: 75%; padding: 0 0 1px 10px; float: left;">
+                                <label for="category_path">Kategorie-Pfad</label>
+                                <input type="text" id="category_path" name="category_path" maxlength="511" class="form-control" value="{{ mp_attributes.category_path if mp_attributes.category_path }}">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            Performance: <span id="priceformula"></span>
+                            <span style="float: right">EK: {{ '%.2f'%(product.get_cheapest_buying_price()[1]|float) }} €</span>
+                        </div>
+                        <div class="form-group">
+                            <div style="width: 25%; padding: 0 10px 1px 0; float: left;">
+                                <label for="price">Preis * </label><div class="smallbutton blackbutton visible five tiny" style="float: right" onclick="update_price()">Preis updaten</div>
+                                <input {% if 'Admin' not in session['roles'] %}readonly{% endif %} type="text" id="price" name="price" class="form-control" value="{{ mp_attributes.selling_price if mp_attributes.selling_price }}" onkeyup="get_performance()">
+                                <span class="supertiny formwarning" id="price_warning">Keine Eingabe!</span>
+                            </div>
+                            <div style="width: 25%; padding: 0 10px 1px 10px; float: left;">
+                                <label for="commission">Provision *</label>
+                                <input type="text" id="commission" name="commission" class="form-control" value="{{ mp_attributes.commission }}" onkeyup="get_performance()">
+                                <span class="supertiny formwarning" id="commission_warning">Keine Eingabe!</span>
+                            </div>
+                            <div style="width: 25%; padding: 0 0 1px 10px; float: left;">
+                                <label for="quantity_delta">Bestandsdelta</label>
+                                <input type="number" id="quantity_delta" min="0" name="quantity_delta" class="form-control" value="{% if mp_attributes.quantity_delta %}{{ mp_attributes.quantity_delta }}{% else %}0{% endif %}">
+                            </div>
+                            <div style="width: 25%; padding: 0 0 1px 10px; float: left;">
+                                <label for="factor" style="margin: 0">
+                                    <label for="price_regulation">
+                                        <input type="checkbox" id="price_regulation" name="price_regulation" value="price_regulation" {% if mp_attributes.price_regulation %}checked{% endif %}>
+                                        Preisbremse
+                                    </label>
+                                </label>
+                                <input type="text" id="factor" name="factor" class="form-control" {% if mp_attributes.price_regulation %}value="{{ mp_attributes.factor }}"{% endif %}>
+                                <span class="supertiny formwarning" id="factor_warning">Gib einen Faktor aus!</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div style="width: 50%; padding: 0 10px 1px 0; float: left;">
+                                <label for="min_stock">Min. Bestand * </label>
+                                <input type="number" min="0" id="min_stock" name="min_stock" class="form-control" value="{{ mp_attributes.min_stock if mp_attributes.min_stock!=None else 2 }}">
+                                <span class="supertiny formwarning" id="min_stock_warning">Keine Eingabe!</span>
+                            </div>
+                            <div style="width: 50%; padding: 0 10px 1px 10px; float: left;">
+                                <label for="max_stock">Max. Bestand *</label>
+                                <input type="number" min="0" id="max_stock" name="max_stock" class="form-control" value="{{ mp_attributes.max_stock if mp_attributes.max_stock!=None else 5}}">
+                                <span class="supertiny formwarning" id="max_stock_warning">Keine Eingabe!</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="splitright">
+                        <div id="descripction_holder">
+                            {% for description in descriptions %}
+                                <div id="descriptionbox{{ description[0] }}" class="form-group" style="position: relative;">
+                                    <label for="description{{ description[0] }}">Beschreibung {{ description[0] }}
+                                        <div class="dotclose redbutton small visible" data-value="{{ description[0] }}" onclick="drop_desciptionbox(this)">
+                                            <i class="fa fa-times" aria-hidden="true"></i>
+                                        </div>
+                                    </label>
+                                    <textarea rows="4" id="description{{ description[0] }}" name="description{{ description[0] }}" class="form-control">{{ description[1].text }}</textarea>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <input hidden name="descriptionindex" id="descriptionindex" value="{{ descriptions|length + 1 }}">
+                        <div class="standardbutton greenbutton visible" onclick="add_desciptionbox()">
+                            <i class="fa fa-plus" aria-hidden="true"></i> Beschreibung hinzufügen
+                        </div>
+                        <br>
+                        <input type="text" name="checker" value="update" hidden>
+                        <button name="btn" type="button" class="standardbutton blackbutton visible" style="float: right" value="plattform" onclick="checkform()">
+                            <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+    <script>
+        {% if mp_attributes %}
+            setTimeout(function() {
+                get_performance();
+            }, 200);
+
+            function get_performance() {
+                var shipping_dhl_cost = document.getElementById('shipping_dhl_cost').value;
+                var shipping_dhl_cost_pythonfloat = shipping_dhl_cost.replace(",", ".").replace("€", "");
+                var commission = document.getElementById('commission').value;
+                var commission_pythonfloat = commission.replace(",", ".").replace("€", "");
+                var price = document.getElementById('price').value;
+                var price_pythonfloat = price.replace(",", ".").replace("€", "");
+                fetch('/center/product/get_performance/' + {{ product.id }} + ',' + {{ marketplace.id }} + ',' + price_pythonfloat + ',' + shipping_dhl_cost_pythonfloat + ',' + {{ product.shipping_dhl }} + ',' + commission_pythonfloat).then(function (response) {
+                        response.json().then(function (data) {
+                            document.getElementById("priceformula").innerText = data.out;
+                        });
+                    });
+            }
+
+            function update_price() {
+                document.getElementById('price_update_message').className = 'alert alert-success small visible';
+                var price = document.getElementById('price').value;
+                var price_pythonfloat = price.replace(",", ".").replace("€", "");
+                fetch('/center/product/marketplace_data/update_price/' + {{ product.id }} + ',' + {{ marketplace.id }} + ',' + price_pythonfloat).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById('price_update_message').innerText = data.msg;
+                        document.getElementById('price_update_message').className = 'alert alert-success small visible messagedown';
+                        setTimeout(function () {
+                            document.getElementById('price_update_message').className = 'alert alert-success small visible';
+                        }, 6000)
+                    });
+                });
+            }
+
+            function update_clearance() {
+                fetch('{{ url_for("center_product_marketplace_update_clearance", mpa_id=mp_attributes.id)}}');
+            }
+
+            function upload_data() {
+                fetch('{{ url_for("center_product_marketplace_data_upload", product_id=product.id, marketplace_id=marketplace.id)}}').then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById('price_update_message').innerText = data.msg;
+                        document.getElementById('price_update_message').className = 'alert alert-success small visible messagedown';
+                        setTimeout(function () {
+                            document.getElementById('price_update_message').className = 'alert alert-success small visible';
+                        }, 6000)
+                    });
+                });
+            }
+
+            function shipping_type_visibility(id) {
+                if (document.getElementById(id).checked === false){
+                    document.getElementById(id+'-wrapper').style.display = 'None';
+                }else{
+                    document.getElementById(id+'-wrapper').style.display = 'block';
+                }
+            }
+        {% endif %}
+        function open_pictures(){
+            {% for picture in product.pictures %}
+                window.open("{{ session['picture_server']+picture.link }}", "_blank");
+            {% endfor %}
+        }
+        function change_marketplace() {
+            document.marketplace_chooser.submit();
+        }
+        function openlinks() {
+            {% for link in product.links %}
+                window.open("{{ link.link }}", "_blank");
+            {% endfor %}
+        }
+
+        function add_desciptionbox() {
+            index = document.getElementById('descriptionindex').value;
+            document.getElementById('descriptionindex').value = Number(index)+1;
+            var div = document.createElement("div");
+            div.id = "descriptionbox" + index.toString();
+            div.class = "form-group";
+            div.style.position = "relative";
+            innerstring = '<label for="description'+ index.toString() +'">Beschreibung '+ index.toString();
+            innerstring += '<div class="dotclose redbutton small visible" data-value="'+ index.toString() +'" onclick="drop_desciptionbox(this)">';
+            innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+            innerstring += '</div>';
+            innerstring += '</label>';
+            innerstring += '<textarea rows="4" id="description'+ index.toString() +'" name="description'+ index.toString() +'" class="form-control"></textarea>';
+            div.innerHTML = innerstring;
+            document.getElementById('descripction_holder').appendChild(div);
+        }
+
+        function drop_desciptionbox(obj){
+            subtracted = document.getElementById('descriptionbox'+obj.getAttribute('data-value'));
+            subtracted.parentNode.removeChild(subtracted);
+        }
+
+
+        function checkform() {
+
+            var prod_name = document.getElementById('name');
+            var price = document.getElementById('price');
+            var commission = document.getElementById('commission');
+            var price_regulation = document.getElementById('price_regulation');
+            var factor = document.getElementById('factor');
+            var min_stock = document.getElementById('min_stock');
+            var max_stock = document.getElementById('max_stock');
+
+
+            if (price.value === ''
+                || prod_name.value === ''
+                || commission.value === ''
+                || (price_regulation.checked === true
+                    && factor.value === ''
+                || min_stock.value === ''
+                || max_stock.value === '')
+            ){
+                if(price.value === ''){
+                    document.getElementById('price_warning').style.opacity = '1';
+                    price.style.borderColor = '#a54843';
+                }
+                if(prod_name.value === ''){
+                    document.getElementById('name_warning').style.opacity = '1';
+                    prod_name.style.borderColor = '#a54843';
+                }
+                if(commission.value === ''){
+                    document.getElementById('commission_warning').style.opacity = '1';
+                    commission.style.borderColor = '#a54843';
+                }
+                if(price_regulation.checked === true
+                    && factor.value === ''){
+                    document.getElementById('factor_warning').style.opacity = '1';
+                    factor.style.borderColor = '#a54843';
+                }
+                if(min_stock.value === ''){
+                    document.getElementById('min_stock_warning').style.opacity = '1';
+                    min_stock.style.borderColor = '#a54843';
+                }
+                if(max_stock.value === ''){
+                    document.getElementById('max_stock_warning').style.opacity = '1';
+                    max_stock.style.borderColor = '#a54843';
+                }
+            }
+
+            else{
+                document.getElementById('form').submit();
+            }
+        }
+
+        function openlinks(){
+            {% for link in product.links if link and link.link!='-' and link.link!=''%}
+            window.open('{{ link.link|safe }}', '_blank');
+            {% endfor %}
+        }
+    </script>
+{%endblock%}

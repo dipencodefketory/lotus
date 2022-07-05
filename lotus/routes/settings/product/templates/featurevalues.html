@@ -1,0 +1,70 @@
+{% extends 'center/basis.html' %}
+{% block title %}Feature-Werte{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white small box100" style="text-align: left; position: relative">
+        <div class="box100title" style="text-align: left">
+            <span class="regbig">Feature: {{ feature.name }}</span>
+            <form action="{{ url_for('center_settings_products_edit_featurename', id=feature.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input style="border: solid 1px black; width: 300px"  type="text" name="name">
+                <button class="blackbutton visible standardbutton" type="submit">
+                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i> Featurenamen ändern
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="box100">
+        <table class="table table-hover tiny">
+            <thead class="black">
+                <tr>
+                    <th></th>
+                    <th>Wert</th>
+                    <th>Aktiv</th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+            {% for value in values %}
+                <tr class="trclick" onclick="window.open('{{ url_for('center_settings_products_featurevalue', value_id=value.id) }}')">
+                    <td>
+                        <a href="{{ url_for('center_delete_featurevalue', id=value.id) }}">
+                            <div class="redbutton visible standardbutton supertiny" style="margin: 0">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </div>
+                        </a>
+                    </td>
+                    <td>{{ value.value }}</td>
+                    {% if value.active == True %}
+                        <td>
+                            <a class="blackfont" href="{{ url_for('center_deactivate_featurevalue', id=value.id) }}">
+                                <i class="fa fa-check-square-o" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                    {% else %}
+                        <td>
+                            <a class="blackfont" href="{{ url_for('center_activate_featurevalue', id=value.id) }}">
+                                <i class="fa fa-square-o" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <form action="" method="POST" style="text-align: left">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="width: 100%; padding: 0 70px 0 20px; position: relative">
+                    <label for="name">Neuer Wert:</label>
+                    <input id="name" type="text" name="name" maxlength="100" class="form-control tinyhead" onkeyup="lowerbound_warning(this,1)">
+                    <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                <button name="btn" type="submit" class="standardbutton green greenbutton tiny" value="value" style="position: absolute; right: 0; top: 25px">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+{%endblock%}

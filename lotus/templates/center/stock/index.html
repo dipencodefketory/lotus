@@ -1,0 +1,122 @@
+{% extends 'center/stock/stock_basis.html' %}
+{% block title %}Lager{% endblock %}
+
+{% block ext2 %}
+    <div class="box100" style="text-align: left">
+        <form action="" method="POST" id="upload_form" style="padding: 15px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="checker" value="upload"/>
+            <span class="five">Daten aktualisieren:</span>
+            <label for="start" style="padding: 5px;">Start:
+                <input type="date" id="start" name="start" value="{{ now }}" onchange="update_dates(this)"><br>
+                <span class="supertiny formwarning" id="start_warning">Gib ein Datum an!</span>
+            </label>
+            <label for="end" style="padding: 5px;">Ende:
+                <input type="date" id="end" name="end" min="{{ now }}" value="{{ now }}" onchange="update_dates(this)"><br>
+                <span class="supertiny formwarning" id="end_warning">Gib ein Datum an!</span>
+            </label>
+            <button name="btn" type="button" class="standardbutton visible blackbutton supertiny" style="margin-top: 0" onclick="check_form()">
+                <i class="fa fa-upload" aria-hidden="true"></i> Upload
+            </button>
+            <a href="{{ url_for('center_stock_scan_receipt') }}" style="float: right">
+                <button type="button" class="blackbutton standardbutton visible" style="float: right">
+                    <i class="fa fa-barcode" aria-hidden="true"></i> Wareneingang erfassen
+                </button>
+            </a>
+        </form>
+    <div class="box100">
+        <table class="table table-hover visible" style="text-align: left">
+            <thead class="black">
+                <tr>
+                    <th>ID</th>
+                    <th>Besitzer</th>
+                    <th>Bezeichnung</th>
+                    <th>Produkte</th>
+                    <th>Delta</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stocks %}
+                <tr class="clickable-row" onclick="show_stock('{{ stock.id }}')">
+                    <td>
+                        {{ stock.id }}
+                    </td>
+                    <td>
+                        {% if stock.owned %}
+                        <i class="fa fa-home" aria-hidden="true"></i>
+                        {% else %}
+                            {% if stock.supplier %}
+                                {{ stock.supplier.get_name() }}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ stock.name }}
+                    </td>
+                    <td>{{ stock.get_available_products()|length }}</td>
+                    <td>{{ stock.lag_days }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <form action="" method="POST" style="text-align: left">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="checker" value="add"/>
+            <div style="width: 100%; padding: 0 50px 0 0; position: relative">
+                <div class="splitleft75">
+                    <div style="width: 50%; float: left; padding-right: 10px">
+                        <label for="supplier">Besitzer:</label>
+                        <select id="supplier" name="supplier" class="form-control">
+                            <option value="0">Eigenes Lager</option>
+                            {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}">{{ supplier.get_name() }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="width: 50%; float: left; padding-left: 10px">
+                        <label for="name">Bezeichnung:</label>
+                        <input type="text" id="name" name="name" class="form-control">
+                    </div>
+                </div>
+                <div class="splitright25">
+                    <label for="lag_days">Delta:</label>
+                    <input id="lag_days" type="number" name="lag_days" min="0" class="form-control" value="0">
+                </div>
+                <button name="btn" type="submit" class="standardbutton green greenbutton tiny visible" value="add_attribute" style="position: absolute; right: 0; top: 25px">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        function update_dates(object){
+            if (object.id==='start'){
+                document.getElementById('end').setAttribute("min", object.value);
+            }
+            else if (object.id==='end'){
+                document.getElementById('start').setAttribute("max", object.value);
+            }
+        }
+        function check_form() {
+            var start = document.getElementById('start');
+            var end = document.getElementById('end');
+            if (start.value==='' || end.value===''){
+                if(start.value===''){
+                    document.getElementById('start_warning').style.opacity = '1';
+                    start.style.borderColor = '#a54843';
+                }
+                if(end.value===''){
+                    document.getElementById('end_warning').style.opacity = '1';
+                    end.style.borderColor = '#a54843';
+                }
+            }else{
+                document.getElementById('upload_form').submit();
+            }
+        }
+
+        function show_stock(id) {
+            window.open('/center/stock/stock/'+ id, '_blank');
+        }
+
+    </script>
+{%endblock%}

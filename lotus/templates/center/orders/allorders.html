@@ -1,0 +1,169 @@
+{% extends 'center/basis.html' %}
+{% block title %}Bestellung{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/orders.css')}}?v=7">
+{% endblock %}
+
+{% block ext %}
+    <form action="" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="visible white small box100" style="position: relative; padding-bottom: 50px">
+            <div class="form-group" style="margin: 20px; text-align: left">
+                <label for="product_ids" style="width: 100%">Produkte (IDs an Semikolon trennen!)
+                    <div style="float: right">
+                        <input type="radio" value="id" id="id" class="id_type"
+                               name="id_type" onclick="transform_ids(this.value)"
+                                {% if 'product_id_type' in session['product_filter_infos'] %}
+                                {% if session['product_filter_infos']['product_id_type'] == 'id' %}
+                                    checked
+                                {% endif %}
+                                {% else %}
+                                    checked
+                                {% endif %}
+                        >
+                        <label for="id" style="margin: 0; padding-bottom: 0">ID
+                        </label>
+                        <input type="radio" value="Internal_ID" id="Internal_ID" class="id_type"
+                               name="id_type" onclick="transform_ids(this.value)"
+                                {% if 'product_id_type' in session['product_filter_infos'] %}
+                                {% if session['product_filter_infos']['product_id_type'] == 'Internal_ID' %}
+                                    checked
+                                {% endif %}
+                                {% endif %}
+                        >
+                        <label for="Internal_ID" style="margin: 0; padding-bottom: 0">Interne ID
+                        </label>
+                        <input type="radio" value="HSP_ID" id="HSP_ID" class="id_type"
+                               name="id_type" onclick="transform_ids(this.value)"
+                                {% if 'product_id_type' in session['product_filter_infos'] %}
+                                {% if session['product_filter_infos']['product_id_type'] == 'HSP_ID' %}
+                                    checked
+                                {% endif %}
+                                {% endif %}
+                        >
+                        <label for="HSP_ID" style="margin: 0; padding-bottom: 0">HSP-ID
+                        </label>
+                        <input hidden name="product_type" id="product_type" value="{{ session['product_filter_infos']['product_id_type'] if session['product_filter_infos']['product_id_type'] else 'id' }}">
+                    </div>
+                </label>
+                <textarea rows="4" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% for p in products %}{{ p.id }};{% endfor %}</textarea>
+                <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                <div style="position:relative;">
+                    <input type="text" name="product" style="border: solid 1px black;"  class="form-control" id="product" list="product-datalist" style="padding-right: 120px" onkeyup="find_products(this.value)">
+                    <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                    <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+                    </datalist>
+                    <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                        <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                    </button>
+                </div>
+            </div>
+            <div class="buttonholder">
+                <button class="standardbutton small blackbutton visible" style="float: right; margin: 0" type="submit" value="filter" name="btn">
+                    <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                </button>
+            </div>
+        </div>
+    </form>
+    <div class="visible white small box100" style="text-align: left">
+        <div class="box100">
+            <table class="table table-striped tiny sortable" style="text-align: left">
+                <thead class="black">
+                    <tr>
+                        <th>Datum</th>
+                        <th>Status</th>
+                        <th>Bezeichnung</th>
+                        <th>EAN</th>
+                        <th>Produktname</th>
+                        <th style="width: 70px">Anzahl</th>
+                        <th style="width: 140px">Stückpreis Netto</th>
+                        <th style="width: 140px">Stückpreis Brutto</th>
+                        <th style="width: 100px">Gesamt</th>
+                        <th style="width: 50px;">Geliefert</th>
+                    </tr>
+                </thead>
+                <tbody id="productholder">
+                    {% for product in products %}
+                        {% for order in product.orders %}
+                        <tr id="row_{{ order.id }}">
+                            <td style="position: relative" class="sortable">
+                                {{ order.order.order_time.strftime('%Y-%m-%d') }}
+                            </td>
+                            <td style="position: relative" class="sortable">
+                                {{ order.order.get_current_shipping_stat().label }}
+                            </td>
+                            <td style="position: relative" class="sortable">
+                                {{ order.order.name if order.order.name != None }}
+                            </td>
+                            <td class="sortable">
+                                {{ product.hsp_id }}
+                            </td>
+                            <td class="sortable">
+                                {{ product.name }}
+                            </td>
+                            <td class="sortable">
+                                {{ order.ordered }}
+                            </td>
+                            <td class="sortable">
+                               {{ '%0.2f' % (order.price)|float }} €
+                            </td>
+                            <td class="sortable">
+                               {{ '%0.2f' % (order.price*(1 + 0.01 * order.prc_tax))|float }} €
+                            </td>
+                            <td class="sortable">
+                                {{ '%0.2f' % (order.price*(1 + 0.01 * order.prc_tax)*order.ordered)|float }} €
+                            </td>
+                            <td class="sortable">
+                                {{ order.shipped }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+    function find_products(val){
+        var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+        if(val.match(letters)) {
+            fetch('/center/product/products/find_products/' + val).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("product-datalist").innerHTML = data.out;
+                });
+            });
+        }
+    }
+    function add_product() {
+        type = document.getElementById('product_type').value;
+        if (type==='id'){
+            prod_id = document.getElementById('product').value.split(" - ")[0];
+        }else if (type==='Internal_ID'){
+            prod_id = document.getElementById('product').value.split(" - ")[1];
+        }else if (type==='HSP_ID'){
+            prod_id = document.getElementById('product').value.split(" - ")[2];}
+        prod_ids = document.getElementById('product_ids');
+        if (prod_ids.value.replace(' ','') === ''){
+            prod_ids.value = prod_id;
+        }
+        else{
+            prod_ids.value += ';'+prod_id;
+        }
+    }
+    function transform_ids(val) {
+        old_type = document.getElementById('product_type').value;
+        document.getElementById('product_type').value = val;
+        ids = document.getElementById('product_ids').value.replace(' ','');
+        fetch('/center/product/dynamic_pricing/transform_ids/'+ids+','+old_type+','+val).then(function (response) {
+            response.json().then(function (data) {
+                document.getElementById('product_ids').value = data.ids;
+                if(data.not_found!==''){
+                    alert("Die IDs "+data.not_found+" konnten nicht umgewandelt werden.");
+                }
+            });
+        });
+    }
+    </script>
+{%endblock%}

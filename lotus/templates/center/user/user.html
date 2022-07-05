@@ -1,0 +1,532 @@
+{% extends 'center/basis.html' %}
+{% block title %}User{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/users.css')}}?v=2">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.5.1/chart.min.js" integrity="sha512-Wt1bJGtlnMtGP0dqNFH1xlkLBNpEodaiQ8ZN5JLA5wpc1sUlk/O5uuOMNgvzddzkpvZ9GLyYNa8w2s7rqiTk5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% endblock %}
+
+{% block ext %}
+    <div class="box100" style="padding-top: 10px">
+        <div class="splitleft25">
+            <div id="UserMain" class="tiny">
+                <div class="white five" id="UserMainPicture">
+                    {% if user.profilepic != '' or user.profilepic != None %}
+                        <img src="{{ url_for('static', filename='images/noprofilepic.jpg') }}" style="width: 100%">
+                    {% else %}
+                        <img src="{{ url_for('static', filename=user.profilepic) }}" style="width: 100%">
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="splitright75">
+            <div class="lightgrey five visible" id="UserMainData">
+                <span class="big" style="text-transform: uppercase">
+                    <i>{{ user.username }}</i>
+                </span>
+                {% if not user.active %} (inaktiv){% endif %}
+                <br>
+                {{ user.firstname }} {{ user.name }}
+                <span class="three">(gestartet am: {{ user.init_date.strftime('%d.%m.%Y') }})</span>
+            </div>
+            <div class="lightgrey four visible" id="UserAddData">
+                <table>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 5px"><i class="fa fa-birthday-cake" aria-hidden="true"></i></td>
+                            {% if user.birthday != None %}
+                                <td style="padding: 5px">{{ user.birthday.strftime('%d.%m.%Y') }}) }}</td>
+                            {% else %}
+                                <td style="padding: 5px">{{ user.birthday }}</td>
+                            {% endif %}
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px"><i class="fa fa-envelope-o" aria-hidden="true"></i></td>
+                            <td style="padding: 5px">{{ user.email }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px"><i class="fa fa-phone" aria-hidden="true"></i></td>
+                            <td style="padding: 5px">{{ user.fon }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px"><i class="fa fa-map-pin" aria-hidden="true"></i></td>
+                            <td style="padding: 5px">
+                                {{ user.address }}<br>
+                                {{ user.zipcode }} {{ user.city }} ({{ user.country }})
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="lightgrey visible" id="UserRoles">
+                <div class="big five" style="padding: 20px">
+                    <i>Rollen</i>
+                </div>
+                <table class="table">
+                    <tbody>
+                        {% for role in roles %}
+                        <tr>
+                            <td>{{ role.name }}</td>
+                            {% if role in user.get_roles() %}
+                                <td>
+                                    <a class="blackfont" href="{{ url_for('center_user_deactivate_role', user_id=user.id, role_id=role.id) }}">
+                                        <i class="fa fa-check-square-o" aria-hidden="true"></i>
+                                    </a>
+                                </td>
+                            {% else %}
+                                <td>
+                                    <a class="blackfont" href="{{ url_for('center_user_activate_role', user_id=user.id, role_id=role.id) }}">
+                                        <i class="fa fa-square-o" aria-hidden="true"></i>
+                                    </a>
+                                </td>
+                            {% endif %}
+                        </tr>
+
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="lightgrey visible" id="UserWorkdays">
+                <div class="big five" style="padding: 20px">
+                    <i>Arbeitstage</i>
+                </div>
+                <div class="box100">
+                    <form action="" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="form_type" value="filter_days">
+                        <div class="splitleft">
+                            <label for="start">
+                                Start:
+                            </label>
+                            <input type="date" id="start" name="start" class="form-control" value="{{ start.strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="splitright">
+                            <label for="end">
+                                Ende:
+                            </label>
+                            <input type="date" id="end" name="end" class="form-control" value="{{ end.strftime('%Y-%m-%d') }}">
+                            <button type="submit" class="standardbutton blackbutton" style="float: right">
+                                <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                            </button>
+                        </div>
+                    </form>
+                    <div class="box100title">
+                        Gesamt: <span id="dur">{{ '%.2f' % dur }}</span> Stunden
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr class="black">
+                                <th>
+
+                                </th>
+                                <th>
+                                    Check-In
+                                </th>
+                                <th>
+                                    Check-In-IP
+                                </th>
+                                <th>
+                                    Check-Out
+                                </th>
+                                <th>
+                                    Check-Out-IP
+                                </th>
+                                <th>
+                                    Dauer
+                                </th>
+                                <th>
+                                    Typ
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for workday in workdays %}
+                                <tr>
+                                    <td>
+                                        <a onclick="delete_wday('{{ workday.id }}');event.cancelBubble=true;">
+                                            <div class="redbutton visible standardbutton supertiny" style="margin: 0">
+                                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                            </div>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span id="wd_{{ workday.id }}_ci_dt">{{ workday.check_in_datetime.strftime('%d.%m.%Y - %H:%M:%S') }}</span>
+                                        <input style="transition: 200ms" type="text" id="wd_{{ workday.id }}_ci_dt_edit" value="{{ workday.check_in_datetime.strftime('%d.%m.%Y - %H:%M:%S') }}" hidden>
+                                        <button id="wd_{{ workday.id }}_ci_dt_ed_button" class="smallbutton blackbutton visible supertiny" onclick="edit_cdt('wd_{{ workday.id }}_ci_dt')" style="margin-left: 10px">
+                                            <i class="fa fa-pencil" aria-hidden="true"></i>
+                                        </button>
+                                        <button id="wd_{{ workday.id }}_ci_dt_sv_button" class="smallbutton blackbutton visible supertiny" onclick="save_cdt('wd_{{ workday.id }}_ci_dt', '{{ workday.id }}', 'ci')" hidden>
+                                            <i class="fa fa-floppy-o" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
+                                    <td>
+                                        {{ workday.check_in_ip }}
+                                    </td>
+                                    <td>
+                                        <span id="wd_{{ workday.id }}_co_dt">{{ workday.check_out_datetime.strftime('%d.%m.%Y - %H:%M:%S') if workday.check_out_datetime else '' }}</span>
+                                        <input style="transition: 200ms" type="text" id="wd_{{ workday.id }}_co_dt_edit" value="{{ workday.check_out_datetime.strftime('%d.%m.%Y - %H:%M:%S') }}" hidden>
+                                        <button id="wd_{{ workday.id }}_co_dt_ed_button" class="smallbutton blackbutton visible supertiny" onclick="edit_cdt('wd_{{ workday.id }}_co_dt')" style="margin-left: 10px">
+                                            <i class="fa fa-pencil" aria-hidden="true"></i>
+                                        </button>
+                                        <button id="wd_{{ workday.id }}_co_dt_sv_button" class="smallbutton blackbutton visible supertiny" onclick="save_cdt('wd_{{ workday.id }}_co_dt', '{{ workday.id }}', 'co')" hidden>
+                                            <i class="fa fa-floppy-o" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
+                                    <td>
+                                        {{ workday.check_out_ip  if workday.check_out_ip else ''}}
+                                    </td>
+                                    <td>
+                                        <span id="wd_{{ workday.id }}_dur">
+                                            {{ "%02d" % (workday.get_duration().seconds//3600)}}:{{"%02d" % ((workday.get_duration().seconds//60)%60) }}:{{"%02d" % (workday.get_duration().seconds%60) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if workday.sick_leave==True %}
+                                            Krankheit
+                                        {% elif workday.vaca_leave==True%}
+                                            Urlaub
+                                        {% elif workday.holiday==True%}
+                                            Feiertag
+                                        {% else %}
+                                            Arbeitstag
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="box100" style="border-top: #CCCCCC solid 1px">
+                        <form action="" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <input type="hidden" name="form_type" value="add_days">
+                            <div class="box100title reg" style="text-align: left">
+                                Tage hinzufügen
+                            </div>
+                            <div class="splitleft">
+                                <label for="add_d_start">
+                                    Start:
+                                </label>
+                                <input type="date" id="add_d_start" name="add_d_start" class="form-control" value="{{ start.strftime('%Y-%m-%d') }}">
+                                <label for="add_d_end">
+                                    Ende:
+                                </label>
+                                <input type="date" id="add_d_end" name="add_d_end" class="form-control" value="{{ end.strftime('%Y-%m-%d') }}">
+                                <label for="hours">
+                                    Stunden:
+                                </label>
+                                <input type="number" id="hours" name="hours" step="0.5" min="0.5" class="form-control" value="8">
+                            </div>
+                            <div class="splitright">
+                                <table style="margin-top: 18px">
+                                    <tr style="text-align: center">
+                                        <td style="padding-right: 10px">
+                                            <label for="regular">
+                                                <input style="display: inline-block;" type="radio" id="regular" name="wd_type" value="regular" checked>
+                                                Arbeitstag
+                                            </label>
+                                        </td>
+                                        <td style="padding-right: 10px">
+                                            <label for="holiday">
+                                                <input style="display: inline-block;" type="radio" id="holiday" name="wd_type" value="holiday">
+                                                Feiertag
+                                            </label>
+                                        </td>
+                                        <td style="padding-right: 10px">
+                                            <label for="vaca_leave">
+                                                <input style="display: inline-block;" type="radio" id="vaca_leave" name="wd_type" value="vaca_leave">
+                                                Urlaub
+                                            </label>
+                                        </td>
+                                        <td style="padding-right: 10px">
+                                            <label for="sick_leave">
+                                                <input style="display: inline-block;" type="radio" id="sick_leave" name="wd_type" value="sick_leave">
+                                                Krankheit
+                                            </label>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <table style="margin-top: 18px">
+                                    <tr style="text-align: center">
+                                        <td>MO</td>
+                                        <td>DI</td>
+                                        <td>MI</td>
+                                        <td>DO</td>
+                                        <td>FR</td>
+                                        <td>SA</td>
+                                        <td>SO</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 25px; padding: 0 10px;">
+                                            <input style="display: inline-block;" checked type="checkbox" id="mo" name="weekday" value="0">
+                                        </td>
+                                        <td style="width: 25px; padding: 0 10px;">
+                                            <input style="display: inline-block;" checked type="checkbox" id="di" name="weekday" value="1">
+                                        </td>
+                                        <td style="width: 25px; padding: 0 10px;">
+                                            <input style="display: inline-block;" checked type="checkbox" id="mi" name="weekday" value="2">
+                                        </td>
+                                        <td style="width: 25px; padding: 0 10px;">
+                                            <input style="display: inline-block;" checked type="checkbox" id="do" name="weekday" value="3">
+                                        </td>
+                                        <td style="width: 25px; padding: 0 10px;">
+                                            <input style="display: inline-block;" checked type="checkbox" id="fr" name="weekday" value="4">
+                                        </td>
+                                        <td style="width: 25px; padding: 0 10px;">
+                                            <input style="display: inline-block;" type="checkbox" id="sa" name="weekday" value="5">
+                                        </td>
+                                        <td style="width: 25px; padding: 0 10px;">
+                                            <input style="display: inline-block;" type="checkbox" id="so" name="weekday" value="6">
+                                        </td>
+                                    </tr>
+                                </table>
+                                <button class="standardbutton blackbutton visible" style="float: right">
+                                    <i class="fa fa-plus" aria-hidden="true"></i> Hinzufügen
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="lightgrey visible" id="UserWorkdays">
+                <div class="big five" style="padding: 20px">
+                    <i>Auszahlungen</i>
+                </div>
+                <div class="box100">
+                    <form action="" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="form_type" value="po_filter_days">
+                        <div class="splitleft">
+                            <label for="po_start">
+                                Start:
+                            </label>
+                            <input type="date" id="po_start" name="po_start" class="form-control" value="{{ po_start.strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="splitright">
+                            <label for="end">
+                                Ende:
+                            </label>
+                            <input type="date" id="po_end" name="po_end" class="form-control" value="{{ po_end.strftime('%Y-%m-%d') }}">
+                            <button type="submit" class="standardbutton blackbutton" style="float: right">
+                                <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                            </button>
+                        </div>
+                    </form>
+                    <table class="table">
+                        <thead>
+                            <tr class="black">
+                                <th>
+
+                                </th>
+                                <th>
+                                    Start
+                                </th>
+                                <th>
+                                    Ende
+                                </th>
+                                <th>
+                                    Stunden
+                                </th>
+                                <th>
+                                    Stunden-Konto
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payout in payouts %}
+                                <tr>
+                                    <td>
+                                    </td>
+                                    <td>
+                                        {{ payout.start.strftime('%d.%m.%Y') }}
+                                    </td>
+                                    <td>
+                                        {{ payout.end.strftime('%d.%m.%Y') }}
+                                    </td>
+                                    <td>
+                                        {{ payout.hours }}
+                                    </td>
+                                    <td>
+                                        {{ '%0.1f' % (payout.time_balance/3600) }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="box100" style="border-top: #CCCCCC solid 1px">
+                        <form action="" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <input type="hidden" name="form_type" value="add_payout">
+                            <div class="box100title reg" style="text-align: left">
+                                Auszahlung hinzufügen
+                            </div>
+                            <div class="splitleft">
+                                <label for="add_po_start">
+                                    Start:
+                                </label>
+                                <input type="date" id="add_po_start" name="add_po_start" class="form-control" value="{{ start.strftime('%Y-%m-%d') }}">
+                                <label for="add_po_end">
+                                    Ende:
+                                </label>
+                                <input type="date" id="add_po_end" name="add_po_end" class="form-control" value="{{ end.strftime('%Y-%m-%d') }}">
+                            </div>
+                            <div class="splitright">
+                                <label for="add_po_hours">
+                                    Stunden:
+                                </label>
+                                <input type="number" id="add_po_hours" name="add_po_hours" step="0.5" min="0.5" class="form-control" value="176">
+                                <button class="standardbutton blackbutton visible" style="float: right">
+                                    <i class="fa fa-plus" aria-hidden="true"></i> Hinzufügen
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="lightgrey visible" id="UserWorkdays" style="margin-top: 20px">
+                <div class="big five" style="padding: 20px">
+                    <i>Bearbeitungsstand</i>
+                </div>
+                <div class="box100">
+                    <div class="box100">
+                        <div class="box100 five" style="text-align: left; min-height: 400px; padding: 40px 0">
+                            <div class="splitleft" style="padding-right: 15px; position: relative">
+                                <div class="regbig lightgrey visible" id="proc_graph_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                                    <span>30 Tage-Ansicht</span>
+                                    <canvas id="proc_graph" style="width: 100%; min-width: 200px; min-height: 200px"></canvas>
+                                </div>
+                            </div>
+                            <div class="splitright" style="padding-left: 15px">
+                                <div class="regbig lightgrey visible" id="proc_monthly_graph_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                                    <span>Jahresansicht</span>
+                                    <canvas id="proc_monthly_graph" style="width: 100%; min-width: 200px; min-height: 200px"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+
+        var proc_graph = document.getElementById("proc_graph").getContext("2d");
+        var proc_graph_constr = new Chart(proc_graph, {
+            type: 'bar',
+            data: {
+                labels: {{ daily_dates|safe }},
+                datasets: [
+                    {
+                        label: 'Bearbeitet',
+                        data: {{ proc_reports }},
+                        fill: true,
+                        borderColor: 'rgb(49, 89, 181)',
+                        backgroundColor: 'rgb(125, 148, 202)',
+                        tension: 0.1
+                    }
+                    ]
+            },
+            options : {
+                plugins: {
+                    legend: {
+                        position: "right",
+                        align: "middle"
+                    }
+                },
+                scales : {
+                    y : {
+                        min: 0
+                    },
+                    x: {
+                        grid: {
+                          display: false
+                        }
+                    }
+                }
+            }
+        }
+        );
+        var proc_monthly_graph = document.getElementById("proc_monthly_graph").getContext("2d");
+        var proc_monthly_graph_constr = new Chart(proc_monthly_graph, {
+            type: 'bar',
+            data: {
+                labels: {{ monthly_dates|safe }},
+                datasets: [
+                    {
+                        label: 'Bearbeitet',
+                        data: {{ proc_monthly_reports }},
+                        fill: true,
+                        borderColor: 'rgb(49, 89, 181)',
+                        backgroundColor: 'rgb(125, 148, 202)',
+                        tension: 0.1
+                    }
+                    ]
+            },
+            options : {
+                plugins: {
+                    legend: {
+                        position: "right",
+                        align: "middle"
+                    }
+                },
+                scales : {
+                    y : {
+                        min: 0
+                    },
+                    x: {
+                        grid: {
+                          display: false
+                        }
+                    }
+                }
+            }
+        }
+        );
+
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+        function edit_cdt(el_id) {
+            document.getElementById(el_id).hidden = true;
+            document.getElementById(el_id+'_ed_button').hidden = true;
+            document.getElementById(el_id+'_edit').hidden = false;
+            document.getElementById(el_id+'_sv_button').hidden = false;
+        }
+        function save_cdt(el_id, wd_id, c) {
+            var date_value = document.getElementById(el_id+'_edit');
+            var matches = date_value.value.match(/^(\d{2})\.(\d{2})\.(\d{4}) - (\d{2}):(\d{2}):(\d{2})$/);
+            if (matches === null) {
+                date_value.style.borderColor = '#a54843';
+            } else{
+                date_value.style.borderColor = '#ced4da';
+                var data = {'wd_id': wd_id, 'filter_start': "{{ start.strftime('%Y-%m-%d') }}", 'filter_end': "{{ end.strftime('%Y-%m-%d') }}"};
+                data['update'] = c;
+                data['value'] = document.getElementById(el_id+'_edit').value;
+                $.ajax({
+                    url: "{{ url_for('center_user_user_update_wd') }}",
+                    type: "POST",
+                    data: data,
+                    success: function (res) {
+                        document.getElementById("dur").innerText = res.dur;
+                        document.getElementById("wd_" + wd_id + "_dur").innerText = res.wd_dur;
+                    }
+                });
+                document.getElementById(el_id).innerText = document.getElementById(el_id+'_edit').value;
+                document.getElementById(el_id).hidden = false;
+                document.getElementById(el_id+'_ed_button').hidden = false;
+                document.getElementById(el_id+'_edit').hidden = true;
+                document.getElementById(el_id+'_sv_button').hidden = true;
+            }
+        }
+        function delete_wday(wday_id) {
+            window.open('/center/user/user/delete_wday/'+ wday_id, '_self')
+        }
+
+    </script>
+
+{%endblock%}

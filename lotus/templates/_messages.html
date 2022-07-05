@@ -1,0 +1,118 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} messagedown small visible" style="position: absolute; left: 25%; width: 50%; top: -50px; z-index: 5000">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+{% if error %}
+    <div class="alert alert-danger messagedown reg visible">{{ error }}</div>
+{% endif %}
+
+{% if msg %}
+    <div class="alert alert-success messagedown reg visible">{{ msg }}</div>
+{% endif %}
+
+<style>
+    .alert-success{
+        background: #42825a;
+        color: white;
+        border-style: none;
+        border-top-right-radius: 0;
+        border-top-left-radius: 0;
+        padding-top: 155px;
+        padding-bottom: 10px;
+        font-weight: 400;
+        min-height: 200px;
+    }
+
+    .alert-danger{
+        background: #a54843;
+        color: white;
+        border-style: none;
+        border-top-right-radius: 0;
+        border-top-left-radius: 0;
+        padding-top: 155px;
+        padding-bottom: 10px;
+        font-weight: 400;
+        min-height: 200px;
+    }
+
+    .messagedown {
+        -webkit-animation: messagedown 6s; /* Safari, Chrome and Opera > 12.1 */
+        -moz-animation: messagedown 6s; /* Firefox < 16 */
+        -ms-animation: messagedown 6s; /* Internet Explorer */
+        -o-animation: messagedown 6s; /* Opera < 12.1 */
+        animation: messagedown 6s;
+        -webkit-animation-fill-mode: forwards;
+        -moz-animation-fill-mode: forwards;
+        -ms-animation-fill-mode: forwards;
+        -o-animation-fill-mode: forwards;
+        animation-fill-mode: forwards;
+    }
+
+    @keyframes messagedown {
+        0% {
+            top:-100%;
+        }
+        15% {
+            top:-15%;
+        }
+        85% {
+            top:-15%;
+        }
+        100%{
+            top:-100%;
+        }
+    }
+
+    /* Firefox < 16 */
+    @-moz-keyframes messagedown {
+        0% {
+            top:-100%;
+        }
+        15% {
+            top:-15%;
+        }
+        85% {
+            top:-15%;
+        }
+        100%{
+            top:-100%;
+        }
+    }
+
+    /* Safari, Chrome and Opera > 12.1 */
+    @-webkit-keyframes messagedown {
+        0% {
+            top:-100%;
+        }
+        15% {
+            top:-15%;
+        }
+        85% {
+            top:-15%;
+        }
+        100%{
+            top:-100%;
+        }
+    }
+
+    /* Internet Explorer */
+    @-ms-keyframes messagedown {
+        0% {
+            top:-120%;
+        }
+        15% {
+            top:-15%;
+        }
+        85% {
+            top:-15%;
+        }
+        100%{
+            top:-100%;
+        }
+    }
+
+</style>

@@ -1,0 +1,531 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkt-Gruppen{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="alert alert-success small visible" id="price_update_message" style="position: absolute; left: 25%; width: 50%; top: -100%; z-index: 5000"></div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_products') }}">
+            <div class="submenu five">
+                Produkte
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Produkt-Gruppen
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_pim') }}">
+            <div class="submenu five">
+                PIM
+            </div>
+        </a>
+        {% if 'Produkt-Management' in session.roles %}
+            <a class="blackfont" href="{{ url_for('center_product_dynamic_pricing') }}">
+                <div class="submenu five">
+                    Dynamic Pricing
+                </div>
+            </a>
+        {% endif %}
+    </div>
+    <div class="box100 visible five" style="text-align: left">
+        <div class="big seven" style="padding: 15px 0 10px 20px"><i>Filter</i></div>
+        <form action="" method="POST" name="filterform" style="padding-top: 3px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <div class="form-group" style="margin-top: 20px">
+                    <label for="product_ids" style="width: 100%">Produkt-IDs
+                        <div style="float: right">
+                            <input type="radio" value="id" id="id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['pgr_filter'] %}
+                                    {% if session['pgr_filter']['product_id_type'] == 'id' %}
+                                        checked
+                                    {% endif %}
+                                    {% else %}
+                                        checked
+                                    {% endif %}
+                            >
+                            <label for="id" style="margin: 0; padding-bottom: 0">ID
+                            </label>
+                            <input type="radio" value="Internal_ID" id="Internal_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['pgr_filter'] %}
+                                    {% if session['pgr_filter']['product_id_type'] == 'Internal_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="Internal_ID" style="margin: 0; padding-bottom: 0">Interne ID
+                            </label>
+                            <input type="radio" value="HSP_ID" id="HSP_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['pgr_filter'] %}
+                                    {% if session['pgr_filter']['product_id_type'] == 'HSP_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="HSP_ID" style="margin: 0; padding-bottom: 0">HSP-ID
+                            </label>
+                            <input hidden name="product_type" id="product_type" value="{{ session['pgr_filter']['product_id_type'] if session['pgr_filter']['product_id_type'] else 'id' }}">
+                        </div>
+                    </label>
+                    <textarea rows="2" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% for p in session['pgr_filter']['product_ids'] %}{{ p }};{% endfor %}</textarea>
+                    <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                    <div style="position:relative;">
+                        <input type="text" name="product" style="border: solid 1px black;"  class="form-control" id="product" list="product-datalist" style="padding-right: 120px" onkeyup="find_products(this.value)">
+                        <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                        <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 20px">
+                    <label for="group_ids" style="width: 100%">Gruppen-IDs</label>
+                    <textarea rows="2" id="group_ids" style="border: solid 1px black;"  name="group_ids" class="form-control">{% for gr_id in session['pgr_filter']['group_ids'] %}{{ gr_id }};{% endfor %}</textarea>
+                    <div style="position:relative; margin-top: 15px">
+                        <input type="text" name="group" class="form-control" id="group" list="group-datalist" style="border: solid 1px black; padding-right: 120px" onkeyup="find_group(this.value)">
+                        <datalist id="group-datalist" onmouseover="show_filter_options('group')" onmouseleave="hide_filter_options('group')" >
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_groups()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="splitright">
+                <table class="tiny" style="width: 100%">
+                    <thead style="width: 100%">
+                        <tr style="width: 100%">
+                            <th style="width: 20%">
+                                <label for="min_ps"> Min. Produkte:
+                                    <input style="border: solid 1px black; display: block; width: 100%;" type="number" step="1" min="1" id="min_ps" name="min_ps" value="{{ session['pgr_filter']['min_ps'] }}">
+                                </label>
+                            </th>
+                            <th style="width: 20%">
+                                <label for="max_ps"> Max. Produkte:
+                                    <input style="border: solid 1px black; display: block; width: 100%;" type="number" step="1" min="1" id="max_ps" name="max_ps" value="{{ session['pgr_filter']['max_ps'] }}">
+                                </label>
+                            </th>
+                            <th style="width: 20%">
+                                <label for="limit_page"> Anzeige pro Seite:
+                                    <input style="border: solid 1px black; display: block; width: 100%;" type="number" step="1" min="1" id="limit_page" name="limit_page" value="{{ session['pgr_filter']['limit_page'] }}">
+                                </label>
+                            </th>
+                            <th style="width: 20%">
+                            </th>
+                            <th style="width: 20%; text-align: center">
+                                <button class="standardbutton tiny blackbutton visible" style="display: inline-block; margin: 0" type="submit" value="filter" name="btn">
+                                    <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <input type="hidden" name="order_by" id="order_by" value="{{ session['pgr_filter']['order_by'] }}"/>
+            <input type="hidden" name="order_dir" id="order_dir" value="{{ session['pgr_filter']['order_dir'] }}"/>
+            <input type="hidden" name="limit_offset" id="limit_offset" value="{{ session['pgr_filter']['limit_offset'] }}"/>
+        </form>
+    </div>
+    <div class="box100">
+        <div class="box100title">
+        </div>
+    </div>
+    <div class="box100">
+        <div class="box100title" id="results">
+        </div>
+        <div class="box100title">
+            Seite: <input id="page" type="number" min="1" value="{{ session['pgr_filter']['limit_offset'] + 1 }}" style="width: 50px" onchange="turnpage(this.value)">
+            / <span id="all_results_upper"></span>
+        </div>
+        <table class="table table-hover tiny" style="text-align: left">
+            <thead>
+                <tr class="black">
+                    <th colspan="5">
+                        Neue Produkt-Gruppe
+                    </th>
+                </tr>
+                <tr>
+                    <td>
+
+                    </td>
+                    <td style="position: relative;">
+                        <input type="text" id="group_name" style="width: 100%">
+                        <span class="supertiny formwarning" id="group_name_warning">Gib mindestens ein Zeichen an!</span>
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        <input type="text" id="main_p_ids" style="width: 100%" placeholder="1,2,3">
+                    </td>
+                    <td>
+                        <button class="smallbutton blackbutton tiny visible" onclick="add_group()">
+                            <i class="fa fa-plus" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </td>
+                </tr>
+                <tr class="black">
+                    <th>
+                        <div class="sortable" style="padding-left: 0; margin-left: 0" onclick="sort_results('gr_id')">
+                            ID
+                            {% if session['pgr_filter']['order_by'] == 'gr_id' %}
+                                {% if session['pgr_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th>
+                        <div class="sortable" style="padding-left: 0; margin-left: 0" onclick="sort_results('gr_name')">
+                            Name
+                            {% if session['pgr_filter']['order_by'] == 'gr_name' %}
+                                {% if session['pgr_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th>
+                        <div class="sortable" style="padding-left: 0; margin-left: 0" onclick="sort_results('p_num')">
+                            # Produkte
+                            {% if session['pgr_filter']['order_by'] == 'p_num' %}
+                                {% if session['pgr_filter']['order_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </th>
+                    <th>
+                        Produkte
+                    </th>
+                    <th>
+                        Zusammenführen
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="table_body" style="border-bottom: solid 1px rgb(222, 226, 230);">
+            </tbody>
+        </table>
+        <div id="loader" class="box100" style="position: relative; height: 200px">
+            <div class="loader"></div>
+        </div>
+        <div class="box100title">
+            Seite: <input id="page" type="number" min="1" value="{{ session['pgr_filter']['limit_offset'] + 1 }}" style="width: 50px" onchange="turnpage(this.value)">
+            / <span id="all_results_lower"></span>
+        </div>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+
+        generate_rows();
+
+        function generate_rows(){
+            var table_body = document.getElementById('table_body');
+            table_body.innerHTML = '';
+            document.getElementById('loader').style.display = 'Block';
+            fetch('/center/product/groups/load').then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('loader').style.display = 'None';
+                    for (var i = 0; i < data.data.length; i++) {
+                        var t_row = table_body.insertRow();
+                        t_row.className = 'trclick';
+                        t_row.setAttribute('data-gr_id', data.data[i].gr_id);
+                        t_row.onclick = function() {window.open('/center/product/group/' + this.getAttribute('data-gr_id'));};
+                        var gr_id_cell = t_row.insertCell();
+                        gr_id_cell.innerHTML = data.data[i].gr_id;
+                        var gr_name_cell = t_row.insertCell();
+                        gr_name_cell.innerHTML = data.data[i].gr_name;
+                        var p_num_cell = t_row.insertCell();
+                        p_num_cell.innerText = data.data[i].p_num;
+                        var p_cell = t_row.insertCell();
+                        var ps = '<table>';
+                        for (var j = 0; j < Math.min(5, data.data[i].products.length); j++) {
+                            ps += '<tr>';
+                            ps += '<td style="border: None; padding: 0 .4rem .4rem .4rem; width: 50px">' + data.data[i].products[j].p_id + '</td>';
+                            ps += '<td style="border: None; padding: 0 .25rem .25rem .25rem">' + data.data[i].products[j].p_name + '</td>';
+                            ps += '</td>';
+                            ps += '</tr>';
+                        }
+                        if (data.data[i].products.length > 5) {
+                            ps += '<tr>';
+                            ps += '<td style="border: None; padding: 0 .4rem .4rem .4rem; width: 50px">&#8942;</td>';
+                            ps += '<td style="border: None; padding: 0 .25rem .25rem .25rem">&#8942;</td>';
+                            ps += '</tr>';
+                        }
+                        ps += '</table>';
+                        p_cell.innerHTML = ps;
+                        var merge_cell = t_row.insertCell();
+                        var merge = '<input style="margin-right: 0 5px 5px 0" type="number" id="merge_' + data.data[i].gr_id + '" onclick="event.cancelBubble=true;"><button class="smallbutton tiny blackbutton" onclick="merge(';
+                        merge += "'" + data.data[i].gr_id + "'";
+                        merge += '); event.cancelBubble=true;"><i class="fa fa-play" aria-hidden="true"></i></button><br>';
+                        merge += '<span id="mg_sugg_' + data.data[i].gr_id + '"><button class="smallbutton blackbutton tiny visible" onclick="find_matches(';
+                        merge += "'" + data.data[i].gr_id + "'";
+                        merge += '); event.cancelBubble=true;">Vorschläge generieren</button></span>';
+                        merge_cell.innerHTML = merge;
+                    }
+                    document.getElementById('all_results_upper').innerText = data.pages;
+                    document.getElementById('all_results_lower').innerText = data.pages;
+                    document.getElementById('results').innerText = data.results + ' Treffer';
+                });
+            });
+        }
+
+        function add_group() {
+            var gr_name = document.getElementById('group_name');
+            var main_p_ids = document.getElementById('main_p_ids').value.split(",").map(function(item) {return Number(item.trim());});
+            if (gr_name.value === '') {
+                document.getElementById('group_name_warning').style.opacity = '1';
+                gr_name.style.borderColor = '#a54843';
+            } else {
+                $.ajax({
+                    url: "{{ url_for('api.product_group.post') }}",
+                    type: "POST",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify([{'name': gr_name.value, 'product_ids': main_p_ids}]),
+                    success: function(response) {
+                        generate_rows();
+                        document.getElementById('msg_basic_title').innerText = 'Success';
+                        document.getElementById('msg_basic_msg').innerText = response.responseJSON.message;
+
+                        document.getElementById("msg_basic").style.display = 'Block';
+                        document.getElementById("msg_basic").style.zIndex = '15002';
+                        document.getElementById("msg_darkener").style.display = 'Block';
+
+                        setTimeout(function() {
+                            document.getElementById("msg_basic").style.opacity = '1';
+                            document.getElementById("msg_darkener").style.opacity = '0.8';
+                        }, 200);
+                        document.getElementById('msg_darkener').innerHTML = '<i class="fa fa-truck" aria-hidden="true"></i> bestellen';
+                    },
+                    error: function(response) {
+                        if (response.status === 400){
+                            document.getElementById('msg_basic_title').innerText = 'Bad Request';
+                            document.getElementById('msg_basic_msg').innerText = response.responseJSON.message;
+                        } else if (response.status === 422){
+                            document.getElementById('msg_basic_title').innerText = 'Unprocessable Entity (WebDAV)';
+                            document.getElementById('msg_basic_msg').innerText = response.responseJSON.message;
+                        } else {
+                            document.getElementById('msg_basic_title').innerText = 'Internal-Error';
+                            document.getElementById('msg_basic_msg').innerText = '';
+                        }
+
+                        document.getElementById("msg_basic").style.display = 'Block';
+                        document.getElementById("msg_basic").style.zIndex = '15002';
+                        document.getElementById("msg_darkener").style.display = 'Block';
+
+                        setTimeout(function() {
+                            document.getElementById("msg_basic").style.opacity = '1';
+                            document.getElementById("msg_darkener").style.opacity = '0.8';
+                        }, 200);
+                    }
+                });
+            }
+        }
+
+        function merge(gr_id) {
+            var mgr_id = document.getElementById('merge_' + gr_id).value;
+            if (mgr_id !== ''){
+                $.ajax({
+                    url: "/api/product_group/merge/" + gr_id,
+                    type: "PATCH",
+                    data: {'mgr_id': mgr_id},
+                    success: function() {
+                        generate_rows();
+                    },
+                    error: function() {
+                    }
+                });
+            }
+        }
+
+        function transform_ids(val) {
+            old_type = document.getElementById('product_type').value;
+            document.getElementById('product_type').value = val;
+            ids = document.getElementById('product_ids').value.replace(/(?:\r\n|\r|\n|,)/g, ';');
+            fetch('/center/product/dynamic_pricing/transform_ids/'+ids+','+old_type+','+val).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('product_ids').value = data.ids;
+                    if(data.not_found!==''){
+                        alert("Die IDs "+data.not_found+" konnten nicht umgewandelt werden.");
+                    }
+                });
+            });
+        }
+
+        function find_matches(gr_id){
+            fetch('/center/product/groups/find_matches/' + gr_id).then(function (response) {
+                response.json().then(function (data) {
+                    var sugg = '';
+                    for (var i = 0; i < data.length; i++) {
+                        sugg += data[i].mgr_id + ' - ' + data[i].mgr_name + ' (' + data[i].score + ' %)<br>';
+                    }
+                    document.getElementById('mg_sugg_' + gr_id).innerHTML = sugg;
+                });
+            });
+        }
+
+        function show_filter_options(type){
+            document.getElementById(type+'-top_filter-dropdown').style.display = 'Block';
+            setTimeout(function () {
+                document.getElementById(type+'-top_filter-dropdown').style.opacity = '1.0';
+            }, 100);
+        }
+
+        function hide_filter_options(type){
+            obj = document.getElementById(type);
+            setTimeout(function () {
+                if (! $(obj).is(':focus')){
+                    document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                    setTimeout(function () {
+                        document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                    }, 100);
+                }}, 200);
+            if (! $(obj).is(':focus')){
+                document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                setTimeout(function () {
+                    document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                }, 100);
+            }
+        }
+
+        function find_products(val){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)) {
+                fetch('/center/product/products/find_products/' + val).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("product-datalist").innerHTML = data.out;
+                    });
+                });
+            }
+        }
+
+        function add_product() {
+            var value = document.getElementById('product').value;
+            var values = value.split(' - ');
+            var type = document.getElementById('product_type').value;
+            if (values.length > 2 && !isNaN(Number(values[0])) && !isNaN(Number(values[1])) && !isNaN(Number(values[2]))) {
+                if (type === 'id') {
+                    var prod_id = document.getElementById('product').value.split(" - ")[0];
+                } else if (type === 'Internal_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[1];
+                } else if (type === 'HSP_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[2];
+                }
+                var prod_ids = document.getElementById('product_ids');
+                if (prod_ids.value.replace(' ', '') === '') {
+                    prod_ids.value = prod_id;
+                }
+                else {
+                    prod_ids.value += ';' + prod_id;
+                }
+            } else {
+                var list = document.getElementById("product-datalist").children;
+                for (var i = 0; i < list.length; i++) {
+                    if (type === 'id') {
+                        prod_id = list[i].value.split(" - ")[0];
+                    } else if (type === 'Internal_ID') {
+                        prod_id = list[i].value.split(" - ")[1];
+                    } else if (type === 'HSP_ID') {
+                        prod_id = list[i].value.split(" - ")[2];
+                    }
+                    prod_ids = document.getElementById('product_ids');
+                    if (prod_ids.value.replace(' ', '') === '') {
+                        prod_ids.value = prod_id;
+                    }
+                    else {
+                        prod_ids.value += ';' + prod_id;
+                    }
+                }
+            }
+        }
+
+        function find_group(keywords){
+            fetch('/api/product_group/search/' + keywords).then(function (response) {
+                response.json().then(function (data) {
+                    var data_list = document.getElementById("group-datalist");
+                    data_list.innerHTML = '';
+                    for (var i=0; i < data.length; i++ ) {
+                        var opt = document.createElement('option');
+                        opt.value = data[i].gr_id;
+                        opt.innerHTML = data[i].gr_id + ' - ' + data[i].gr_name;
+                        data_list.appendChild(opt);
+                    }
+                });
+            });
+        }
+
+        function add_groups() {
+            var value = document.getElementById('group').value;
+            var values = value.split(' - ');
+            var gr_ids = document.getElementById('group_ids');
+            if (values.length > 1 && !isNaN(Number(values[0]))) {
+                var gr_id = values[0];
+                if (gr_ids.value.replace(' ', '') === '') {
+                    gr_ids.value = gr_id;
+                }
+                else {
+                    gr_ids.value += ';' + gr_id;
+                }
+            }
+            else {
+                var list = document.getElementById("group-datalist").children;
+                for (var i = 0; i < list.length; i++) {
+                    if (gr_ids.value.replace(' ', '') === '') {
+                        gr_ids.value = list[i].value;
+                    }
+                    else {
+                        gr_ids.value += ';' + list[i].value;
+                    }
+                }
+            }
+        }
+
+        function sort_results(val) {
+            var order_by = document.getElementById('order_by');
+            var order_dir = document.getElementById('order_dir');
+            if (order_by.value === val) {
+                if (order_dir.value === 'ASC') {
+                    order_dir.value = 'DESC';
+                } else {
+                    order_dir.value = 'ASC';
+                }
+            } else {
+                order_by.value = val;
+                order_dir.value = 'DESC';
+            }
+            setTimeout(function () {
+                document.filterform.submit();
+            }, 200);
+        }
+
+        function turnpage(val){
+            document.getElementById('limit_offset').value = Number(val) - 1;
+            setTimeout(function() {
+                document.filterform.submit();
+            }, 200);
+        }
+    </script>
+{%endblock%}

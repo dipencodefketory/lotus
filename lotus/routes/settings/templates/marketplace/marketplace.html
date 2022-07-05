@@ -1,0 +1,59 @@
+{% extends 'index.html' %}
+{% block title %}Marketplaces{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div id="marketplaces" class="visible white small box100" style="text-align: left; position: relative; min-height: 80px;
+            max-height: {{ 267 + 50 * marketplaces|length }}px; overflow: hidden; transition: 600ms ease-in-out">
+        <div class="big box100title" style="text-align: left">
+            Marketplaces
+        </div>
+        <table class="table table-hover tiny">
+            <thead class="black">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Link</th>
+                    <th>Produktlink-Kategorie</th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+            {% for marketplace in marketplaces %}
+                <tr class="trclick">
+                    <td>{{ marketplace.id }}</td>
+                    <td>{{ marketplace.name }}</td>
+                    <td>{{ marketplace.link }}</td>
+                    <td>{% if marketplace.productlinkcategory_id %}{{ marketplace.productlinkcategory.name }}{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <form action="" method="POST" style="text-align: left; padding-bottom:20px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="width: 100%; padding: 0 70px 0 600px; position: relative">
+                <div style="position: absolute; left:10px; width: 280px">
+                    <label for="name">Name:</label>
+                    <input id="name" type="text" name="name" maxlength="100" class="form-control tinyhead" onkeyup="lowerbound_warning(this,1)">
+                    <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                </div>
+                <div style="position: absolute; left:305px; width: 280px">
+                    <label for="link">Link:</label>
+                    <input id="link" type="text" name="link" maxlength="255" class="form-control tinyhead">
+                </div>
+                    <label for="productlinkcategory">Produktlink-Kategorie:</label>
+                <select id="productlinkcategory" name="productlinkcategory" class="form-control tinyhead">
+                    <option value="0"></option>
+                    {% for linkcategory in productlinkcategories %}
+                        <option value="{{ linkcategory.id }}">{{ linkcategory.name }}</option>
+                    {% endfor %}
+                </select>
+                <button name="btn" type="submit" class="standardbutton green greenbutton tiny" value="add_link_catgory" style="position: absolute; right: 0; top: 25px">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+{%endblock%}

@@ -1,0 +1,53 @@
+{% extends 'center/user/user_foundation.html' %}
+{% block title %}User{% endblock %}
+
+{% block ext2 %}
+    <div class="box100" style="padding-top: 10px">
+        <div class="splitleft">
+            <div class="box100 lightgrey visible" style="padding: 15px">
+                <div class="box500title regbig">
+                    Dein Arbeitstag
+                </div>
+                {% if workday %}
+                    {% if workday.check_out_datetime %}
+                        <a href="{{ url_for('center_user_start_workday') }}">
+                            <button class="standardbutton blackbutton visible">Arbeitstag starten</button>
+                        </a>
+                    {% else %}
+                        <b>Start: </b>{{ workday.check_in_datetime.strftime('%H:%M') }}<br>
+                        <a href="{{ url_for('center_user_end_workday') }}">
+                            <button class="standardbutton blackbutton visible">Arbeitstag beenden</button>
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('center_user_start_workday') }}">
+                        <button class="standardbutton blackbutton visible">Arbeitstag starten</button>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="splitright" style="padding: 15px">
+            <div class="box500title regbig">
+                Geleistete Stunden
+            </div>
+            <table>
+                <tr>
+                    <td>
+                        Woche:
+                    </td>
+                    <td>
+                        {{ '%.2f' % week_dur }} Stunden
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        Monat:
+                    </td>
+                    <td>
+                        {{ '%.2f' % month_dur }} Stunden
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+{%endblock%}

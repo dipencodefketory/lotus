@@ -1,0 +1,564 @@
+{% extends 'center/basis.html' %}
+{% block title %}Import/Exporteinstellungen{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}">
+{% endblock %}
+
+{% block ext %}
+
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_settings') }}">
+            <div class="submenu five">
+                Produkteinstellungen
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Import-/Exporteinstellungen
+        </div>
+    </div>
+    <div id="products" class="visible white small box100" style="text-align: left; position: relative; min-height: 50px; max-height: 2000px; overflow: hidden; transition: 600ms ease-in-out">
+        <div class="regbig box100title">
+            Neuer Produktimport/-export
+        </div>
+        <div class="standardbutton greybutton supertiny visible" style="position: absolute; right: 5px; top:5px; padding-bottom: 10px" onclick="show_or_hide('products')">
+            <i class="fa fa-window-minimize" aria-hidden="true"></i>
+        </div>
+        <div class="small box100title">
+            <label for="prodimports">Produktimports/-exports: </label>
+            <select id="prodimports" name="prodimport" style="width: 200px" onchange="fill_prod(this.value)">
+                <option value=""></option>
+                {% for imp in prodimports %}
+                <option value="{{ imp.id }}">{{ imp.name }}</option>
+                {% endfor %}
+            </select>
+            <button id="prodimpbutton" class="standardbutton redbutton visible" style="margin-left: 20px; opacity: 0;" onclick="deleteprodimp(this.value)">
+                <i class="fa fa-trash-o" aria-hidden="true"></i> Löschen
+            </button>
+        </div>
+        <form action="" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="width: 100%; padding: 10px 20px 10px 20px; position: relative;">
+                <label for="name">Bezeichnung</label>
+                <input type="text" id="name" name="name" class="form-control">
+            </div>
+            <div style="width: 50%; float: left">
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="product_Internal_ID" name="product_Internal_ID" class="form-control">
+                    </div>
+                    <label for="product_Internal_ID">Interne ID</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="product_HSP_ID_Type" name="product_HSP_ID_Type" class="form-control">
+                    </div>
+                    <label for="product_HSP_ID_Type">HSP-ID-Typ</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="product_HSP_ID" name="product_HSP_ID" class="form-control">
+                    </div>
+                    <label for="product_HSP_ID">HSP-ID</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="product_MPN" name="product_MPN" class="form-control">
+                    </div>
+                    <label for="product_MPN">MPN</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="product_name" name="product_name" class="form-control">
+                    </div>
+                    <label for="product_name">Name</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="product_measurements" name="product_measurements" class="form-control">
+                    </div>
+                    <label for="product_measurements">Maße</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="product_weight" name="product_weight" class="form-control">
+                    </div>
+                    <label for="product_weight">Gewicht</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_bigpic_link" name="pic_bigpic_link" class="form-control">
+                    </div>
+                    <label for="pic_bigpic_link">Hauptbild 1 groß</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_smallpic_link" name="pic_smallpic_link" class="form-control">
+                    </div>
+                    <label for="pic_smallpic_link">Hauptbild 2 klein</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_piclink_0" name="pic_piclink_0" class="form-control">
+                    </div>
+                    <label for="pic_piclink_0">Zusatzbild 1</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_piclink_1" name="pic_piclink_1" class="form-control">
+                    </div>
+                    <label for="pic_piclink_1">Zusatzbild 2</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_piclink_2" name="pic_piclink_2" class="form-control">
+                    </div>
+                    <label for="pic_piclink_2">Zusatzbild 3</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_piclink_3" name="pic_piclink_3" class="form-control">
+                    </div>
+                    <label for="pic_piclink_3">Zusatzbild 4</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_piclink_4" name="pic_piclink_4" class="form-control">
+                    </div>
+                    <label for="pic_piclink_4">Zusatzbild 5</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_piclink_5" name="pic_piclink_5" class="form-control">
+                    </div>
+                    <label for="pic_piclink_5">Zusatzbild 6</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_piclink_6" name="pic_piclink_6" class="form-control">
+                    </div>
+                    <label for="pic_piclink_6">Zusatzbild 7</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="pic_piclink_7" name="pic_piclink_7" class="form-control">
+                    </div>
+                    <label for="pic_piclink_7">Zusatzbild 8</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_name" name="article_name" class="form-control">
+                    </div>
+                    <label for="article_name">Artikelname</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_brand" name="article_brand" class="form-control">
+                    </div>
+                    <label for="article_brand">Marke</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_0" name="article_dscrpt_0" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_0">Artikelbeschreibung 1</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_1" name="article_dscrpt_1" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_1">Artikelbeschreibung 2</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_2" name="article_dscrpt_2" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_2">Artikelbeschreibung 3</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_3" name="article_dscrpt_3" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_3">Artikelbeschreibung 4</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_4" name="article_dscrpt_4" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_4">Artikelbeschreibung 5</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_5" name="article_dscrpt_5" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_5">Artikelbeschreibung 6</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_6" name="article_dscrpt_6" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_6">Artikelbeschreibung 7</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_7" name="article_dscrpt_7" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_7">Artikelbeschreibung 8</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_8" name="article_dscrpt_8" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_8">Artikelbeschreibung 9</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_dscrpt_9" name="article_dscrpt_9" class="form-control">
+                    </div>
+                    <label for="article_dscrpt_9">Artikelbeschreibung 10</label>
+                </div>
+            </div>
+            <div style="width: 50%; float: left">
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_buying_price" name="article_buying_price" class="form-control">
+                    </div>
+                    <label for="article_buying_price">EK-Preis</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_selling_price" name="article_selling_price" class="form-control">
+                    </div>
+                    <label for="article_selling_price">VK-Preis</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_shipping_dhl" name="article_shipping_dhl" class="form-control">
+                    </div>
+                    <label for="article_shipping_dhl">Versandkosten DHL</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_shipping_dp" name="article_shipping_dp" class="form-control">
+                    </div>
+                    <label for="article_shipping_dp">Versandkosten Deutsche Post</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_shipping_dpd" name="article_shipping_dpd" class="form-control">
+                    </div>
+                    <label for="article_shipping_dpd">Versandkosten DPD</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_shipping_hermes" name="article_shipping_hermes" class="form-control">
+                    </div>
+                    <label for="article_shipping_hermes">Versandkosten Hermes</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_search_mercateo" name="article_search_mercateo" class="form-control">
+                    </div>
+                    <label for="article_search_mercateo">Suche Mercateo</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_search_ebay" name="article_search_ebay" class="form-control">
+                    </div>
+                    <label for="article_search_ebay">Suche Ebay</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_search_idealo" name="article_search_idealo" class="form-control">
+                    </div>
+                    <label for="article_search_idealo">Suche Idealo</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="article_packagenr" name="article_packagenr" class="form-control">
+                    </div>
+                    <label for="article_packagenr">Verpackungsnummer</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="ebayattr_price" name="ebayattr_price" class="form-control">
+                    </div>
+                    <label for="ebayattr_price">Ebay - Preis</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="ebayattr_shipping_time" name="ebayattr_shipping_time" class="form-control">
+                    </div>
+                    <label for="ebayattr_shipping_time">Ebay - Versandzeit</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="ebayattr_shipping_comment" name="ebayattr_shipping_comment" class="form-control">
+                    </div>
+                    <label for="ebayattr_shipping_comment">Ebay - Versandkommentar</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="ebayattr_shipping_dhl" name="ebayattr_shipping_dhl" class="form-control">
+                    </div>
+                    <label for="ebayattr_shipping_dhl">Ebay - Versandkosten DHL</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="ebayattr_shipping_dp" name="ebayattr_shipping_dp" class="form-control">
+                    </div>
+                    <label for="ebayattr_shipping_dp">Ebay - Versandkosten Deutsche Post</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="ebayattr_shipping_dpd" name="ebayattr_shipping_dpd" class="form-control">
+                    </div>
+                    <label for="ebayattr_shipping_dpd">Ebay - Versandkosten DPD</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="ebayattr_shipping_hermes" name="ebayattr_shipping_hermes" class="form-control">
+                    </div>
+                    <label for="ebayattr_shipping_hermes">Ebay - Versandkosten Hermes</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="ebayattr_comission" name="ebayattr_comission" class="form-control">
+                    </div>
+                    <label for="ebayattr_comission">Ebay - Provision</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="ebayattr_quantity_delta" name="ebayattr_quantity_delta" class="form-control">
+                    </div>
+                    <label for="ebayattr_quantity_delta">Ebay - Bestandsdelta</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="idealoattr_price" name="idealoattr_price" class="form-control">
+                    </div>
+                    <label for="idealoattr_price">Idealo - Preis</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="idealoattr_shipping_time" name="idealoattr_shipping_time" class="form-control">
+                    </div>
+                    <label for="idealoattr_shipping_time">Idealo - Versandzeit</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="idealoattr_shipping_comment" name="idealoattr_shipping_comment" class="form-control">
+                    </div>
+                    <label for="idealoattr_shipping_comment">Idealo - Versandkommentar</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="idealoattr_shipping_dhl" name="idealoattr_shipping_dhl" class="form-control">
+                    </div>
+                    <label for="idealoattr_shipping_dhl">Idealo - Versandkosten DHL</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="idealoattr_shipping_dp" name="idealoattr_shipping_dp" class="form-control">
+                    </div>
+                    <label for="idealoattr_shipping_dp">Idealo - Versandkosten Deutsche Post</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="idealoattr_shipping_dpd" name="idealoattr_shipping_dpd" class="form-control">
+                    </div>
+                    <label for="idealoattr_shipping_dpd">Idealo - Versandkosten DPD</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="idealoattr_shipping_hermes" name="idealoattr_shipping_hermes" class="form-control">
+                    </div>
+                    <label for="idealoattr_shipping_hermes">Idealo - Versandkosten Hermes</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="idealoattr_comission" name="idealoattr_comission" class="form-control">
+                    </div>
+                    <label for="idealoattr_comission">Idealo - Provision</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="idealoattr_quantity_delta" name="idealoattr_quantity_delta" class="form-control">
+                    </div>
+                    <label for="idealoattr_quantity_delta">Idealo - Bestandsdelta</label>
+                </div>
+                <button name="btn" type="submit" class="standardbutton blackbutton visible" value="product" style="margin-left: 20px">
+                    <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="visible lightgrey small box100" style="text-align: left; position: relative; height: 50px">
+    </div>
+    <div id="productattributes" class="visible white small box100" style="text-align: left; position: relative; min-height: 50px; max-height: 2000px; overflow: hidden; transition: 900ms ease-in-out">
+        <div class="regbig box100title">
+            Neuer Attributimport/-export
+        </div>
+        <div class="standardbutton greybutton supertiny visible" style="position: absolute; right: 5px; top:5px; padding-bottom: 10px" onclick="show_or_hide('productattributes')">
+            <i class="fa fa-window-minimize" aria-hidden="true"></i>
+        </div>
+        <div class="small box100title">
+            <label for="attrimports">Attributimports/-exports: </label>
+            <select id="attrimports" name="attrimports" style="width: 200px" onchange="fill_attr(this.value)">
+                <option value=""></option>
+                {% for imp in attrimports %}
+                <option value="{{ imp.id }}">{{ imp.name }}</option>
+                {% endfor %}
+            </select>
+            <button id="attrimpbutton" class="standardbutton redbutton visible" style="margin-left: 20px; opacity: 0;" onclick="deleteattrimp(this.value)">
+                <i class="fa fa-trash-o" aria-hidden="true"></i> Löschen
+            </button>
+        </div>
+        <form action="" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="width: 100%; padding: 10px 20px 10px 20px; position: relative;">
+                <label for="attr_name">Bezeichnung</label>
+                <input type="text" id="attr_name" name="name" class="form-control">
+            </div>
+            <div style="width: 50%; float: left">
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="attr_product_Internal_ID" name="product_Internal_ID" class="form-control">
+                    </div>
+                    <label for="attr_product_Internal_ID">Interne Produkt-ID</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="attr_productattribute_Internal_ID" name="productattribute_Internal_ID" class="form-control">
+                    </div>
+                    <label for="attr_productattribute_Internal_ID">Interne Attribut-ID</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="attr_productattribute_name" name="productattribute_name" class="form-control">
+                    </div>
+                    <label for="attr_productattribute_name">Attributname</label>
+                </div>
+            </div>
+            <div style="width: 50%; float: left">
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="attr_productattribute_fixed_values" name="productattribute_fixed_values" class="form-control">
+                    </div>
+                    <label for="attr_productattribute_fixed_values">Fixe Werte (True/False)</label>
+                </div>
+                <div style="width: 100%; padding: 10px 10px 10px 140px; position: relative;">
+                    <div style="position: absolute; left: 20px; top:0; width: 100px">
+                        <input type="number" min="0" id="attr_attributevalue_value" name="attributevalue_value" class="form-control">
+                    </div>
+                    <label for="attr_attributevalue_value">Attributwerte</label>
+                </div>
+                <button name="btn" type="submit"  class="standardbutton blackbutton visible" value="attribute" style="margin-left: 20px; ">
+                    <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="visible lightgrey small box100" style="text-align: left; position: relative; height: 50px">
+    </div>
+    <script>
+        function show_or_hide(thisid) {
+            if (document.getElementById(thisid).style.maxHeight == "80px") {
+                document.getElementById(thisid).style.maxHeight = '2000px';
+            }
+            else {
+                document.getElementById(thisid).style.maxHeight = '80px';
+            }
+        }
+        function fill_prod(value) {
+            document.getElementById('prodimpbutton').style.opacity = '1';
+            document.getElementById('prodimpbutton').value = value;
+            fetch('/center/import_export_settings_fillprod/' + value).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('name').value = data.name;
+                    document.getElementById('product_Internal_ID').value = data.product_Internal_ID;
+                    document.getElementById('product_HSP_ID_Type').value = data.product_HSP_ID_Type;
+                    document.getElementById('product_HSP_ID').value = data.product_HSP_ID;
+                    document.getElementById('product_MPN').value = data.product_MPN;
+                    document.getElementById('product_name').value = data.product_name;
+                    document.getElementById('product_measurements').value = data.product_measurements;
+                    document.getElementById('product_weight').value = data.product_weight;
+                    document.getElementById('article_name').value = data.article_name;
+                    document.getElementById('article_brand').value = data.article_brand;
+                    document.getElementById('article_dscrpt_0').value = data.article_dscrpt_0;
+                    document.getElementById('article_dscrpt_1').value = data.article_dscrpt_1;
+                    document.getElementById('article_dscrpt_2').value = data.article_dscrpt_2;
+                    document.getElementById('article_dscrpt_3').value = data.article_dscrpt_3;
+                    document.getElementById('article_dscrpt_4').value = data.article_dscrpt_4;
+                    document.getElementById('article_dscrpt_5').value = data.article_dscrpt_5;
+                    document.getElementById('article_dscrpt_6').value = data.article_dscrpt_6;
+                    document.getElementById('article_dscrpt_7').value = data.article_dscrpt_7;
+                    document.getElementById('article_dscrpt_8').value = data.article_dscrpt_8;
+                    document.getElementById('article_dscrpt_9').value = data.article_dscrpt_9;
+                    document.getElementById('article_buying_price').value = data.article_buying_price;
+                    document.getElementById('article_selling_price').value = data.article_selling_price;
+                    document.getElementById('article_shipping_hermes').value = data.article_shipping_hermes;
+                    document.getElementById('article_shipping_dhl').value = data.article_shipping_dhl;
+                    document.getElementById('article_search_mercateo').value = data.article_search_mercateo;
+                    document.getElementById('article_search_ebay').value = data.article_search_ebay;
+                    document.getElementById('article_search_idealo').value = data.article_search_idealo;
+                    document.getElementById('article_shipping_dpd').value = data.article_shipping_dpd;
+                    document.getElementById('article_packagenr').value = data.article_packagenr;
+                    document.getElementById('pic_bigpic_link').value = data.pic_bigpic_link;
+                    document.getElementById('pic_smallpic_link').value = data.pic_smallpic_link;
+                    document.getElementById('pic_piclink_0').value = data.pic_piclink_0;
+                    document.getElementById('pic_piclink_1').value = data.pic_piclink_1;
+                    document.getElementById('pic_piclink_2').value = data.pic_piclink_2;
+                    document.getElementById('pic_piclink_3').value = data.pic_piclink_3;
+                    document.getElementById('pic_piclink_4').value = data.pic_piclink_4;
+                    document.getElementById('pic_piclink_5').value = data.pic_piclink_5;
+                    document.getElementById('pic_piclink_6').value = data.pic_piclink_6;
+                    document.getElementById('pic_piclink_7').value = data.pic_piclink_7;
+                    document.getElementById('ebayattr_price').value = data.ebayattr_price;
+                    document.getElementById('ebayattr_shipping_dhl').value = data.ebayattr_shipping_dhl;
+                    document.getElementById('ebayattr_shipping_dp').value = data.ebayattr_shipping_dp;
+                    document.getElementById('ebayattr_shipping_dpd').value = data.ebayattr_shipping_dpd;
+                    document.getElementById('ebayattr_shipping_hermes').value = data.ebayattr_shipping_hermes;
+                    document.getElementById('ebayattr_shipping_time').value = data.ebayattr_shipping_time;
+                    document.getElementById('ebayattr_shipping_comment').value = data.ebayattr_shipping_comment;
+                    document.getElementById('ebayattr_comission').value = data.ebayattr_comission;
+                    document.getElementById('ebayattr_quantity_delta').value = data.ebayattr_quantity_delta;
+                    document.getElementById('idealoattr_price').value = data.idealoattr_price;
+                    document.getElementById('idealoattr_shipping_dhl').value = data.idealoattr_shipping_dhl;
+                    document.getElementById('idealoattr_shipping_dp').value = data.idealoattr_shipping_dp;
+                    document.getElementById('idealoattr_shipping_dpd').value = data.idealoattr_shipping_dpd;
+                    document.getElementById('idealoattr_shipping_hermes').value = data.idealoattr_shipping_hermes;
+                    document.getElementById('idealoattr_shipping_time').value = data.idealoattr_shipping_time;
+                    document.getElementById('idealoattr_shipping_comment').value = data.idealoattr_shipping_comment;
+                    document.getElementById('idealoattr_comission').value = data.idealoattr_comission;
+                    document.getElementById('idealoattr_quantity_delta').value = data.idealoattr_quantity_delta;
+
+                });
+            });
+        }
+        function fill_attr(value) {
+            document.getElementById('attrimpbutton').style.opacity = '1';
+            document.getElementById('attrimpbutton').value = value;
+            fetch('/center/import_export_settings_fillattr/' + value).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('attr_name').value = data.name;
+                    document.getElementById('attr_product_Internal_ID').value = data.product_Internal_ID;
+                    document.getElementById('attr_productattribute_Internal_ID').value = data.productattribute_Internal_ID;
+                    document.getElementById('attr_productattribute_name').value = data.productattribute_name;
+                    document.getElementById('attr_productattribute_fixed_values').value = data.productattribute_fixed_values;
+                    document.getElementById('attr_attributevalue_value').value = data.attributevalue_value;
+                });
+            });
+        }
+
+        function deleteprodimp(value) {
+            window.open("/center/import_export_settings_delete_prod/"+value, "_blank");
+            window.open("/center/import_export_settings", "_self");
+        }
+
+        function deleteattrimp(value) {
+            window.open("/center/import_export_settings_delete_attr/"+value, "_blank");
+            window.open("/center/import_export_settings", "_self");
+        }
+    </script>
+{%endblock%}

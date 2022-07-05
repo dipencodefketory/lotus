@@ -1,0 +1,50 @@
+{% extends 'index.html' %}
+{% block title %}Connection{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div id="productcategorylink" class="visible white small box100" style="text-align: left; position: relative; min-height: 80px;
+            max-height: {{ 267 + 50 * product_link_categories|length }}px; overflow: hidden; transition: 600ms ease-in-out">
+        <div class="big box100title" style="text-align: left">
+            Produktlink-Links
+        </div>
+        <table class="table table-hover tiny">
+            <thead class="black">
+                <tr>
+                    <th></th>
+                    <th>ID</th>
+                    <th>Name</th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+            {% for category in product_link_categories %}
+                <tr class="trclick">
+                    <td>
+                        <a href="{{ url_for('settings.product_.delete_linkcategory', linkcategory_id=category.id) }}">
+                            <div class="redbutton visible standardbutton supertiny" style="margin: 0">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </div>
+                        </a>
+                    </td>
+                    <td>{{ category.id }}</td>
+                    <td>{{ category.name }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <form action="" method="POST" style="text-align: left">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="width: 100%; padding: 0 70px 0 20px; position: relative">
+                <label for="name">Name:</label>
+                <input id="name" type="text" name="name" maxlength="100" class="form-control tinyhead" onkeyup="lowerbound_warning(this,1)">
+                <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                <button name="btn" type="submit" class="standardbutton green greenbutton tiny" value="add_link_category" style="position: absolute; right: 0; top: 25px">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

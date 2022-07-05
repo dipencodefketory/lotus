@@ -1,0 +1,75 @@
+{% extends 'center/user/user_foundation.html' %}
+{% block title %}User{% endblock %}
+
+{% block ext2 %}
+    <div class="box100" style="padding-top: 10px">
+        <div class="box100title big" style="text-align: left">
+            Deine Arbeitstage
+        </div>
+        <div class="box100">
+            <form action="" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="splitleft">
+                    <label for="start">
+                        Start:
+                    </label>
+                    <input type="date" id="start" name="start" class="form-control" value="{{ start.strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="splitright">
+                    <label for="end">
+                        Ende:
+                    </label>
+                    <input type="date" id="end" name="end" class="form-control" value="{{ end.strftime('%Y-%m-%d') }}">
+                    <button type="submit" class="standardbutton blackbutton" style="float: right">
+                        <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="box100title">
+            Gesamt: {{ '%.2f' % dur }} Stunden
+        </div>
+        <table class="table">
+            <thead>
+                <tr class="black">
+                    <th>
+                        Check-In
+                    </th>
+                    <th>
+                        Check-In-IP
+                    </th>
+                    <th>
+                        Check-Out
+                    </th>
+                    <th>
+                        Check-Out-IP
+                    </th>
+                    <th>
+                        Dauer
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for workday in workdays %}
+                    <tr>
+                        <td>
+                            {{ workday.check_in_datetime.strftime('%d.%m.%Y - %H:%M:%S') }}
+                        </td>
+                        <td>
+                            {{ workday.check_in_ip }}
+                        </td>
+                        <td>
+                            {{ workday.check_out_datetime.strftime('%d.%m.%Y - %H:%M:%S') if workday.check_out_datetime else '' }}
+                        </td>
+                        <td>
+                            {{ workday.check_out_ip  if workday.check_out_ip else ''}}
+                        </td>
+                        <td>
+                            {{ "%02d" % (workday.get_duration().seconds//3600)}}:{{"%02d" % ((workday.get_duration().seconds//60)%60) }}:{{"%02d" % (workday.get_duration().seconds%60) }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{%endblock%}

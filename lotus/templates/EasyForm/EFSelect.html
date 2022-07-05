@@ -1,0 +1,11 @@
+<label for="{{ field.id }}">
+    {{ field.label }} {{ field.info }}
+</label>
+<select id="{{ field.id }}" name="{{ field.id }}" class="form-control">
+    {% if field.blank_option %}
+    <option value=""></option>
+    {% for option in field.options.keys()|sort() %}
+    <option value="{{ field.options[option] }}">{{ option }}</option>
+    {% endfor %}
+    {% endif %}
+</select>

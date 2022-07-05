@@ -1,0 +1,235 @@
+{% extends 'index.html' %}
+{% block title %}Pricing-Bundle{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div class="container-fluid">
+        <div class="row">
+            <label for="name">
+            </label>
+            <input id="name" class="form-control" value="{{ pr_bundle.name }}">
+            <button class="smallbutton blackbutton" onclick="patch_pricing_bundle()"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>
+        </div>
+        <div class="row">
+            <table class="table text-start">
+                <thead>
+                    <tr class="black">
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Von</th>
+                        <th>Zu</th>
+                        <th>Erfolgszeitraum (h)</th>
+                        <th>Misserfolgszeitraum (h)</th>
+                        <th>Verkäufe</th>
+                        <th>Umsatz</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="t_body" style="border-bottom: solid 1px rgb(222, 226, 230);">
+                    {% for pr_rule in pr_bundle.pricing_rules|sort(attribute='id') %}
+                        <tr id="row_{{ pr_rule.id }}">
+                            <td>{{ pr_rule.id }}</td>
+                            <td>
+                                <input type="text" id="rule_name_{{ pr_rule.id }}" value="{{ pr_rule.name }}">
+                            </td>
+                            <td>
+                                <input type="text" id="rule_if_strategy_{{ pr_rule.id }}" value="{{ pr_rule.if_strategy }}" list="pa_names">
+                            </td>
+                            <td>
+                                <input type="text" id="rule_then_strategy_{{ pr_rule.id }}" value="{{ pr_rule.then_strategy }}" list="pa_names">
+                            </td>
+                            <td>
+                                <input type="number" min="1" id="rule_if_sale_suc_h_{{ pr_rule.id }}" value="{{ pr_rule.if_sale_suc_h if pr_rule.if_sale_suc_h != None }}">
+                            </td>
+                            <td>
+                                <input type="number" min="1" id="rule_if_sale_fail_h_{{ pr_rule.id }}" value="{{ pr_rule.if_sale_fail_h if pr_rule.if_sale_fail_h != None }}">
+                            </td>
+                            <td>
+                                <input type="number" min="1" id="rule_if_sale_num_{{ pr_rule.id }}" value="{{ pr_rule.if_sale_num if pr_rule.if_sale_num != None }}">
+                            </td>
+                            <td>
+                                <input type="number" min="1" id="rule_if_sale_rev_{{ pr_rule.id }}" value="{{ pr_rule.if_sale_rev if pr_rule.if_sale_rev != None }}">
+                            </td>
+                            <td>
+                                <button class="smallbutton blackbutton visible"><i class="fa fa-floppy-o" aria-hidden="true" onclick="patch_pricing_rule('{{ pr_rule.id }}')"></i></button>
+                                <button class="smallbutton redbutton visible"><i class="fa fa-trash-o" aria-hidden="true" onclick="delete_pricing_rule('{{ pr_rule.id }}')"></i></button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    <datalist id="pa_names">
+                        {% for pa_name in pa_names %}
+                            <option value="{{ pa_name }}">{{ pa_name }}</option>
+                        {% endfor %}
+                    </datalist>
+                    <tr>
+                        <td class="reg">ADD</td>
+                        <td>
+                            <input type="text" id="rule_name">
+                        </td>
+                        <td>
+                            <input type="text" id="rule_if_strategy" list="pa_names">
+                        </td>
+                        <td>
+                            <input type="text" id="rule_then_strategy" list="pa_names">
+                        </td>
+                        <td>
+                            <input type="number" min="1" id="rule_if_sale_suc_h">
+                        </td>
+                        <td>
+                            <input type="number" min="1" id="rule_if_sale_fail_h">
+                        </td>
+                        <td>
+                            <input type="number" min="1" id="rule_if_sale_num">
+                        </td>
+                        <td>
+                            <input type="number" min="1" id="rule_if_sale_rev">
+                        </td>
+                        <td>
+                            <button class="smallbutton blackbutton visible"><i class="fa fa-plus" aria-hidden="true" onclick="post_pricing_rule()"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        function post_pricing_rule() {
+            let name = document.getElementById('rule_name').value;
+            let if_strategy = document.getElementById('rule_if_strategy').value;
+            let then_strategy = document.getElementById('rule_then_strategy').value;
+            let if_sale_suc_h = document.getElementById('rule_if_sale_suc_h').value;
+            let if_sale_fail_h = document.getElementById('rule_if_sale_fail_h').value;
+            let if_sale_num = document.getElementById('rule_if_sale_num').value;
+            let if_sale_rev = document.getElementById('rule_if_sale_rev').value;
+            if (name !== '' && if_strategy !== '' && then_strategy !== '' && (if_sale_suc_h !== '' || if_sale_fail_h !== '') && (if_sale_num !== '' || if_sale_rev !== '')) {
+                let obj = {
+                    'name': name,
+                    'if_strategy': if_strategy,
+                    'then_strategy': then_strategy,
+                    'if_sale_suc_h': if_sale_suc_h,
+                    'if_sale_fail_h': if_sale_fail_h,
+                    'if_sale_num': if_sale_num,
+                    'if_sale_rev': if_sale_rev,
+                    'pricing_bundle_id': {{ pr_bundle.id }}
+                };
+                let data = [];
+                data.push(obj);
+                darken();
+                $.ajax({
+                    url: "{{ url_for('api.pricing.post_rule') }}",
+                    type: "POST",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    success: function (response) {
+                        response.results.map(el => {
+                            let t_body = document.getElementById('t_body');
+                            let t_row = t_body.insertRow(0);
+                            let id_cell = t_row.insertCell();
+                            id_cell.innerHTML = el.id;
+                            let name_cell = t_row.insertCell();
+                            name_cell.innerHTML = name;
+                            let if_strategy_cell = t_row.insertCell();
+                            if_strategy_cell.innerHTML = if_strategy;
+                            let then_strategy_cell = t_row.insertCell();
+                            then_strategy_cell.innerHTML = then_strategy;
+                            let if_sale_suc_h_cell = t_row.insertCell();
+                            if_sale_suc_h_cell.innerHTML = if_sale_suc_h;
+                            let if_sale_fail_h_cell = t_row.insertCell();
+                            if_sale_fail_h_cell.innerHTML = if_sale_fail_h;
+                            let if_sale_num_cell = t_row.insertCell();
+                            if_sale_num_cell.innerHTML = if_sale_num;
+                            let if_sale_rev_cell = t_row.insertCell();
+                            if_sale_rev_cell.innerHTML = if_sale_rev;
+                            let button_cell = t_row.insertCell();
+                            button_cell.innerHTML = '<button class="smallbutton blackbutton visible"><i class="fa fa-plus" aria-hidden="true" onclick="patch_pricing_rule(\'' + el.id + '\')"></i></button>';
+                            show_msg('Update erfolgreich.', 'success');
+                            lighten();
+                        });
+                    },
+                    error: function(response) {
+                        show_msg('Error.', 'danger');
+                        lighten();
+                    }
+                });
+            }
+        }
+        function patch_pricing_rule(pr_rule_id) {
+            let name = document.getElementById('rule_name_' + pr_rule_id).value;
+            let if_strategy = document.getElementById('rule_if_strategy_' + pr_rule_id).value;
+            let then_strategy = document.getElementById('rule_then_strategy_' + pr_rule_id).value;
+            let if_sale_suc_h = document.getElementById('rule_if_sale_suc_h_' + pr_rule_id).value;
+            let if_sale_fail_h = document.getElementById('rule_if_sale_fail_h_' + pr_rule_id).value;
+            let if_sale_num = document.getElementById('rule_if_sale_num_' + pr_rule_id).value;
+            let if_sale_rev = document.getElementById('rule_if_sale_rev_' + pr_rule_id).value;
+            if (name !== '' && if_strategy !== '' && then_strategy !== '' && (if_sale_suc_h !== '' || if_sale_fail_h !== '') && (if_sale_num !== '' || if_sale_rev !== '')) {
+                let obj = {
+                    'id': pr_rule_id,
+                    'name': name,
+                    'if_strategy': if_strategy,
+                    'then_strategy': then_strategy,
+                    'if_sale_suc_h': if_sale_suc_h,
+                    'if_sale_fail_h': if_sale_fail_h,
+                    'if_sale_num': if_sale_num,
+                    'if_sale_rev': if_sale_rev,
+                    'pricing_bundle_id': {{ pr_bundle.id }}
+                };
+                let data = [];
+                data.push(obj);
+                darken();
+                $.ajax({
+                    url: "{{ url_for('api.pricing.patch_rule') }}",
+                    type: "PATCH",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    success: function (response) {
+                        show_msg('Update erfolgreich.', 'success');
+                        lighten();
+                    },
+                    error: function(response) {
+                        show_msg('Error.', 'danger');
+                        lighten();
+                    }
+                });
+            }
+        }
+        function delete_pricing_rule(pr_rule_id) {
+            darken();
+            $.ajax({
+                url:  "/api/pricing/rule/" + pr_rule_id,
+                type: "DELETE",
+                contentType: 'application/json; charset=utf-8',
+                success: function () {
+                    let row = document.getElementById('row_' + pr_rule_id);
+                    row.parentNode.removeChild(row);
+                    show_msg('Update erfolgreich.', 'success');
+                    lighten();
+                },
+                error: function() {
+                    show_msg('Error.', 'danger');
+                    lighten();
+                }
+            });
+        }
+        function patch_pricing_bundle() {
+            darken();
+            $.ajax({
+                url:  "/api/pricing/bundle/{{ pr_bundle.id }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                success: function () {
+                    show_msg('Update erfolgreich.', 'success');
+                    lighten();
+                },
+                error: function(response) {
+                    show_msg('Error.', 'danger');
+                    lighten();
+                }
+            });
+        }
+    </script>
+{%endblock%}

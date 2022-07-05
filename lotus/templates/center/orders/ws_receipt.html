@@ -1,0 +1,1052 @@
+{% extends 'center/orders/index.html' %}
+{% block title %}Wareneingang {{ wsr.id }}{% endblock %}
+
+{% block ext2 %}
+    <div class="big seven container-fluid text-start py-3">
+        <div class="row">
+            <div class="col-6">
+                Wareneingang {{ wsr.id }}
+            </div>
+            <div class="col-6 text-right">
+                <button type="button" class="standardbutton blackbutton tiny visible mx-1" style="vertical-align: top" onclick="get_pick_list('{{ wsr.id }}')">
+                    <i class="fa fa-list" aria-hidden="true"></i> PICKLISTE
+                </button>
+                <button type="button" class="standardbutton blackbutton tiny visible mx-1" style="vertical-align: top" onclick="window.open('/center/orders/ws_receipt/print_csv/{{ wsr.id }}');">
+                    <i class="fa fa-file-o" aria-hidden="true"></i> CSV
+                </button>
+                <button type="button" class="standardbutton blackbutton tiny visible mx-1" style="vertical-align: top" onclick="window.open('https://farm02.afterbuy.de/afterbuy/auktionsliste.aspx?AWebayname=&AWFilter=37&AWSuchwort=&AWRENummer=&AWFilter2=0&awmaxart=100&maxgesamt=500&AWEmail=&AWDatumVon=&AWDatumBis=&AWBezug=EndeDerAuktion&AWPLZ=&AWBetrag=&AWBetragBezug=1&AWStammID={{ internal_ids }}&AWLaenderkennung=d&AWLaenderkennungBezug=liefer&AWLabelDynSearchField1=ShippingAddress&AWDynSearchField1=&AWLabelDynSearchField2=PaymentStatus&AWDynSearchField2=&AWDynamicSorting=0&AWLabelDynSearchField3=PaymentShipMethod&AWDynSearchField3=&searchUserTag1=78&searchUserTagNegate1=1&searchUserTag2=0&searchUserTag3=0&searchUserTag4=0&killordersession=0&art=SetAuswahl')">
+                    <i class="fa fa-external-link" aria-hidden="true"></i> AFTERBUY
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid text-start">
+        <div class="row">
+            <div class="col-3">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input class="form-control" type="text" id="name" name="name" value="{{ wsr.name }}">
+                </div>
+                <div class="form-group">
+                    <label for="units">Einheiten</label>
+                    <input class="form-control" type="number" step="1" min="1" id="units" name="units" value="{{ wsr.units }}">
+                </div>
+                <div class="form-group">
+                    <label for="add_cost">Zusatzkosten</label>
+                    <input class="form-control" type="number" step=".01" min="0" id="add_cost" name="add_cost" value="{{ wsr.add_cost }}">
+                </div>
+                <div class="form-group">
+                    <label for="external_id">Order-Nummer</label>
+                    <input class="form-control" type="text" id="external_id" name="external_id" value="{{ wsr.external_id if wsr.external_id else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="afterbuy_id">Afterbuy-ID</label>
+                    <input class="form-control" type="text" id="afterbuy_id" name="afterbuy_id" value="{{ wsr.afterbuy_id if wsr.external_id else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="supplier">
+                        Lieferant *
+                        <button type="button" style="margin: 0 5px; padding: 2px 7px" class="supertiny standardbutton visible blackbutton" onclick="refreshsuppliers()">
+                            <i class="fa fa-refresh" aria-hidden="true"></i>
+                        </button>
+                    </label>
+                    <a href="{{ url_for('center_addsupplier') }}" style="float: right" target="_blank">
+                        <button type="button" class="standardbutton supertiny greenbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px">
+                            <i class="fa fa-plus" aria-hidden="true"></i> neu anlegen
+                        </button>
+                    </a>
+                    <select id="supplier" name="supplier" class="form-control">
+                        <option value=""></option>'
+                        {% for supplier in suppliers %}
+                        <option id="{{ supplier.id }}" value="{{ supplier.id }}" {% if supplier.id==wsr.supplier_id %}selected{% endif %}>
+                            {% if supplier.isfirm %}
+                                {{ supplier.firmname }}
+                            {% else %}
+                                {{ supplier.salutation }} {{ supplier.firstname }} {{ supplier.name }}
+                            {% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="invoice">
+                        Rechnungen
+                    </label>
+                    <a href="{{ url_for('center_addsupplier') }}" style="float: right" target="_blank">
+                        <button type="button" class="standardbutton supertiny greenbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px">
+                            <i class="fa fa-plus" aria-hidden="true"></i> neu anlegen
+                        </button>
+                    </a>
+                    <button type="button" class="standardbutton supertiny blackbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px; float: right" onclick="match_invoice()">
+                        <i class="fa fa-exchange" aria-hidden="true"></i> matchen
+                    </button>
+                    <select id="invoice" name="invoice" class="form-control">
+                        <option value=""></option>
+                        {% for wsi in ws_invoices %}
+                            <option id="{{ wsi.id }}" value="{{ wsi.id }}" {% if wsi.id == wsr.invoice_id %}selected{% endif %}>
+                                {{ wsi.name }} ({{ wsi.invoice_number if wsi.invoice_number else '-' }}) - {{ wsi.gross_price }} €
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="comment">Kommentar</label>
+                    <textarea class="form-control" id="comment" name="comment">{{ wsr.comment if wsr.comment != None else ''}}</textarea>
+                </div>
+                <div>
+                    <table class="table">
+                        <thead>
+                            <tr class="black text-center font-weight-bold">
+                                <td colspan="4">RECHNUNGSABGLEICH</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Netto</td>
+                                <td><span id="wsi_net_price_check">{{ '%0.2f' % wsr.invoice.net_price if wsr.invoice }}</span> €</td>
+                                <td><span id="wsr_net_price_check">{{ '%0.2f' % wsr.net_price }}</span> €</td>
+                                <td id="net_price_check_res">
+                                    {% if wsr.invoice %}
+                                        {% if '%0.2f' % wsr.invoice.net_price == '%0.2f' % wsr.net_price %}
+                                            <span class="text-success"><i class="fa fa-thumbs-up" aria-hidden="true"></i></span>
+                                        {% else %}
+                                            <span class="text-danger"><i class="fa fa-thumbs-down" aria-hidden="true"></i></span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Brutto</td>
+                                <td><span id="wsi_gross_price_check">{{ '%0.2f' % wsr.invoice.gross_price if wsr.invoice }}</span> €</td>
+                                <td><span id="wsr_gross_price_check">{{ '%0.2f' % wsr.gross_price }}</span> €</td>
+                                <td id="gross_price_check_res">
+                                    {% if wsr.invoice %}
+                                        {% if '%0.2f' % wsr.invoice.gross_price == '%0.2f' % wsr.gross_price %}
+                                            <span class="text-success"><i class="fa fa-thumbs-up" aria-hidden="true"></i></span>
+                                        {% else %}
+                                            <span class="text-danger"><i class="fa fa-thumbs-down" aria-hidden="true"></i></span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Pos.</td>
+                                <td><span id="wsi_product_positions_check">{{ wsr.invoice.positions if wsr.invoice }}</span></td>
+                                <td><span id="wsr_product_positions_check">{{ wsr.positions }}</span></td>
+                                <td id="product_positions_check_res">
+                                    {% if wsr.invoice %}
+                                        {% if wsr.invoice.positions == wsr.positions %}
+                                            <span class="text-success"><i class="fa fa-thumbs-up" aria-hidden="true"></i></span>
+                                        {% else %}
+                                            <span class="text-danger"><i class="fa fa-thumbs-down" aria-hidden="true"></i></span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Stk.</td>
+                                <td><span id="wsi_product_quantity_check">{{ wsr.invoice.num_products if wsr.invoice }}</span></td>
+                                <td><span id="wsr_product_quantity_check">{{ wsr.num_products }}</span></td>
+                                <td id="product_quantity_check_res">
+                                    {% if wsr.invoice %}
+                                        {% if wsr.invoice.num_products == wsr.num_products %}
+                                            <span class="text-success"><i class="fa fa-thumbs-up" aria-hidden="true"></i></span>
+                                        {% else %}
+                                            <span class="text-danger"><i class="fa fa-thumbs-down" aria-hidden="true"></i></span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-9">
+                <table class="table">
+                    <thead>
+                        <tr class="black">
+                            <th>
+                                <input style="width: 0; height:0; opacity: 0" id="wsr_p_ids" value="{{ ids }}">
+                                <input style="width: 0; height:0; opacity: 0" id="wsr_p_internal_ids" value="{{ internal_ids }}">
+                                <input style="width: 0; height:0; opacity: 0" id="wsr_p_hsp_ids" value="{{ hsp_ids }}">
+                            </th>
+                            <th>
+                            </th>
+                            <th>
+                                <a onclick="copy_to_clipboard('wsr_p_ids')"><button class="supertiny smallbutton blackbutton px-1 mx-1"><i class="fa fa-copy" aria-hidden="true"></i></button></a>ID<br>
+                                <a onclick="copy_to_clipboard('wsr_p_internal_ids')"><button class="supertiny smallbutton blackbutton px-1 mx-1"><i class="fa fa-copy" aria-hidden="true"></i></button></a>Interne ID<br>
+                                <a onclick="copy_to_clipboard('wsr_p_hsp_ids')"><button class="supertiny smallbutton blackbutton px-1 mx-1"><i class="fa fa-copy" aria-hidden="true"></i></button></a>HSP-ID
+                            </th>
+                            <th>
+                                Name
+                            </th>
+                            <th>
+                                Anzahl
+                            </th>
+                            <th>
+                                Steuer
+                            </th>
+                            <th>
+                                Netto
+                            </th>
+                            <th>
+                                Brutto
+                            </th>
+                            <th>
+                                Gesamt
+                            </th>
+                            <th>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for parcel in wsr.parcels %}
+                            <tr id="parcel_{{ parcel.id }}" class="lightgrey">
+                                <td class="border-dark text-nowrap">
+                                    <button class="smallbutton redbutton tiny visible" onclick="delete_wsr_parcels(['{{ parcel.id }}'])"><i class="fa fa-trash"></i></button>
+                                    <button class="smallbutton blackbutton tiny visible" onclick="paste_wsr_product('{{ parcel.id }}')"><i class="fa fa-paste"></i></button>
+                                </td>
+                                <td class="border-dark" colspan="7">
+                                    <i class="fa fa-cube" aria-hidden="true"></i>
+                                    <input type="hidden" class="wsr_parcel" value="{{ parcel.id }}"/>
+                                    <input type="text" id="wsr_parcel_{{ parcel.id }}_tracking_number" name="wsr_parcel_{{ parcel.id }}_tracking_number" value="{{ parcel.tracking_number }}">
+                                </td>
+                                <td class="border-dark">
+                                    <span><span id="wsr_parcel_{{ parcel.id }}_p_num">{{ parcel.get_quantity() }}</span> Stück</span>
+                                </td>
+                                <td class="border-dark text-right">
+                                     <button class="smallbutton blackbutton tiny visible" onclick="separate_parcel('{{ parcel.id }}')">
+                                        <i class="fa fa-chain-broken" aria-hidden="true"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% for p in parcel.products %}
+                                <tr class="parcel_{{ parcel.id }}_row" id="row_{{ p.id }}" style="{% if p.complete == True %}background: #caf0c7{% endif %}">
+                                    <input type="hidden" class="{% if p.complete == True %}complete{% else %}open{% endif %}" id="status_inp_{{ p.id }}" value="{{ p.id }}"/>
+                                    <input type="hidden" id="wsr_p_{{ p.id }}_parcel_ident" value="{{ parcel.id }}"/>
+                                    <input type="hidden" id="wsr_parcel_product_ident_{{ p.id }}" class="wsr_parcel_{{ parcel.id }}_product_ident" value="{{ p.id }}"/>
+                                    <td class="text-nowrap">
+                                        <button class="smallbutton redbutton tiny visible" onclick="delete_wsr_products(['{{ p.id }}'])"><i class="fa fa-trash"></i></button>
+                                        <button class="smallbutton blackbutton tiny visible" onclick="cut_wsr_products('{{ p.id }}')"><i class="fa fa-scissors"></i></button>
+                                    </td>
+                                    <td id="status_{{ p.id }}">
+                                        {% if p.complete == True %}
+                                            <i class="fa fa-lock" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="fa fa-unlock-alt" aria-hidden="true"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ p.product.id }}<br>
+                                        {{ p.product.internal_id }}<br>
+                                        {{ p.product.hsp_id }}
+                                    </td>
+                                    <td>
+                                        {{ p.product.name }}
+                                    </td>
+                                    <td class="text-nowrap" id="wsr_product_{{ p.id }}_quantity">
+                                        <input {% if p.complete == True %}readonly {% endif %}type="number" step="1" id="wsr_p_{{ p.id }}_quantity" name="wsr_p_{{ p.id }}_quantity" value="{{ p.quantity }}"
+                                               onchange="update_product_inputs('{{ p.id }}', 'one')" style="width: 80px">
+                                    </td>
+                                    <td class="text-nowrap" id="wsr_product_{{ p.id }}_tax">
+                                        <input {% if p.complete == True %}readonly {% endif %}type="number" step=".01" id="wsr_p_{{ p.id }}_tax" name="wsr_p_{{ p.id }}_tax" value="{{ '%0.2f' % (p.tax * 100) }}"
+                                               onchange="update_product_inputs('{{ p.id }}', 'both')" style="width: 80px"> %
+                                    </td>
+                                    <td class="text-nowrap" id="wsr_product_{{ p.id }}_net_price">
+                                        <input {% if p.complete == True %}readonly {% endif %}type="number" step=".01" id="wsr_p_{{ p.id }}_net_price" name="wsr_p_{{ p.id }}_net_price" value="{{ '%0.2f' % (p.price) }}"
+                                               onchange="update_product_inputs('{{ p.id }}', 'both')" style="width: 80px"> €
+                                    </td>
+                                    <td class="text-nowrap">
+                                        <div class="my-1"  id="wsr_product_{{ p.id }}_gross_price">{{ '%0.2f' % (p.price * (1 + p.tax)) }} €</div>
+                                    </td>
+                                    <td class="text-nowrap">
+                                        <div class="my-1" id="wsr_product_{{ p.id }}_full_price">{{ '%0.2f' % (p.price * (1 + p.tax) * p.quantity) }} €</div>
+                                    </td>
+                                    <td class="text-nowrap">
+                                        <button class="smallbutton blackbutton tiny visible" onclick="patch_wsr_product('{{ p.id }}')"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>
+                                        <button class="smallbutton blackbutton tiny visible" id="open_button_{{ p.id }}" onclick="open_wsr_product(['{{ p.id }}'])" {% if p.complete != True %}hidden{% endif %}>
+                                            <i class="fa fa-unlock-alt" aria-hidden="true"></i>
+                                        </button>
+                                        <button class="smallbutton blackbutton tiny visible" id="complete_button_{{ p.id }}" onclick="complete_wsr_product(['{{ p.id }}'])" {% if p.complete == True %}hidden{% endif %}>
+                                            <i class="fa fa-lock" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            <tr id="add_row_{{ parcel.id }}" class="parcel_{{ parcel.id }}_row">
+                                <td class="reg font-weight-bold border-dark">ADD</td>
+                                <td class="border-dark"></td>
+                                <td class="border-dark">
+                                    <input type="hidden" id="add_hsp_id_{{ parcel.id }}">
+                                    <input type="hidden" id="add_p_id_{{ parcel.id }}">
+                                    <input type="text" id="add_id_{{ parcel.id }}" class="add_id w-100" onkeyup="update_add_name('{{ parcel.id }}', this)">
+                                </td>
+                                <td class="border-dark">
+                                    <input type="text" id="add_name_{{ parcel.id }}" class="add_name w-100">
+                                </td>
+                                <td class="border-dark text-nowrap">
+                                    <input type="number" step="1" id="add_quantity_{{ parcel.id }}" class="add_quantity" value="1" style="width: 80px" onchange="update_add_inputs('{{ parcel.id }}', this)">
+                                </td>
+                                <td class="border-dark text-nowrap">
+                                    <input type="number" step=".01" id="add_tax_{{ parcel.id }}" class="add_tax" value="{{ base_tax }}" style="width: 80px" onchange="update_add_inputs('{{ parcel.id }}', this)"> %
+                                </td>
+                                <td class="border-dark text-nowrap">
+                                    <input type="number" step=".01" id="add_net_price_{{ parcel.id }}" class="add_net_price" value="" style="width: 80px" onchange="update_add_inputs('{{ parcel.id }}', this)"> €
+                                </td>
+                                <td class="border-dark text-nowrap">
+                                    <input type="number" step=".01" id="add_gross_price_{{ parcel.id }}" class="add_gross_price" value="" style="width: 80px" onchange="update_add_inputs('{{ parcel.id }}', this)"> €
+                                </td>
+                                <td class="border-dark text-nowrap">
+                                    <div id="add_full_price_{{ parcel.id }}" class="add_full_price my-1" style="width: 80px">-</div>
+
+                                </td>
+                                <td class="border-dark text-nowrap text-right">
+                                    <button class="smallbutton blackbutton tiny visible" onclick="add_wsr_product('{{ parcel.id }}')"><i class="fa fa-plus" aria-hidden="true"></i></button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        <tr id="summary_row" class="lightgrey font-weight-bold">
+                            <input type="hidden" id="cut_p_id" value=""/>
+                            <td class="text-start">
+                                <button class="smallbutton blackbutton tiny visible" style="position:relative; padding-right: 12px" onclick="add_parcel()">
+                                    <i class="fa fa-cube" aria-hidden="true"></i>
+                                    <div class="supertiny" style="position: absolute; top: 0; right:8px"><i class="fa fa-plus" aria-hidden="true"></i></div>
+                                </button>
+                            </td>
+                            <td colspan="7" class="text-right">
+                            </td>
+                            <td class="text-right text-nowrap">
+                                <span id="wsr_net_price">{{ '%0.2f' % (wsr.net_price) }}</span> €<br>
+                                <span id="wsr_gross_price">{{ '%0.2f' % (wsr.gross_price) }}</span> €<br>
+                                <span id="wsr_product_positions">{{ wsr.positions }}</span><br>
+                                <span id="wsr_product_quantity">{{ wsr.num_products }}</span>
+                            </td>
+                            <td>
+                                Netto<br>
+                                Brutto<br>
+                                Pos.<br>
+                                Stk.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="row py-2">
+            <div class="col-12 text-center">
+               <button class="standardbutton blackbutton small visible" onclick="open_all_wsr_products()"><i class="fa fa-unlock-alt" aria-hidden="true"></i> Alle öffnen</button>
+               <button class="standardbutton blackbutton small visible" onclick="complete_all_wsr_products()"><i class="fa fa-lock" aria-hidden="true"></i> Alle abschließen</button>
+               <button class="standardbutton blackbutton small visible" onclick="patch_wsr()"><i class="fa fa-floppy-o" aria-hidden="true"></i> Speichern</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let sh_dest = '&AWLaenderkennung=d&AWLaenderkennungBezug=liefer';
+
+        let csrf_token = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrf_token)
+                }
+            }
+        });
+
+        function check_inv(result) {
+            if (result.gross_price === result.inv_gross_price) {
+                document.getElementById('gross_price_check_res').innerHTML = '<span class="text-success"><i class="fa fa-thumbs-up" aria-hidden="true"></i></span>';
+            }
+            else{
+                document.getElementById('gross_price_check_res').innerHTML = '<span class="text-danger"><i class="fa fa-thumbs-down" aria-hidden="true"></i></span>';
+            }
+            if (result.net_price === result.inv_net_price) {
+                document.getElementById('net_price_check_res').innerHTML = '<span class="text-success"><i class="fa fa-thumbs-up" aria-hidden="true"></i></span>';
+            }
+            else{
+                document.getElementById('net_price_check_res').innerHTML = '<span class="text-danger"><i class="fa fa-thumbs-down" aria-hidden="true"></i></span>';
+            }
+            if (result.product_positions === result.inv_product_positions) {
+                document.getElementById('product_positions_check_res').innerHTML = '<span class="text-success"><i class="fa fa-thumbs-up" aria-hidden="true"></i></span>';
+            }
+            else{
+                document.getElementById('product_positions_check_res').innerHTML = '<span class="text-danger"><i class="fa fa-thumbs-down" aria-hidden="true"></i></span>';
+            }
+            if (result.product_quantity === result.inv_product_quantity) {
+                document.getElementById('product_quantity_check_res').innerHTML = '<span class="text-success"><i class="fa fa-thumbs-up" aria-hidden="true"></i></span>';
+            }
+            else{
+                document.getElementById('product_quantity_check_res').innerHTML = '<span class="text-danger"><i class="fa fa-thumbs-down" aria-hidden="true"></i></span>';
+            }
+        }
+
+        function patch_wsr() {
+            darken();
+            let data = {
+                'id': {{ wsr.id }},
+                'name': document.getElementById('name').value,
+                'units': document.getElementById('units').value,
+                'add_cost': document.getElementById('add_cost').value,
+                'external_id': document.getElementById('external_id').value,
+                'afterbuy_id': document.getElementById('afterbuy_id').value,
+                'supplier_id': document.getElementById('supplier').value,
+                'comment': document.getElementById('comment').value,
+                'parcels': []
+            };
+            if (document.getElementById('invoice').value !== '') {
+                data['invoice_id'] = document.getElementById('invoice').value;
+            }
+            data['parcels'] = Array.prototype.map.call(document.getElementsByClassName('wsr_parcel'), function f(parcel) {
+                let products = Array.prototype.map.call(document.getElementsByClassName('wsr_parcel_' + parcel.value + '_product_ident'), function f(product) {
+                return {
+                    'id': product.value,
+                    'quantity': document.getElementById('wsr_p_' + product.value + '_quantity').value,
+                    'tax': document.getElementById('wsr_p_' + product.value + '_tax').value,
+                    'price': document.getElementById('wsr_p_' + product.value + '_net_price').value
+                }
+                });
+                return {'id': parcel.value, 'tracking_number': document.getElementById('wsr_parcel_' + parcel.value + '_tracking_number').value, 'products': products};
+            });
+            console.log(data);
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.patch') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    let result = response.result;
+                    document.getElementById('wsr_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('wsr_gross_price_check').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price_check').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions_check').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity_check').innerText = result.product_quantity;
+                    if (result.invoice === true) {
+                        document.getElementById('wsi_gross_price_check').innerText = result.inv_gross_price;
+                        document.getElementById('wsi_net_price_check').innerText = result.inv_net_price;
+                        document.getElementById('wsi_product_positions_check').innerText = result.inv_product_positions;
+                        document.getElementById('wsi_product_quantity_check').innerText = result.inv_product_quantity;
+                        check_inv(result);
+                    }
+                    for (let i=0; i < result.parcels.length; i++){
+                        let parcel = result.parcels[i];
+                        document.getElementById('wsr_parcel_' + parcel.id + '_p_num').innerHTML = parcel.p_num;
+                        for (let j=0; j < parcel.products.length; j++){
+                            let p = parcel.products[j];
+                            document.getElementById('wsr_product_' + p.id + '_gross_price').innerHTML = p.gross_price + ' €';
+                            document.getElementById('wsr_product_' + p.id + '_full_price').innerHTML = p.full_price + ' €';
+                        }
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                }
+            });
+        }
+
+        function match_invoice() {
+            darken();
+            $.ajax({
+                url: "/api/logistics/ws_receipt/{{ wsr.id }}/match_invoice",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (response) {
+                    let result = response.result;
+                    if (result.type === 'no invoice found') {
+                        show_msg('Keine passende Rechnung gefunden.', 'danger');
+                    }
+                    else {
+                        document.getElementById('invoice').value = result.invoice_id;
+                        if (result.type === 'matched') {
+                            document.getElementById('wsi_gross_price_check').innerText = result.inv_gross_price;
+                            document.getElementById('wsi_net_price_check').innerText = result.inv_net_price;
+                            document.getElementById('wsi_product_positions_check').innerText = result.inv_product_positions;
+                            document.getElementById('wsi_product_quantity_check').innerText = result.inv_product_quantity;
+                            check_inv(response.result);
+                            show_msg('Rechnung identifiziert.', 'success');
+                        }
+                        else {
+                            show_msg('Rechnungs-Kandidat identifiziert.', 'success');
+                        }
+                    }
+                    lighten();
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                }
+            });
+        }
+
+        function add_parcel() {
+            darken();
+            $.ajax({
+                url: "/api/logistics/ws_receipt/parcels/add",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify({'wsr_id': {{ wsr.id }}, 'parcels': [{'tracking_number': '-', 'products': []}]}),
+                success: function (response) {
+                    let result = response.result;
+                    document.getElementById('wsr_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('wsr_gross_price_check').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price_check').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions_check').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity_check').innerText = result.product_quantity;
+                    if (result.invoice === true) {
+                        document.getElementById('wsi_gross_price_check').innerText = result.inv_gross_price;
+                        document.getElementById('wsi_net_price_check').innerText = result.inv_net_price;
+                        document.getElementById('wsi_product_positions_check').innerText = result.inv_product_positions;
+                        document.getElementById('wsi_product_quantity_check').innerText = result.inv_product_quantity;
+                        check_inv(result);
+                    }
+                    let target_row = document.getElementById('summary_row');
+                    result.parcels.forEach(function (parcel) {
+                        let new_row = document.createElement('tr');
+                        new_row.id = 'parcel_' + parcel.id;
+                        new_row.className = 'lightgrey';
+                        let td_1 = new_row.insertCell();
+                        td_1.className = 'border-dark text-nowrap';
+                        let td_1_innerHTML = '<button class="smallbutton redbutton tiny visible" onclick="delete_wsr_parcels([\'' + parcel.id + '\'])"><i class="fa fa-trash"></i></button>\n';
+                        td_1_innerHTML += '<button class="smallbutton blackbutton tiny visible" onclick="paste_wsr_product(\'' +  parcel.id + '\')"><i class="fa fa-paste"></i></button>';
+                        td_1.innerHTML = td_1_innerHTML;
+                        let td_2 = new_row.insertCell();
+                        td_2.className = 'border-dark';
+                        td_2.colSpan = '7';
+                        let td_2_innerHTML = '<i class="fa fa-cube" aria-hidden="true"></i><input type="hidden" class="wsr_parcel" value="' + parcel.id + '"/>';
+                        td_2_innerHTML += '<input type="text" id="wsr_parcel_' + parcel.id + '_tracking_number" name="wsr_parcel_' + parcel.id + '_tracking_number" value="' + parcel.tracking_number + '">';
+                        td_2.innerHTML = td_2_innerHTML;
+                        let td_3 = new_row.insertCell();
+                        td_3.className = 'border-dark';
+                        td_3.innerHTML = '<span><span id="wsr_parcel_' + parcel.id + '_p_num">' + parcel.p_num + '</span> Stück</span>';
+                        let td_4 = new_row.insertCell();
+                        td_4.className = 'border-dark text-right';
+                        td_4.innerHTML = '<button class="smallbutton blackbutton tiny visible" onclick="separate_parcel(\'' + parcel.id + '\')"><i class="fa fa-chain-broken" aria-hidden="true"></i></button>';
+                        target_row.parentNode.insertBefore(new_row, target_row);
+                        add_product_rows('summary_row', parcel);
+                        new_row = document.createElement('tr');
+                        new_row.id = 'add_row_' + parcel.id;
+                        new_row.className = 'parcel_' + parcel.id + '_row';
+                        td_1 = new_row.insertCell();
+                        td_1.className = 'reg font-weight-bold border-dark';
+                        td_1.innerText = 'ADD';
+                        td_2 = new_row.insertCell();
+                        td_2.className = 'border-dark';
+                        td_3 = new_row.insertCell();
+                        td_3.className = 'border-dark';
+                        let td_3_innerHTML = '<input type="hidden" id="add_hsp_id_' + parcel.id + '"><input type="hidden" id="add_p_id_' + parcel.id + '">';
+                        td_3_innerHTML += '<input type="text" id="add_id_' + parcel.id + '" class="add_id w-100" onkeyup="update_add_name(\'' + parcel.id + '\', this)">';
+                        td_3.innerHTML = td_3_innerHTML;
+                        td_4 = new_row.insertCell();
+                        td_4.className = 'border-dark';
+                        td_4.innerHTML = '<input type="text" id="add_name_' + parcel.id + '" class="add_name w-100">';
+                        let td_5 = new_row.insertCell();
+                        td_5.className = 'border-dark text-nowrap';
+                        td_5.innerHTML = '<input type="number" step="1" id="add_quantity_' + parcel.id + '" class="add_quantity" value="1" style="width: 80px" onchange="update_add_inputs(\'' + parcel.id + '\', this)">';
+                        let td_6 = new_row.insertCell();
+                        td_6.className = 'border-dark text-nowrap';
+                        td_6.innerHTML = '<input type="number" step=".01" id="add_tax_' + parcel.id + '" class="add_tax" value="{{ base_tax }}" style="width: 80px" onchange="update_add_inputs(\'' + parcel.id + '\', this)"> %';
+                        let td_7 = new_row.insertCell();
+                        td_7.className = 'border-dark text-nowrap';
+                        td_7.innerHTML = '<input type="number" step=".01" id="add_net_price_' + parcel.id + '" class="add_net_price" value="" style="width: 80px" onchange="update_add_inputs(\'' + parcel.id + '\', this)"> €';
+                        let td_8 = new_row.insertCell();
+                        td_8.className = 'border-dark text-nowrap';
+                        td_8.innerHTML = '<input type="number" step=".01" id="add_gross_price_' + parcel.id + '" class="add_gross_price" value="" style="width: 80px" onchange="update_add_inputs(\'' + parcel.id + '\', this)"> €';
+                        let td_9 = new_row.insertCell();
+                        td_9.className = 'border-dark text-nowrap';
+                        td_9.innerHTML = '<div id="add_full_price_' + parcel.id + '" class="add_full_price my-1" style="width: 80px">-</div>';
+                        let td_10 = new_row.insertCell();
+                        td_10.className = 'border-dark text-nowrap text-right';
+                        td_10.innerHTML = '<button class="smallbutton blackbutton tiny visible" onclick="add_wsr_product(\'' + parcel.id + '\')"><i class="fa fa-plus" aria-hidden="true"></i></button>';
+                        target_row.parentNode.insertBefore(new_row, target_row);
+                    });
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                }
+            });
+        }
+
+        function separate_parcel(wsr_parcel_id) {
+            darken();
+            $.ajax({
+                url: "/api/logistics/ws_receipt/parcel/" + wsr_parcel_id + "/separate",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function(response) {
+                    let result = response.result;
+                    document.getElementById('wsr_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('wsr_gross_price_check').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price_check').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions_check').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity_check').innerText = result.product_quantity;
+                    if (result.invoice === true) {
+                        document.getElementById('wsi_gross_price_check').innerText = result.inv_gross_price;
+                        document.getElementById('wsi_net_price_check').innerText = result.inv_net_price;
+                        document.getElementById('wsi_product_positions_check').innerText = result.inv_product_positions;
+                        document.getElementById('wsi_product_quantity_check').innerText = result.inv_product_quantity;
+                        check_inv(result);
+                    }
+                    let row = document.getElementById('parcel_' + wsr_parcel_id);
+                    row.parentNode.removeChild(row);
+                    let products = document.getElementsByClassName('parcel_' + wsr_parcel_id + '_row');
+                    while (products.length > 0) {
+                        products[0].parentNode.removeChild(products[0]);
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                }
+            });
+        }
+
+        function paste_wsr_product(wsr_parcel_id) {
+            darken();
+            let inp = document.getElementById('cut_p_id');
+            if (inp.value !== '') {
+                $.ajax({
+                    url: "/api/logistics/ws_receipt/parcel/" + wsr_parcel_id + "/paste_wsr_product/" + inp.value,
+                    type: "POST",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    success: function (response) {
+                        let cut_row = document.getElementById('row_' + inp.value);
+                        cut_row.className = 'parcel_' + wsr_parcel_id + '_row';
+                        document.getElementById('wsr_p_' + inp.value + '_parcel_ident').value = wsr_parcel_id;
+                        document.getElementById('wsr_parcel_product_ident_' + inp.value).className = 'wsr_parcel_' + wsr_parcel_id + '_product_ident';
+                        let add_row = document.getElementById('add_row_' + wsr_parcel_id);
+                        add_row.parentNode.insertBefore(cut_row, add_row);
+                        cut_row.style.border = 'None';
+                        inp.value = '';
+                        for (let i=0; i < response.result.parcels.length; i++){
+                            document.getElementById('wsr_parcel_' + response.result.parcels[i].id + '_p_num').innerHTML = response.result.parcels[i].p_num;
+                        }
+                        lighten();
+                        show_msg('Update erfolgreich.', 'success');
+                    },
+                    error: function(response) {
+                        lighten();
+                        show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                    }
+                });
+            }
+            else {
+                lighten();
+                show_msg('Kein Produkt ausgewählt.', 'danger');
+            }
+        }
+
+        function delete_wsr_parcels(wsr_parcel_ids) {
+            darken();
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.delete_parcels') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(wsr_parcel_ids),
+                success: function(response) {
+                    let result = response.result[0];
+                    document.getElementById('wsr_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('wsr_gross_price_check').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price_check').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions_check').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity_check').innerText = result.product_quantity;
+                    if (result.invoice === true) {
+                        document.getElementById('wsi_gross_price_check').innerText = result.inv_gross_price;
+                        document.getElementById('wsi_net_price_check').innerText = result.inv_net_price;
+                        document.getElementById('wsi_product_positions_check').innerText = result.inv_product_positions;
+                        document.getElementById('wsi_product_quantity_check').innerText = result.inv_product_quantity;
+                        check_inv(result);
+                    }
+                    for (let i=0; i < result.parcels.length; i++){
+                        document.getElementById('wsr_parcel_' + result.parcels[i].id + '_p_num').innerHTML = result.parcels[i].p_num;
+                    }
+                    let removed = response.removed;
+                    for (let i=0; i < removed.length; i++){
+                        let row = document.getElementById('parcel_' + removed[i]);
+                        row.parentNode.removeChild(row);
+                        let products = document.getElementsByClassName('parcel_' + removed[i] + '_row');
+                        while (products.length > 0) {
+                            products[0].parentNode.removeChild(products[0]);
+                        }
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                }
+            });
+        }
+
+        function add_wsr_product(parcel_id) {
+            darken();
+            let data = {
+                'parcel_id': parcel_id,
+                'products':
+                    [
+                        {
+                            'id': document.getElementById("add_p_id_" + parcel_id).value,
+                            'ean': document.getElementById("add_hsp_id_" + parcel_id).value,
+                            'name': document.getElementById("add_name_" + parcel_id).value,
+                            'quantity': document.getElementById("add_quantity_" + parcel_id).value,
+                            'tax': document.getElementById("add_tax_" + parcel_id).value,
+                            'price': document.getElementById("add_net_price_" + parcel_id).value
+                        }
+                    ]
+            };
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.add_products') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    let result = response.result;
+                    document.getElementById('wsr_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('wsr_gross_price_check').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price_check').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions_check').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity_check').innerText = result.product_quantity;
+                    if (result.invoice === true) {
+                        document.getElementById('wsi_gross_price_check').innerText = result.inv_gross_price;
+                        document.getElementById('wsi_net_price_check').innerText = result.inv_net_price;
+                        document.getElementById('wsi_product_positions_check').innerText = result.inv_product_positions;
+                        document.getElementById('wsi_product_quantity_check').innerText = result.inv_product_quantity;
+                        check_inv(result);
+                    }
+                    for (let i=0; i < result.parcels.length; i++){
+                        let parcel = result.parcels[i];
+                        document.getElementById('wsr_parcel_' + parcel.id + '_p_num').innerHTML = parcel.p_num;
+                        add_product_rows('add_row_' + parcel.id, parcel);
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                }
+            });
+        }
+
+        function add_product_rows(target_row_id, parcel) {
+            for (let j=0; j < parcel.products.length; j++) {
+                let wsr_p = parcel.products[j];
+                let new_row = document.createElement('tr');
+                new_row.className = "parcel_" + parcel.id + "_row";
+                new_row.id = "row_" + wsr_p.id;
+                let status_inp = document.createElement('input');
+                status_inp.type = 'hidden';
+                status_inp.className = 'open';
+                status_inp.id = 'status_inp_' + wsr_p.id;
+                status_inp.value = wsr_p.id;
+                new_row.appendChild(status_inp);
+                let parcel_ident = document.createElement('input');
+                parcel_ident.type = 'hidden';
+                parcel_ident.id = 'wsr_p_' + wsr_p.id + '_parcel_ident';
+                parcel_ident.value = parcel.id;
+                new_row.appendChild(parcel_ident);
+                let product_ident = document.createElement('input');
+                product_ident.type = 'hidden';
+                product_ident.className = 'wsr_parcel_' + parcel.id + '_product_ident';
+                product_ident.id = 'wsr_parcel_product_ident_' + wsr_p.id;
+                product_ident.value = wsr_p.id;
+                new_row.appendChild(product_ident);
+                let td_1 = new_row.insertCell();
+                td_1.className = "text-nowrap";
+                let td_1_innerHTML = '<button class="smallbutton redbutton visible" onclick="delete_wsr_products([\'' + wsr_p.id + '\'])"><i class="fa fa-trash"></i></button>\n';
+                td_1_innerHTML += '<button class="smallbutton blackbutton tiny visible" onclick="cut_wsr_products(\'' + wsr_p.id + '\')"><i class="fa fa-scissors"></i></button>';
+                td_1.innerHTML = td_1_innerHTML;
+                let td_2 = new_row.insertCell();
+                td_2.id = 'status_' + wsr_p.id;
+                td_2.innerHTML = '<i class="fa fa-unlock-alt" aria-hidden="true"></i>';
+                let td_3 = new_row.insertCell();
+                td_3.innerHTML = wsr_p.p_id + '<br>' + wsr_p.p_internal_id + '<br>' + wsr_p.p_hsp_id;
+                let td_4 = new_row.insertCell();
+                td_4.innerHTML = wsr_p.p_name;
+                let td_5 = new_row.insertCell();
+                td_5.className = 'text-nowrap';
+                td_5.id = 'wsr_product_' + wsr_p.id + '_quantity';
+                td_5.innerHTML = '<input type="number" step="1" id="wsr_p_' + wsr_p.id + '_quantity" name="wsr_p_' + wsr_p.id + '_quantity" value="' + wsr_p.quantity + '" onchange="update_product_inputs(\'' + wsr_p.id + '\', \'one\')" style="width: 80px">';
+                let td_6 = new_row.insertCell();
+                td_6.className = 'text-nowrap';
+                td_6.id = 'wsr_product_' + wsr_p.id + '_tax';
+                td_6.innerHTML = '<input type="number" step=".01" id="wsr_p_' + wsr_p.id + '_tax" name="wsr_p_' + wsr_p.id + '_tax" value="' + wsr_p.tax + '" onchange="update_product_inputs(\'' + wsr_p.id + '\', \'both\')" style="width: 80px"> %';
+                let td_7 = new_row.insertCell();
+                td_7.className = 'text-nowrap';
+                td_7.id = 'wsr_product_' + wsr_p.id + '_net_price';
+                td_7.innerHTML = '<input type="number" step=".01" id="wsr_p_' + wsr_p.id + '_net_price" name="wsr_p_' + wsr_p.id + '_net_price" value="' + wsr_p.net_price + '" onchange="update_product_inputs(\'' + wsr_p.id + '\', \'both\')" style="width: 80px"> €';
+                let td_8 = new_row.insertCell();
+                td_8.className = 'text-nowrap';
+                td_8.id = 'wsr_product_' + wsr_p.id + '_gross_price';
+                td_8.innerHTML = '<div class="my-1">' + wsr_p.gross_price + '€</div>';
+                let td_9 = new_row.insertCell();
+                td_9.className = 'text-nowrap';
+                td_9.id = 'wsr_product_' + wsr_p.id + '_full_price';
+                td_9.innerHTML = '<div class="my-1">' + wsr_p.full_price + '€</div>';
+                let td_10 = new_row.insertCell();
+                td_10.className = 'text-nowrap';
+                let td_10_innerHTML= '<button class="smallbutton blackbutton tiny visible" onclick="patch_wsr_product(\'' + wsr_p.id + '\')"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>';
+                td_10_innerHTML += '<button class="smallbutton blackbutton tiny visible" id="open_button_' + wsr_p.id + '" onclick="open_wsr_product([\'' + wsr_p.id + '\'])" hidden>';
+                td_10_innerHTML += '<i class="fa fa-unlock-alt" aria-hidden="true"></i>';
+                td_10_innerHTML += '</button>\n';
+                td_10_innerHTML += '<button class="smallbutton blackbutton tiny visible" id="complete_button_' + wsr_p.id + '" onclick="complete_wsr_product([\'' + wsr_p.id + '\'])">';
+                td_10_innerHTML += '<i class="fa fa-lock" aria-hidden="true"></i>';
+                td_10_innerHTML += '</button>';
+                td_10.innerHTML = td_10_innerHTML;
+                let target_row = document.getElementById(target_row_id);
+                target_row.parentNode.insertBefore(new_row, target_row);
+            }
+        }
+
+        function patch_wsr_product(wsr_p_id) {
+            darken();
+            let data = {
+                'id': {{ wsr.id }},
+                'parcels': [
+                    {
+                        'id': document.getElementById('wsr_p_' + wsr_p_id + '_parcel_ident').value,
+                        'products': [
+                            {
+                                'id': wsr_p_id,
+                                'quantity': document.getElementById('wsr_p_' + wsr_p_id + '_quantity').value,
+                                'tax': document.getElementById('wsr_p_' + wsr_p_id + '_tax').value,
+                                'price': document.getElementById('wsr_p_' + wsr_p_id + '_net_price').value
+                            }
+                        ]
+                    }
+                ]
+            };
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.patch') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    let result = response.result;
+                    document.getElementById('wsr_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('wsr_gross_price_check').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price_check').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions_check').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity_check').innerText = result.product_quantity;
+                    if (result.invoice === true) {
+                        document.getElementById('wsi_gross_price_check').innerText = result.inv_gross_price;
+                        document.getElementById('wsi_net_price_check').innerText = result.inv_net_price;
+                        document.getElementById('wsi_product_positions_check').innerText = result.inv_product_positions;
+                        document.getElementById('wsi_product_quantity_check').innerText = result.inv_product_quantity;
+                        check_inv(result);
+                    }
+                    for (let i=0; i < result.parcels.length; i++){
+                        let parcel = result.parcels[i];
+                        document.getElementById('wsr_parcel_' + parcel.id + '_p_num').innerHTML = parcel.p_num;
+                        for (let j=0; j < parcel.products.length; j++){
+                            let p = parcel.products[j];
+                            document.getElementById('wsr_product_' + p.id + '_gross_price').innerHTML = p.gross_price + ' €';
+                            document.getElementById('wsr_product_' + p.id + '_full_price').innerHTML = p.full_price + ' €';
+                        }
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.message, 'danger');
+                }
+            });
+        }
+
+        function cut_wsr_products(wsr_p_id) {
+            let inp = document.getElementById('cut_p_id');
+            if (inp.value !== '') {document.getElementById('row_' + inp.value).style.border = 'None';}
+            document.getElementById('row_' + wsr_p_id).style.border = 'dashed 2px black';
+            inp.value = wsr_p_id;
+        }
+
+        function delete_wsr_products(wsr_p_ids) {
+            darken();
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.delete_products') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(wsr_p_ids),
+                success: function(response) {
+                    let result = response.result[0];
+                    document.getElementById('wsr_gross_price').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity').innerText = result.product_quantity;
+                    document.getElementById('wsr_gross_price_check').innerText = result.gross_price;
+                    document.getElementById('wsr_net_price_check').innerText = result.net_price;
+                    document.getElementById('wsr_product_positions_check').innerText = result.product_positions;
+                    document.getElementById('wsr_product_quantity_check').innerText = result.product_quantity;
+                    if (result.invoice === true) {
+                        document.getElementById('wsi_gross_price_check').innerText = result.inv_gross_price;
+                        document.getElementById('wsi_net_price_check').innerText = result.inv_net_price;
+                        document.getElementById('wsi_product_positions_check').innerText = result.inv_product_positions;
+                        document.getElementById('wsi_product_quantity_check').innerText = result.inv_product_quantity;
+                        check_inv(result);
+                    }
+                    for (let i=0; i < result.parcels.length; i++){
+                        let parcel = result.parcels[i];
+                        console.log(result);
+                        console.log(parcel);
+                        document.getElementById('wsr_parcel_' + parcel.id + '_p_num').innerHTML = parcel.p_num;
+                    }
+                    for (let i=0; i < wsr_p_ids.length; i++){
+                        if (document.getElementById('status_inp_' + wsr_p_ids[i]).className === 'open') {
+                            let row = document.getElementById('row_' + wsr_p_ids[i]);
+                            row.parentNode.removeChild(row);
+                        }
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.message, 'danger');
+                }
+            });
+        }
+
+        function open_wsr_product(wsr_p_ids) {
+            darken();
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.open_products') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(wsr_p_ids),
+                success: function(response) {
+                    for (let i = 0; i < wsr_p_ids.length; i++) {
+                        document.getElementById('row_' + wsr_p_ids[i]).style.background = 'white';
+                        document.getElementById('status_' + wsr_p_ids[i]).innerHTML = '<i class="fa fa-unlock-alt" aria-hidden="true"></i>';
+                        document.getElementById('wsr_p_' + wsr_p_ids[i] + '_quantity').readOnly = false;
+                        document.getElementById('wsr_p_' + wsr_p_ids[i] + '_tax').readOnly = false;
+                        document.getElementById('wsr_p_' + wsr_p_ids[i] + '_net_price').readOnly = false;
+                        document.getElementById('open_button_' + wsr_p_ids[i]).hidden = true;
+                        document.getElementById('complete_button_' + wsr_p_ids[i]).hidden = false;
+                        document.getElementById('status_inp_' + wsr_p_ids[i]).className = 'open';
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.message, 'danger');
+                }
+            });
+        }
+
+        function complete_wsr_product(wsr_p_ids) {
+            darken();
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.complete_products') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(wsr_p_ids),
+                success: function(response) {
+                    for (let i = 0; i < wsr_p_ids.length; i++) {
+                        document.getElementById('row_' + wsr_p_ids[i]).style.background = '#caf0c7';
+                        document.getElementById('status_' + wsr_p_ids[i]).innerHTML = '<i class="fa fa-lock" aria-hidden="true"></i>';
+                        document.getElementById('wsr_p_' + wsr_p_ids[i] + '_quantity').readOnly = true;
+                        document.getElementById('wsr_p_' + wsr_p_ids[i] + '_tax').readOnly = true;
+                        document.getElementById('wsr_p_' + wsr_p_ids[i] + '_net_price').readOnly = true;
+                        document.getElementById('open_button_' + wsr_p_ids[i]).hidden = false;
+                        document.getElementById('complete_button_' + wsr_p_ids[i]).hidden = true;
+                        document.getElementById('status_inp_' + wsr_p_ids[i]).className = 'complete';
+                    }
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                }
+            });
+        }
+
+        function open_all_wsr_products() {
+            let wsr_p_ids = Array.prototype.map.call(document.getElementsByClassName('complete'), el => el.value);
+            open_wsr_product(wsr_p_ids);
+        }
+
+        function complete_all_wsr_products() {
+            let wsr_p_ids = Array.prototype.map.call(document.getElementsByClassName('open'), el => el.value);
+            complete_wsr_product(wsr_p_ids);
+        }
+
+        function update_add_inputs(parcel_id, obj) {
+            if (obj.className ==='add_tax' || obj.className ==='add_net_price') {
+                document.getElementById('add_gross_price_' + parcel_id).value = (document.getElementById('add_net_price_' + parcel_id).value * (1 + document.getElementById('add_tax_' + parcel_id).value / 100)).toFixed(2);
+            }
+            if (obj.className ==='add_gross_price') {
+                document.getElementById('add_net_price_' + parcel_id).value = (document.getElementById('add_gross_price_' + parcel_id).value / (1 + document.getElementById('add_tax_' + parcel_id).value / 100)).toFixed(2);
+            }
+            document.getElementById('add_full_price_' + parcel_id).innerText = (document.getElementById('add_gross_price_' + parcel_id).value * document.getElementById('add_quantity_' + parcel_id).value).toFixed(2) + ' €';
+        }
+
+        function update_product_inputs(p_id, mode) {
+            let quantity = document.getElementById('wsr_p_' + p_id + '_quantity').value;
+            let tax = document.getElementById('wsr_p_' + p_id + '_tax').value;
+            let net_price = document.getElementById('wsr_p_' + p_id + '_net_price').value;
+            let gross_price = net_price * (1 +  tax / 100);
+            if (mode ==='both') {
+                document.getElementById('wsr_product_' + p_id + '_gross_price').innerHTML = gross_price.toFixed(2) + ' €';
+            }
+            document.getElementById('wsr_product_' + p_id + '_full_price').innerHTML = (quantity * gross_price).toFixed(2) + ' €';
+        }
+
+        function update_add_name(parcel_id, obj) {
+            fetch('/center/orders/get_hsp_id_name/'+obj.value).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("add_name_" + parcel_id).value = data.product_name;
+                    document.getElementById("add_p_id_" + parcel_id).value = data.product_id;
+                    document.getElementById("add_hsp_id_" + parcel_id).value = data.hsp_id;
+                });
+            });
+        }
+
+        function refreshsuppliers() {
+            fetch('/center/orders/get_suppliers/').then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("supplier").innerHTML = data.out;
+                });
+            });
+        }
+
+    </script>
+{%endblock%}
+

@@ -1,0 +1,36 @@
+<div style="padding: 10px; font-size: 14px">
+Hallo {{ user.firstname }},<br>
+<br>
+Vielen Dank für deine Registrierung. Hier deine Zugangsdaten:<br>
+<br>
+<table style="width: 100%">
+    <thead style="background: black; color: white; font-size: 14px">
+        <tr>
+            <th style="padding: 5px">
+                Zugangsdaten
+            </th>
+            <th style="padding: 5px">
+            </th>
+        </tr>
+    </thead>
+    <tbody style="font-size: 14px">
+        <tr style="border-bottom: solid 1px #ECECEC">
+            <td style="padding: 5px">Username:</td>
+            <td style="padding: 5px">{{ user.username }}</td>
+        </tr>
+        <tr style="border-bottom: solid 1px #ECECEC">
+            <td style="padding: 5px">Passwort:</td>
+            <td style="padding: 5px">{{ password }}</td>
+        </tr>
+    </tbody>
+</table>
+<br>
+Bevor du dich einloggen kannst, muss dein Account bestätigt werden. Drücke dazu auf folgenden Link:<br>
+<br>
+{{ link }}
+<br>
+<br>
+Vielen Dank und beste Grüße<br>
+<br>
+Dein LotusiCafe-Team
+</div>

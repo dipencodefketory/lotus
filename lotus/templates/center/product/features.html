@@ -1,0 +1,181 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkt editieren{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_product', id=product.id) }}">
+            <div class="submenu five">
+                Produkt-Attribute
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Produkt-Features
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_marketplace_data', id=product.id) }}">
+            <div class="submenu five">
+                Marketplace-Attribute
+            </div>
+        </a>
+        {% if 'Produkt-Management' in session.roles %}
+            <a class="blackfont" href="{{ url_for('center_product_pricingactions', id=product.id) }}">
+                <div class="submenu five">
+                    Pricing-Aktionen
+                </div>
+            </a>
+            <a class="blackfont" href="{{ url_for('center_product_update_logs', p_id=product.id) }}">
+                <div class="submenu five">
+                    Update-Logs
+                </div>
+            </a>
+        {% endif %}
+    </div>
+    <div class="visible white small box100" style="text-align: left; position: relative; overflow: hidden; transition: 1200ms ease-in-out">
+        <div class="big box100title" style="text-align: left">
+            {{ product.name }} <span class="small"><i>({{ product.hsp_id_type }}: {{ product.hsp_id }})</i></span><br>
+            <div class="standardbutton blackbutton small visible" onclick="open_pictures()" style="margin-left: 0">
+                <i class="fa fa-image" aria-hidden="true"></i> Produkt-Bilder
+            </div>
+            <div class="standardbutton blackbutton small visible" onclick="openlinks()" style="margin-left: 0">
+                <i class="fa fa-external-link" aria-hidden="true"></i> Externe Links
+            </div>
+            <div class="standardbutton blackbutton small visible" onclick="window.open('{{ url_for("center_product_ext_features", id=product.id) }}', '_blank')" style="margin-left: 0">
+                <i class="fa fa-info" aria-hidden="true"></i> Externe Quellen
+            </div>
+            <div class="standardbutton blackbutton small visible" onclick="window.open('{{ url_for("center_product_update_features", product_id=product.id) }}', '_self')" style="margin-left: 0">
+                <i class="fa fa-refresh" aria-hidden="true"></i> Werte updaten
+            </div>
+            <div class="standardbutton blackbutton small visible" onclick="window.open('{{ url_for("center_product_update_ebay_features", product_id=product.id) }}', '_self')" style="margin-left: 0">
+                <i class="fa fa-upload" aria-hidden="true"></i> Ebay-Feature-Update
+            </div>
+        </div>
+        <div class="tiny three box100title" style="text-align: left; position: relative">
+            <label for="product">
+                Aus anderem Produkt generieren:
+            </label>
+            <input type="text" name="product" class="form-control" id="product" list="product-datalist" style="padding-right: 120px" onkeyup="find_products(this.value)" onselect="change_featurevalues(this.value)">
+            <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+            </datalist>
+        </div>
+        <form action="" method="POST" style="padding: 25px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="form-group" id="category">
+                <label for="category">Kategorien</label>
+                <select class="form-control" name="category" id="category" onchange="changegencategory(this.value)">
+                    <option id="nocat" value="0-0"></option>
+                    {% for cat in categories %}
+                        <option id="{{ cat.name }}" value="{{ cat.id }}-{{ cat.name }}" {% if cat == product.productcategory %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div id="attributeform">
+                {% for feature in features %}
+                    {% if feature.fixed_values  %}
+                        <div id='{{ feature.id }}holder' class="form-group" style="width: 50%; float: left; padding: 0 10px 0 10px;
+                                {% if product.productcategory %}
+                                    {% if feature not in product.productcategory.get_productfeatures() %}
+                                   display: None
+                                    {% endif %}
+                                {% endif %}">
+                            <label for="{{ feature.id }}">{{ feature.name }}</label>
+                            <select id="{{ feature.id }}" name="{{ feature.id }}" class="form-control">
+                                {% for value in feature.values|sort(attribute='value') %}
+                                    <option value="{{ value.value }}"
+                                    {% if product in value.get_products() %}
+                                        selected
+                                    {% endif%}
+                                    >{{ value.value }} </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% else %}
+                        <div id='{{ feature.id }}holder' class="form-group" style="width: 50%; float: left; padding: 0 10px 0 10px;
+                                {% if product.productcategory %}
+                                    {% if feature not in product.productcategory.get_productfeatures() %}
+                                   display: None
+                                    {% endif %}
+                                {% endif %}">
+                            <label for="{{ feature.id }}">{{ feature.name  }}</label>
+                            <input type="text" id='{{ feature.id }}' name="{{ feature.id }}"
+                                   list="{{ feature.id }}-{{ feature.name }}" class="form-control"
+                                   {% if (feature.id==2 or feature.id==47) and feature.get_value_product_values(product.id)==[] %}
+                                   value="{{ product.name }}"{% else %}
+                                   value="{{ ', '.join(feature.get_value_product_values(product.id)) }}"{% endif %}>
+                            <datalist id="{{ feature.id }}-{{ feature.name }}">
+                            {% for value in feature.values|sort(attribute='value') %}
+                                <option value="{{ value.value }}"></option>
+                            {% endfor %}
+                            </datalist>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <br>
+            <button name="btn" type="submit" id="HIHI" class="standardbutton blackbutton visible" style="float: right" value="attributedata">
+                <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+            </button>
+        </form>
+    </div>
+    <script>
+        function open_pictures(){
+            {% for picture in product.pictures %}
+                window.open("{{ session['picture_server']+picture.link }}", "_blank");
+            {% endfor %}
+        }
+        function fetch_data() {
+            fetch('{{ url_for('center_product_get_idealo_data', product_id=product.id) }}').then(function() {
+                console.log('HI');
+            }).catch(function(err) {
+                console.log('Fetch Error', err);
+            });
+        }
+        function find_products(val){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)) {
+                fetch('/center/product/products/find_products/' + val).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("product-datalist").innerHTML = data.out;
+                    });
+                });
+            }
+        }
+        function change_featurevalues(value) {
+            var prod_id = value.split(" - ")[0];
+            fetch('/center/product/feature/changefeaturevalues/' + prod_id).then(function (response) {
+                response.json().then(function (data) {
+                    for (i=0; i < data.list.length ; i++){
+                        document.getElementById(data.list[i][0]).value = data.list[i][1];
+                    }
+                    document.getElementById('category').value = data.category;
+                });
+            });
+        }
+
+        function changegencategory(value) {
+            fetch('/center/product/feature/changecategory/' + value).then(function (response) {
+                response.json().then(function (data) {
+                    for (i=0; i < data.list.length ; i++){
+                        if (data.list[i][1] === true){
+                            document.getElementById(data.list[i][0]+'holder').style.display = 'inline';
+                        }
+                        else{
+                            document.getElementById(data.list[i][0]+'holder').style.display = 'None';
+
+                        }
+                    }
+                });
+            });
+        }
+
+        function openlinks(){
+            {% for link in product.links if link and link.link!='-' and link.link!=''%}
+            window.open('{{ link.link|safe }}', '_blank');
+            {% endfor %}
+        }
+
+    </script>
+{%endblock%}

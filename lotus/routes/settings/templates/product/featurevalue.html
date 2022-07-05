@@ -1,0 +1,154 @@
+{% extends 'index.html' %}
+{% block title %}Connection{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="white small box100" style="text-align: left; position: relative">
+        <div class="box100title" style="text-align: left">
+            <span class="regbig">Feature: {{ value.productfeature.name }}</span><br>
+            <span class="regbig">Wert: {{ value.value }}</span>
+
+            <form action="{{ url_for('settings.product_.edit_featurevalue', value_id=value.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input style="border: solid 1px black; width: 300px"  type="text" name="value">
+                <button class="blackbutton visible standardbutton" type="submit">
+                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i> Wert ändern
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="box100">
+        <div class="splitleft">
+            <table class="table visible">
+                <thead class="black">
+                    <tr>
+                        <th>Feature</th>
+                        <th>Quelle</th>
+                        <th style="width: 50px"></th>
+                    </tr>
+                </thead>
+                <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% set last_val={'key':first_id} %}
+                <tr class="trclick lightgrey" data-value="0" onclick="show_values('{{ ext_features[0][0].id }}', this)" id="{{ ext_features[0][0].id }}">
+                    <td>{{ ext_features[0][0].name }}</td>
+                    <td colspan="2">{{ ext_features[0][0].source }}</td>
+                </tr>
+                {% for ext_feature in ext_features %}
+                    {% if ext_feature[0].id!=last_val.key %}
+                        {% if last_val.update({'key':ext_feature[0].id}) %}
+                        {% endif %}
+                        <tr class="trclick lightgrey" data-value="0" onclick="show_values('{{ ext_feature[0].id }}', this)" id="{{ ext_feature[0].id }}">
+                            <td>{{ ext_feature[0].name }}</td>
+                            <td colspan="2">{{ ext_feature[0].source }}</td>
+                        </tr>
+                        <tr hidden class="{{ ext_feature[0].id }}_values">
+                            <td colspan="2">
+                                {{ ext_feature[1].value }}
+                            </td>
+                            <td style="cursor: pointer" onclick="add_value('{{ ext_feature[1].id }}', '{{ ext_feature[0].id }}', '{{ ext_feature[0].source }}', this)">
+                                <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr hidden class="{{ ext_feature[0].id }}_values">
+                            <td colspan="2">
+                                {{ ext_feature[1].value }}
+                            </td>
+                            <td style="cursor: pointer" onclick="add_value('{{ ext_feature[1].id }}', '{{ ext_feature[0].id }}', '{{ ext_feature[0].source }}', this)">
+                                <i class="fa fa-arrow-right" aria-hidden="true"></i>
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="splitright">
+            <table class="table visible">
+                <thead class="black">
+                    <tr>
+                        <th>Wert</th>
+                        <th>Feature</th>
+                        <th>Quelle</th>
+                        <th style="width: 50px"></th>
+                    </tr>
+                </thead>
+                <tbody style="border-bottom: solid 1px rgb(222, 226, 230);" id="ext_values">
+                {% for ext_value in value.get_ext_values() %}
+                    <tr>
+                        <td>{{ ext_value.value }}</td>
+                        <td>{{ ext_value.productfeature.name }} {{ ext_value.productfeature.id }}</td>
+                        <td>{{ ext_value.productfeature.source }}</td>
+                        <td style="cursor: pointer" onclick="subtract_value('{{ ext_value.id }}', '{{ ext_value.productfeature.id  }}', '{{ ext_value.productfeature.source }}', this)">
+                            <i class="fa fa-arrow-left" aria-hidden="true"></i>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        function show_values(feature_id, obj) {
+            var values = document.getElementsByClassName(feature_id+'_values');
+            if (obj.getAttribute('data-value')==="0"){
+                for (i=0; i < values.length ; i++){
+                    values[i].hidden = false;
+                }
+                obj.setAttribute('data-value', 1)
+            }else{
+                for (i=0; i < values.length ; i++){
+                    values[i].hidden = true;
+                }
+                obj.setAttribute('data-value', 0)
+
+            }
+        }
+        function add_value(value_id, feature_id, source, obj) {
+            var featurevalue = '';
+            var feature = '';
+            fetch('/settings/product/connect_ext_featurevalues/' + {{ value.id }} + ',' + value_id).then(function (response) {
+                response.json().then(function (data) {
+                    featurevalue = data.featurevalue;
+                    feature = data.feature;
+                    setTimeout(function () {
+                        obj.parentNode.parentNode.removeChild(obj.parentNode);
+                        var inner = '<tr>' +
+                            '<td>' + featurevalue + '</td>' +
+                            '<td>' + feature + '</td>' +
+                            '<td>' + source + '</td>' +
+                            '<td style="cursor: pointer" onclick="subtract_value(';
+                        inner += "'" + value_id + "', '" + feature_id + "', '" + source + "', this";
+                        inner += ')"><i class="fa fa-arrow-left" aria-hidden="true"></i></td></tr>';
+                        document.getElementById('ext_values').innerHTML += inner;
+                    }, 200)
+                });
+            });
+        }
+        function subtract_value(value_id, feature_id, source, obj) {
+            var featurevalue = '';
+            var feature = '';
+            fetch('/settings/product/disconnect_ext_featurevalues/' + value_id).then(function (response) {
+                response.json().then(function (data) {
+                    featurevalue = data.featurevalue;
+                    feature = data.feature;
+                    setTimeout(function () {
+                        obj.parentNode.parentNode.removeChild(obj.parentNode);
+                        var currTR = document.getElementById(feature_id);
+                        var newTR = document.createElement("tr");
+                        newTR.hidden = currTR.getAttribute('data-value') === "0";
+                        newTR.className = feature_id + "_values";
+                        var inner = '<td colspan="2">' + featurevalue + '</td>' + '<td style="cursor: pointer" onclick="add_value(';
+                        inner += "'"+ value_id + "', '" + feature_id + "', '" + source +"', this)";
+                        inner += '"><i class="fa fa-arrow-right" aria-hidden="true"></i></td>';
+                        newTR.innerHTML = inner;
+                        currTR.parentNode.insertBefore(newTR, currTR.nextSibling);
+                    }, 200)
+                });
+            });
+        }
+    </script>
+{%endblock%}

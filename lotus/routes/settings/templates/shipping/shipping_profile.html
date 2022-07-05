@@ -1,0 +1,69 @@
+{% extends 'index.html' %}
+{% block title %}Versand-Profil | {{ shipping_profile.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div id="productcategories" class="visible white small box100" style="text-align: left;">
+        <div class="big box100title" style="text-align: left">
+            {{ shipping_profile.name }}
+        </div>
+        <div class="box100" style="position: relative; padding-bottom: 50px">
+            <form action="" method="POST" style="text-align: left">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="form-group"  style="padding: 15px">
+                    <label for="name">Bezeichnung:</label>
+                    <input id="name" type="text" name="name" maxlength="80" class="form-control tinyhead" onkeyup="lowerbound_warning(this,1)" value="{{ shipping_profile.name }}">
+                </div>
+                <table class="table">
+                    <tr>
+                        <td>Versandart</td>
+                        <td>Kosten</td>
+                        {% for mp in marketplaces %}
+                            <td>{{ mp.name }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% for ss in shipping_services %}
+                        <tr>
+                            <td>
+                                {{ ss.name }}
+                            </td>
+                            <td>
+                                {{ '%0.2f' % ss.price }} €
+                            </td>
+                            {% for mp in marketplaces %}
+                                <td>
+                                    <input class="form-control" type="number" step="0.01" min="0" id="price_{{ mp.id }}_{{ ss.id }}" name="price_{{ mp.id }}_{{ ss.id }}"
+                                           value="{{ price_dict[mp.id|string + '_' + ss.id|string] if mp.id|string + '_' + ss.id|string in price_dict else 0 }}"
+                                            {% if mp.id|string + '_' + ss.id|string not in mps_list %}
+                                           readonly>
+                                            <a class="supertiny blackfont" href="{{ url_for('settings.shipping.shipping_service', service_id=ss.id) }}" target="_blank"
+                                               style="float: right; margin-left: 5px; text-decoration: underline">
+                                                (Jetzt setzen)
+                                            </a>
+                                           <span class="supertiny formwarning" style="visibility: visible; opacity: 1">Kein Code gesetzt!</span>
+                                            {% else %}
+                                            >
+                                           <span class="supertiny formwarning" style="visibility: visible; opacity: 1; color: white">.</span>
+                                            {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+                <div class="small buttonholder">
+                    <button name="btn" type="submit" class="standardbutton blackbutton visible" style="display: inline-block; float: right">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        function open_shipping_profile(id) {
+            window.open('/settings/shipping/service/'+ id, '_self');
+        }
+    </script>
+{%endblock%}

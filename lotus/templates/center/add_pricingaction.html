@@ -1,0 +1,346 @@
+{% extends 'center/basis.html' %}
+{% block title %}Pricing-Aktion hinzufügen - {{ product.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_product', id=product.id) }}">
+            <div class="submenu five">
+                Produkt-Attribute
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_features', id=product.id) }}">
+            <div class="submenu five">
+                Produkt-Features
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_marketplace_data', id=product.id) }}">
+            <div class="submenu five">
+                Marketplace-Attribute
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Pricing-Aktion
+        </div>
+    </div>
+    <div class="visible white small box100 " style="text-align: left; position: relative; overflow: hidden;">
+        <div class="big box100title" style="text-align: left">
+            {{ product.name }}<br>
+            <div class="standardbutton blackbutton small visible" onclick="openlinks()" style="margin-left: 0">
+                <i class="fa fa-external-link" aria-hidden="true"></i> Externe Links
+            </div>
+        </div>
+    </div>
+    <div class="visible white small box100" id="PricingActionFormHolder" style="position: relative">
+        <div class="reg box100title" style="text-align: left">
+            Neue Pricing-Aktion
+        </div>
+        <form id="form" action="" method="POST">
+            <div class="box100">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="splitleft">
+                    <div class="form-group">
+                        <div style="width: 50%; padding: 0 10px 1px 0; float: left;">
+                            <label for="name">Name</label>
+                            <input type="text" id="name" name="name" class="form-control">
+                            <span class="supertiny formwarning" id="name_warning">Keine Eingabe!</span>
+                        </div>
+                        <div style="width: 50%; padding: 0 0 1px 10px; float: left;">
+                            <label for="promotion_quantity">Aktionsmenge</label>
+                            <input type="number" min="1" id="promotion_quantity" name="promotion_quantity" class="form-control">
+                            <span class="supertiny formwarning" id="promotion_quantity_warning">Keine Eingabe!</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="splitright">
+                    <div class="form-group">
+                        <div style="width: 50%; padding: 0 10px 1px 0; float: left;">
+                            <label for="start">Start *</label>
+                            <input type="date" id="start" name="start" class="form-control" min="{{ now }}" value="{{ now }}" onchange="update_dates(this)">
+                            <span class="supertiny formwarning" id="start_warning">Keine Eingabe!</span>
+                        </div>
+                        <div style="width: 50%; padding: 0 0 1px 10px; float: left;">
+                            <label for="end">Ende *</label>
+                            <input type="date" id="end" name="end" class="form-control" min="{{ now }}" value="{{ init_end }}" onchange="update_dates(this)">
+                            <span class="supertiny formwarning" id="end_warning">Keine Eingabe!</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="splitleft">
+                        <label for="supplier_ids" style="width: 100%">Lieferanten hinzufügen (IDs an Semikolon trennen!)</label>
+                        <textarea rows="2" id="supplier_ids" name="supplier_ids" class="form-control"></textarea>
+                        <div style="position:relative; margin-top: 10px">
+                            <input type="text" name="supplierchoices" class="form-control" id="supplierchoices" list="suppliername" style="padding-right: 120px" onkeyup="find_suppliers(this.value)">
+                            <datalist id="suppliername">
+
+                            </datalist>
+                            <button type="button" class="fromfield_button" name="btn" onclick="add_supplier()" id="attributebtn">
+                                <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                            </button>
+                        </div>
+                    </div>
+                    <div class="splitright">
+                        <label for="comment">Kommentar</label>
+                        <textarea rows="4" id="comment" name="comment" class="form-control"></textarea>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="splitleft">
+                        <label for="stock_ids" style="width: 100%">Lager hinzufügen (IDs an Semikolon trennen!)</label>
+                        <textarea rows="2" id="stock_ids" name="stock_ids" class="form-control"></textarea>
+                        <div style="position:relative; margin-top: 10px">
+                            <input type="text" name="stockchoices" class="form-control" id="stockchoices" list="stockname" style="padding-right: 120px" onkeyup="find_stocks(this.value)">
+                            <datalist id="stockname">
+
+                            </datalist>
+                            <button type="button" class="fromfield_button" name="btn" onclick="add_stock()" id="attributebtn">
+                                <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                            </button>
+                        </div>
+                    </div>
+                    <div class="splitright">
+                    </div>
+                </div>
+            </div>
+            {% for marketplace in marketplaces %}
+                <div class="box100title reg" style="text-align: left">
+                    <input type="checkbox" name="marketplace_checkbox" id="{{ marketplace.id }}" value="{{ marketplace.id }}" onchange="control(this.checked, '{{ marketplace.id }}')">
+                    <label for="{{ marketplace.id }}">
+                        {{ marketplace.name }}
+                    </label>
+                </div>
+                <div id="{{ marketplace.id }}_holder" style="display: none">
+                    <div class="splitleft">
+                        <div class="form-group">
+                            <div style="width: 66.7%; padding: 0 10px 1px 0; float: left;">
+                                <label for="strategy{{ marketplace.id }}" style="width: 100%">Strategie *</label>
+                                <select id="strategy{{ marketplace.id }}" name="strategy{{ marketplace.id }}" class="form-control">
+                                    <option value="3">Abverkauf</option>
+                                    <option value="0">Keine Aktion</option>
+                                    <option value="1">Optimarge</option>
+                                    <option value="2">Platzierung</option>
+                                </select>
+                            </div>
+                            <div style="width: 33.3%; padding: 0 0 1px 10px; float: left;">
+                                <label for="quantity_share{{ marketplace.id }}" style="width: 100%">Anteil (in Prozent)</label>
+                                <input type="number" min="1" step="0.1" class="form-control" id="quantity_share{{ marketplace.id }}" name="quantity_share{{ marketplace.id }}">
+                                <span class="supertiny formwarning" id="quantity_share{{ marketplace.id }}_warning">Die Zahlen müssen sich zu 100 aufaddieren!</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div style="width: 50%; padding: 0 10px 1px 0; float: left;">
+                                <label for="rank{{ marketplace.id }}">Rang</label>
+                                <input type="number" id="rank{{ marketplace.id }}" name="rank{{ marketplace.id }}" class="form-control">
+                            </div>
+                            <div style="width: 50%; padding: 0 0 1px 10px; float: left;">
+                                <label for="prc_margin{{ marketplace.id }}">Marge (in Prozent) *</label>
+                                <input type="number" min="0" step="0.1" id="prc_margin{{ marketplace.id }}" name="prc_margin{{ marketplace.id }}" class="form-control" value="0">
+                                <span class="supertiny formwarning" id="prc_margin{{ marketplace.id }}_warning">Keine Eingabe!</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div style="width: 33.3%; padding: 0 10px 15px 0; float: left;">
+                                <label for="update_rule_quantity{{ marketplace.id }}">Update nach Stückzahl</label>
+                                <input type="number" min="1" id="update_rule_quantity{{ marketplace.id }}" name="update_rule_quantity{{ marketplace.id }}" class="form-control">
+
+                            </div>
+                            <div style="width: 33.3%; padding: 0 10px 15px 10px; float: left;">
+                                <label for="update_rule_hours{{ marketplace.id }}">Update nach Stunden</label>
+                                <input type="number" min="1" id="update_rule_hours{{ marketplace.id }}" name="update_rule_hours{{ marketplace.id }}" class="form-control">
+
+                            </div>
+                            <div style="width: 33.3%; padding: 0 0 15px 10px; float: left;">
+                                <label for="update_factor{{ marketplace.id }}">Update-Faktor</label>
+                                <input type="number" min="0" step="0.01" id="update_factor{{ marketplace.id }}" name="update_factor{{ marketplace.id }}" class="form-control">
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="splitright">
+                        <div class="form-group">
+                            <label for="platform_ids{{ marketplace.id }}" style="width: 100%">Plattformen ausnehmen (IDs an Semikolon trennen!)</label>
+                            <textarea rows="2" id="platform_ids{{ marketplace.id }}" name="platform_ids{{ marketplace.id }}" class="form-control"></textarea>
+                            <div style="position:relative; margin-top: 10px">
+                                <input type="text" name="platformchoices{{ marketplace.id }}" class="form-control" id="platformchoices{{ marketplace.id }}" list="platformname{{ marketplace.id }}" style="padding-right: 120px" onkeyup="find_platforms(this.value, {{ marketplace.id }})">
+                                <datalist id="platformname{{ marketplace.id }}">
+
+                                </datalist>
+                                <button type="button" class="fromfield_button" name="btn" onclick="add_platform({{ marketplace.id }})" id="attributebtn">
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="seller_ids{{ marketplace.id }}" style="width: 100%">Verkäufer ausnehmen (IDs an Semikolon trennen!)</label>
+                            <textarea rows="2" id="seller_ids{{ marketplace.id }}" name="seller_ids{{ marketplace.id }}" class="form-control"></textarea>
+                            <div style="position:relative; margin-top: 10px">
+                                <input type="text" name="sellerchoices{{ marketplace.id }}" class="form-control" id="sellerchoices{{ marketplace.id }}" list="sellername{{ marketplace.id }}" style="padding-right: 120px" onkeyup="find_sellers(this.value, {{ marketplace.id }})">
+                                <datalist id="sellername{{ marketplace.id }}">
+
+                                </datalist>
+                                <button type="button" class="fromfield_button" name="btn" onclick="add_seller({{ marketplace.id }})" id="attributebtn">
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            <div class="box100title reg" style="text-align: left">
+                <input type="checkbox" name="activate" id="activate" value="activate">
+                <label for="activate">
+                    Wenn möglich, gleich aktivieren
+                </label>
+            </div>
+            <div class="form-group">
+                <div class="splitleft33" style="width: 100%">
+                    <button name="btn" type="button" class="standardbutton blackbutton visible" style="display: inline-block;float: right" onclick="checkform()">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                    </button>
+                    <a href="{{ url_for('center_product_pricingactions', id=product.id) }}" style="display: inline-block;float: right">
+                        <button name="btn" type="button" class="standardbutton redbutton visible">
+                            <i class="fa fa-reply" aria-hidden="true"></i> zurück
+                        </button>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+        function update_dates(object){
+            if (object.id==='start'){
+                document.getElementById('end').setAttribute("min", object.value);
+            }
+            else if (object.id==='end'){
+                document.getElementById('start').setAttribute("max", object.value);
+            }
+        }
+        function add_platform(marketplace_id) {
+            platform_id = document.getElementById('platformchoices'+marketplace_id).value.split(" - ")[0];
+            platform_ids = document.getElementById('platform_ids'+marketplace_id);
+            if (platform_ids.value.replace(' ','') === ''){
+                platform_ids.value = platform_id;
+            }
+            else{
+                platform_ids.value += ';'+platform_id;
+            }
+        }
+        function add_seller(marketplace_id) {
+            seller_id = document.getElementById('sellerchoices'+marketplace_id).value.split(" - ")[0];
+            seller_ids = document.getElementById('seller_ids'+marketplace_id);
+            if (seller_ids.value.replace(' ','') === ''){
+                seller_ids.value = seller_id;
+            }
+            else{
+                seller_ids.value += ';'+seller_id;
+            }
+        }
+        function add_supplier() {
+            supplier_id = document.getElementById('supplierchoices').value.split(" - ")[0];
+            supplier_ids = document.getElementById('supplier_ids');
+            if (supplier_ids.value.replace(' ','') === ''){
+                supplier_ids.value = supplier_id;
+            }
+            else{
+                supplier_ids.value += ';'+supplier_id;
+            }
+        }
+        function add_stock() {
+            stock_id = document.getElementById('stockchoices').value.split(" - ")[0];
+            stock_ids = document.getElementById('stock_ids');
+            if (stock_ids.value.replace(' ','') === ''){
+                stock_ids.value = stock_id;
+            }
+            else{
+                stock_ids.value += ';'+stock_id;
+            }
+        }
+        function control(boolean, id) {
+            if (boolean===true){
+                document.getElementById(id+'_holder').style.display = 'Block';
+
+            }else{
+                document.getElementById(id+'_holder').style.display = 'None';
+            }
+        }
+        function find_platforms(val, marketplace){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)) {
+                fetch('/center/product/add_pricingaction/find_platforms/' + val+','+marketplace).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("platformname"+marketplace).innerHTML = data.out;
+                    });
+                });
+            }
+        }
+        function find_sellers(val, marketplace){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)){
+                fetch('/center/product/add_pricingaction/find_sellers/'+val+','+marketplace).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("sellername"+marketplace).innerHTML = data.out;
+                    });
+                });
+            }
+        }
+        function find_suppliers(val){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)){
+                fetch('/center/product/add_pricingaction/find_suppliers/'+val).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("suppliername").innerHTML = data.out;
+                    });
+                });
+            }
+        }
+        function find_stocks(val){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)){
+                fetch('/center/product/add_pricingaction/find_stocks/'+val).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("stockname").innerHTML = data.out;
+                    });
+                });
+            }
+        }
+
+        function checkform(){
+            var marketplaces = document.getElementsByName('marketplace_checkbox');
+            var shares = 0;
+            for (var i=0; i < marketplaces.length ; i++){
+                if (marketplaces[i].checked === true){
+                    var share = Number(document.getElementById('quantity_share'+marketplaces[i].value).value);
+                    if (!isNaN(share)){
+                        shares += share;
+                        }
+                    }
+                }
+            if (shares === 0 || shares === 100) {
+                for (var j = 0; j < marketplaces.length; j++) {
+                    if (marketplaces[j].checked === true) {
+                        document.getElementById('quantity_share' + marketplaces[j].value + '_warning').style.opacity = '0';
+                        document.getElementById('quantity_share' + marketplaces[j].value).style.borderColor = '#ced4da';
+                    }
+                    document.getElementById('form').submit();
+                }
+            }else{
+                for (var k  = 0; k < marketplaces.length; k++) {
+                    if (marketplaces[k].checked === true) {
+                        document.getElementById('quantity_share' + marketplaces[k].value).style.borderColor = '#a54843';
+                        document.getElementById('quantity_share' + marketplaces[k].value + '_warning').style.opacity = '1';
+                    }
+                }
+            }
+        }
+
+        function openlinks(){
+            {% for link in product.links if link and link.link!='-' and link.link!=''%}
+            window.open('{{ link.link }}', '_blank');
+            {% endfor %}
+        }
+    </script>
+{%endblock%}

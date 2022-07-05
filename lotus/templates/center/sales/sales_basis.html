@@ -1,0 +1,33 @@
+{% extends 'center/basis.html' %}
+{% block title %}Verkäufe{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/sales.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_sales_sales') }}">
+            <div class="submenu five">
+                Verkäufe
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_sales_problem_handling') }}">
+            <div class="submenu five">
+                Problem-Behandlung
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_sales_gen_shipping_labels') }}">
+            <div class="submenu five">
+                Versand-Labels
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_sales_ready_to_ship') }}">
+            <div class="submenu five">
+                Versandfertige Bestellungen
+            </div>
+        </a>
+    </div>
+    {% block ext2 %}
+    {% endblock %}
+{%endblock%}

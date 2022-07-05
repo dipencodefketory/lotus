@@ -1,0 +1,26 @@
+<label for="{{ field.id }}" style="width: 100%">{{ field.label }} {{ field.info  }}
+    {% if field.converter %}
+        <div style="float: right">
+            {% for option in field.converter_options %}
+                <input type="radio" value="{{ option }}" id="{{ option }}" name="{{ field }}_type"
+                       {% if option == field.converter_options[0] %}checked{% endif %}>
+                <label for="{{ option }}">{{ option }}</label>
+            {% endfor %}
+            <input hidden name="{{ field.id }}_conversion_type" id="{{ field.id }}_conversion_type" value="{{ field.converter_options[0] }}">
+        </div>
+    {% endif %}
+</label>
+<textarea rows="4" id="{{ field.id }}" name="{{ field.id }}" class="form-control"></textarea>
+<span class="supertiny formwarning" id="{{ field.id }}_warning">Keine Eingabe!</span>
+<div style="position:relative;">
+    <input type="text" name="{{ field.id }}_choices" id="{{ field.id }}_choices"
+           class="form-control" list="{{ field.id }}_choices-datalist" style="padding-right: 120px">
+    <datalist id="{{ field.id }}_choices-datalist">
+        {% for option_label in field.options.keys()|sort() %}
+            <option value="{{ field.options[option_label] }}">{{ option_label }}</option>
+        {% endfor %}
+    </datalist>
+    <button type="button" class="fromfield_button" onclick="optionpicker_adder('{{ field.id }}')">
+        <i class="fa fa-caret-up" aria-hidden="true"></i> add
+    </button>
+</div>

@@ -1,0 +1,163 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkt - {{ p.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}?v=2">
+{% endblock %}
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_product', id=p.id) }}">
+            <div class="submenu five">
+                Produkt-Attribute
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_features', id=p.id) }}">
+            <div class="submenu five">
+                Produkt-Features
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_marketplace_data', id=p.id) }}">
+            <div class="submenu five">
+                Marketplace-Attribute
+            </div>
+        </a>
+        {% if 'Produkt-Management' in session.roles %}
+            <a class="blackfont" href="{{ url_for('center_product_pricingactions', id=p.id) }}">
+                <div class="submenu five">
+                    Pricing-Aktionen
+                </div>
+            </a>
+            <div class="submenu five lightgrey">
+                Update-Logs
+            </div>
+        {% endif %}
+    </div>
+    <div class="visible white small box100" style="text-align: left; overflow: hidden;">
+        <div class="big box100title" style="text-align: left">
+            {{ p.name }} <span class="small"><i>({{ p.hsp_id_type }}: {{ p.hsp_id }})</i></span><br>
+        </div>
+        <table class="table table-hover tiny">
+            <thead>
+                <tr>
+                    <td>
+                        Marketplace
+                    </td>
+                    <td>
+                        Timestamp
+                    </td>
+                    <td>
+                        URL
+                    </td>
+                    <td>
+                        Method
+                    </td>
+                    <td>
+                        Status-Code
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in puls %}
+                    <tr class="trclick" onclick="log_details('{{log.id}}')">
+                        <td>
+                            {{ log.marketplace.name }}
+                        </td>
+                        <td>
+                            {{ log.init_date.strftime('%d.%m.%Y - %H:%M:%S') }}
+                        </td>
+                        <td>
+                            {{ log.url }}
+                        </td>
+                        <td>
+                            {{ log.method }}
+                        </td>
+                        <td>
+                            {{ log.status_code }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="ScreenDarkener">
+
+    </div>
+    <div class="white visible small" id="log_details" style="overflow-y: scroll">
+        <a onclick="hide_log_details()" class="blackfont" style="position: absolute; right: 10px; top:10px; width: 25px; height: 25px; z-index: 1002">
+            <div>
+                <img src="{{ url_for('static', filename='images/X.png') }}" style="width: 100%;">
+            </div>
+        </a>
+        <div class="regbig">Order-Status</div>
+        <table class="table">
+            <tr>
+                <td>Timestamp</td>
+                <td>
+                    <span id="timestamp"></span>
+                </td>
+            </tr>
+            <tr>
+                <td>Marketplace</td>
+                <td>
+                    <span id="mp_name"></span>
+                </td>
+            </tr>
+            <tr>
+                <td>URL</td>
+                <td>
+                    <span id="url"></span>
+                </td>
+            </tr>
+            <tr>
+                <td>Data</td>
+                <td>
+                    <span id="data"></span>
+                </td>
+            </tr>
+            <tr>
+                <td>Status-Code</td>
+                <td>
+                    <span id="status_code"></span>
+                </td>
+            </tr>
+            <tr>
+                <td>Response</td>
+                <td>
+                    <span id="response"></span>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <script>
+        function log_details(log_id) {
+            fetch('/center/product/update_logs/details/'+log_id).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("timestamp").innerText = data.timestamp;
+                    document.getElementById("mp_name").innerText = data.mp_name;
+                    document.getElementById("url").innerText = data.url;
+                    document.getElementById("data").innerText = data.data;
+                    document.getElementById("status_code").innerText = data.status_code;
+                    document.getElementById("response").innerText = data.response;
+                    document.getElementById("log_details").style.display = 'Block';
+                    document.getElementById("log_details").style.zIndex = '15002';
+                    document.getElementById("ScreenDarkener").style.display = 'Block';
+
+                    setTimeout(function() {
+                        document.getElementById("log_details").style.opacity = '1';
+                        document.getElementById("ScreenDarkener").style.opacity = '0.8';
+                    }, 200);
+                });
+            });
+        }
+        function hide_log_details() {
+            document.getElementById("log_details").style.opacity = '0';
+            document.getElementById("log_details").style.zIndex = '15000';
+            document.getElementById("ScreenDarkener").style.opacity = '0';
+            setTimeout(function () {
+                document.getElementById("log_details").style.display = 'None';
+                document.getElementById("ScreenDarkener").style.display = 'None';
+            }, 200);
+        }
+    </script>
+{%endblock%}

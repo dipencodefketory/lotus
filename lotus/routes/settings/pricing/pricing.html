@@ -1,0 +1,40 @@
+{% extends 'index.html' %}
+{% block title %}Pricing{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div id="productcategories" class="visible white small box100">
+        <div class="big box100title" style="text-align: left">
+            Pricing-Bundles
+        </div>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <table class="table tiny text-start">
+            <thead class="black">
+                <tr>
+                    <th>Datum</th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Regeln</th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% for pr_bundle in pr_bundles %}
+                    <tr onclick="window.open('{{ url_for("settings.pricing_.bundle", pr_bundle_id=pr_bundle.id) }}')">
+                        <td>{{ pr_bundle.init_dt.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ pr_bundle.id }}</td>
+                        <td>{{ pr_bundle.name }}</td>
+                        <td>{{ pr_bundle.rules|length }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button class="standardbutton greenbutton visible" onclick="window.open('{{ url_for('settings.pricing_.bundle', pr_bundle_id=0) }}')">
+            <i class="fa fa-plus" aria-hidden="true"></i> Bundle hinzufügen
+        </button>
+    </div>
+    <script>
+    </script>
+{%endblock%}

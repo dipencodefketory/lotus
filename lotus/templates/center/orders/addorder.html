@@ -1,0 +1,903 @@
+{% extends 'center/basis.html' %}
+{% block title %}Bestellung hinzufügen{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/orders.css')}}?v=7">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white small box100" style="text-align: left">
+        <div class="big box100title" style="text-align: left">Neue Bestellung</div>
+        <form action="" method="POST" id="form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft25" id="left">
+                <div class="form-group">
+                    <label for="name">Bezeichnung</label>
+                    <input type="text" id="name" name="name" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="afterbuy_id">Afterbuy-ID</label>
+                    <input type="text" id="afterbuy_id" name="afterbuy_id" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="order_time">Bestelldatum *</label>
+                    <input id="order_time" type="date" name="order_time" class="form-control">
+                    <span class="supertiny formwarning" id="order_time_warning">Gib ein gültiges Bestelldatum an!</span>
+                </div>
+                <div class="form-group">
+                    <label for="stock">Lager *</label>
+                    <select id="stock" name="stock" class="form-control">
+                        {% for stock in stocks %}
+                        <option id="{{ stock.id }}" value="{{ stock.id }}">{{ stock.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="supplier">
+                        Lieferant *
+                        <button type="button" style="margin: 0 5px; padding: 2px 7px" class="supertiny standardbutton visible blackbutton" onclick="refreshsuppliers()">
+                            <i class="fa fa-refresh" aria-hidden="true"></i>
+                        </button>
+                    </label>
+                    <a href="{{ url_for('center_addsupplier') }}" style="float: right" target="_blank">
+                        <button type="button" class="standardbutton supertiny greenbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px">
+                            <i class="fa fa-plus" aria-hidden="true"></i> neu anlegen
+                        </button>
+                    </a>
+                    <select id="supplier" name="supplier" class="form-control">
+                        <option value=""></option>'
+                        {% for supplier in suppliers %}
+                        <option id="{{ supplier.id }}" value="{{ supplier.id }}">
+                            {% if supplier.isfirm %}
+                                {{ supplier.firmname }}
+                            {% else %}
+                                {{ supplier.salutation }} {{ supplier.firstname }} {{ supplier.name }}
+                            {% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="supertiny formwarning" id="supplier_warning">Gib einen Lieferanten an!</span>
+                </div>
+                <div class="form-group">
+                    <label for="payment_method">
+                        Bezahlmethode *
+                        <button type="button" style="margin: 0 5px; padding: 2px 7px" class="supertiny standardbutton visible blackbutton" onclick="refreshpaymentmethods()">
+                            <i class="fa fa-refresh" aria-hidden="true"></i>
+                        </button>
+                    </label>
+                    <div style="float: right">
+                        <input type="text" id="new_paymentmethod">
+                        <button type="button" class="standardbutton supertiny greenbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px" onclick="add_paymentmethod()">
+                            <i class="fa fa-plus" aria-hidden="true"></i> neu anlegen
+                        </button>
+                    </div>
+                    <select id="payment_method" name="payment_method" class="form-control">
+                        <option value=""></option>
+                        {% for payment_method in payment_methods %}
+                        <option id="{{ payment_method.id }}" value="{{ payment_method.id }}">{{ payment_method.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="supertiny formwarning" id="payment_method_warning">Gib eine Bezahlmethode an!</span>
+                </div>
+                <div class="form-group" style="position: relative">
+                    <label for="additional_cost">Zusätzliche Kosten</label>
+                    <input type="text" id="additional_cost" name="additional_cost" class="form-control" value="0">
+                    <span class="supertiny formwarning" id="additional_cost_warning">Ungültiges Format!</span>
+                    <span class="supertiny formwarning" id="additional_cost_split_warning">Keine Stückzahl vorhanden!</span>
+                    <button type="button" class="fromfield_button " id="additional_cost_button" onclick="split_additional_cost()">
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </button>
+                    <input type="hidden" id="splitted_additional_cost" name="splitted_additional_cost" value="0"/>
+                </div>
+                <div class="form-group">
+                    <label for="delivery_time">Lieferdatum</label>
+                    <input id="delivery_time" type="date" name="delivery_time" class="form-control">
+                    <span class="supertiny formwarning" id="delivery_time_warning">Ungültiges Format</span>
+                </div>
+                <div class="form-group">
+                    <label for="comment">Kommentar</label>
+                    <textarea id="comment" rows="5" name="comment" class="form-control"></textarea>
+                </div>
+            </div>
+            <div class="splitright75" style="padding-bottom: 75px;">
+                <div class="form-group" style="position: relative; margin-bottom: 85px">
+                    <div style="width: 60px; position: absolute">
+                        <label for="productquant">Anzahl</label>
+                        <input type="text" id="productquant" name="productquant" class="form-control" onkeyup="lowerbound_warning(this, 1)">
+                        <span class="supertiny formwarning" id="productquant_warning" style="float: left">keine Eingabe</span>
+                        <span class="supertiny formwarning" id="productquant_format_warning" style="position: absolute; left: 0">Ungültiges Format</span>
+                    </div>
+                    <div style="position: absolute; left: 70px; padding-top: 40px; text-align: center">X</div>
+                    <div style="width: 150px; position: absolute;left: 90px;">
+                        <label for="addproduct">ID</label>
+                        <input type="text" id="addproduct" name="addproduct" class="form-control" onkeyup="lowerbound_warning(this, 1); checkforname(this)">
+                        <span class="supertiny formwarning" id="addproduct_warning">keine Eingabe</span>
+                    </div>
+                    <div style="position: absolute; left: 250px; padding-top: 40px; text-align: center">-</div>
+                    <div style="position: absolute; right: 430px; padding-top: 40px; text-align: center">zu</div>
+                    <div style="width: 75px; position: absolute; right: 345px">
+                        <label for="prc_tax">Steuer in %</label>
+                        <input type="text" id="prc_tax" name="prc_tax" class="form-control" onkeyup="price_update(this); lowerbound_warning(this, 1)" value="19">
+                        <span class="supertiny formwarning" id="prc_tax_warning">keine Eingabe</span>
+                        <span class="supertiny formwarning" id="prc_tax_format_warning" style="float: left">Ungültiges Format</span>
+                    </div>
+                    <div style="width: 185px; position: absolute; right: 145px">
+                        <label for="price_format">Preisformat</label>
+                        <select id="price_format" name="price_format" class="form-control" onchange="switch_price_format(this)">
+                            <option value="net_price-wrapper" selected>Netto-Preis</option>
+                            <option value="gross_price-wrapper">Brutto-Preis</option>
+                            <option value="summed_net_price-wrapper">Gesamt-Netto-Preis</option>
+                            <option value="summed_gross_price-wrapper">Gesamt-Brutto-Preis</option>
+                        </select>
+                    </div>
+                    <div id="net_price-wrapper" class="price_wrapper" style="width: 130px; position: absolute; right: 0">
+                        <label for="net_price">Netto-Preis</label>
+                        <input type="text" id="net_price" name="net_price" class="form-control" onkeyup="price_update(this); lowerbound_warning(this, 1)">
+                        <span class="supertiny formwarning" id="net_price_warning">keine Eingabe</span>
+                        <span class="supertiny formwarning" id="net_price_format_warning" style="float: left">Ungültiges Format</span>
+                    </div>
+                    <div id="gross_price-wrapper" class="price_wrapper" style="width: 130px; position: absolute; right: 0; display: none;">
+                        <label for="gross_price">Brutto-Preis</label>
+                        <input type="text" id="gross_price" name="gross_price" class="form-control" style="padding-right: 50px;" onkeyup="price_update(this); lowerbound_warning(this, 1)">
+                        <span class="supertiny formwarning" id="gross_price_warning">keine Eingabe</span>
+                        <span class="supertiny formwarning" id="gross_price_format_warning" style="float: left">Ungültiges Format</span>
+                    </div>
+                    <div id="summed_net_price-wrapper" class="price_wrapper" style="width: 130px; position: absolute; right: 0; display: none;">
+                        <label for="summed_net_price">Gesamt-Netto-Preis</label>
+                        <input type="text" id="summed_net_price" name="summed_net_price" class="form-control" onkeyup="price_update(this); lowerbound_warning(this, 1)">
+                        <span class="supertiny formwarning" id="summed_net_price_warning">keine Eingabe</span>
+                        <span class="supertiny formwarning" id="summed_net_price_format_warning" style="float: left">Ungültiges Format</span>
+                    </div>
+                    <div id="summed_gross_price-wrapper" class="price_wrapper" style="width: 130px; position: absolute; right: 0; display: none;">
+                        <label for="summed_gross_price">Gesamt-Brutto-Preis</label>
+                        <input type="text" id="summed_gross_price" name="summed_gross_price" class="form-control" style="padding-right: 50px;" onkeyup="price_update(this); lowerbound_warning(this, 1)">
+                        <span class="supertiny formwarning" id="summed_gross_price_warning">keine Eingabe</span>
+                        <span class="supertiny formwarning" id="summed_gross_price_format_warning" style="float: left">Ungültiges Format</span>
+                    </div>
+                    <div style="width: 100%; padding: 0 455px 0 265px">
+                        <label for="name">Name</label>
+                        <input type="text" id="prod_name" maxlength="80" name="prod_name" class="form-control" onkeyup="lowerbound_warning(this, 1)">
+                        <span class="supertiny formwarning" id="prod_name_warning">keine Eingabe</span>
+                        <span class="supertiny formwarning" id="prod_name_length_warning">Höchstens 255 Zeichen!</span>
+                    </div>
+                    <div style="width: 100%; padding: 0 455px 0 265px; position: absolute; top: 75px">
+                        <label for="idealo_link">Idealo-Link</label>
+                        <input type="text" id="idealo_link" name="idealo_link" class="form-control">
+                        <span class="supertiny formwarning" id="idealo_link_warning">keine Eingabe</span>
+                    </div>
+                    <div>
+
+                    </div>
+                    <button type="button" class="fromfield_button" id="addproduct_button" onclick="addproducts()">
+                        <i class="fa fa-plus" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="five" style="width: 100%; text-align: center">oder</div>
+                <div class="form-group" style="text-align: center; padding-bottom: 0; margin-bottom: 0">
+                    <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="show_scanproducts_field()">
+                        <i class="fa fa-barcode" aria-hidden="true"></i> scannen
+                    </button>
+                </div>
+                <table class="table table-striped" id="productwrapper" style="margin-top: 40px">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px"></th>
+                            <th>HSP-ID</th>
+                            <th>Name</th>
+                            <th style="width: 50px">Anzahl</th>
+                            <th style="width: 50px">Steuer</th>
+                            <th style="width: 120px">Netto Stckpr.</th>
+                            <th style="width: 120px">Brutto Stckpr.</th>
+                            <th style="width: 100px">Gesamt</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productholder">
+
+                    </tbody>
+                </table>
+                <span class="supertiny formwarning" id="productwrapper_warning" style="float: left">Gib mindestens ein Produkt an!</span>
+                <div id="summed_price" style="width: 100%; text-align: right" data-value="0" data-netsum="0" data-distquant="0" data-summedquant="0" >
+
+                </div>
+                <input id="counter" name="counter" hidden value="1">
+                <input id="removed" name="removed" hidden>
+                <input id="summed_price_value" name="summed_price_value" hidden>
+                <input id="summed_price_distquant" name="summed_price_distquant" hidden>
+                <input id="summed_price_summedquant" name="summed_price_summedquant" hidden>
+                <div class="small buttonholder">
+                    <a href="{{ url_for('center_orders')}}">
+                        <button type="button" class="standardbutton redbutton visible" style="display: inline-block; margin-right: 15px">
+                            <i class="fa fa-reply" aria-hidden="true"></i> zurück
+                        </button>
+                    </a>
+                    <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="checkorderform()">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div id="ScreenDarkener">
+
+    </div>
+    <div class="white visible small" id="scanproducts_field">
+        <a onclick="hidescanproducts_field()" class="blackfont" style="position: absolute; right: 10px; top:10px; width: 25px; height: 25px; z-index: 1002">
+            <div>
+                <img src="{{ url_for('static', filename='images/X.png') }}" style="width: 100%;">
+            </div>
+        </a>
+        <div class="form-gourp" style="position: relative">
+            <label for="HSP_ID_Scan">HSP-ID</label>
+            <input id="HSP_ID_Scan" name="HSP_ID_Scan" class="form-control" style="padding-right: 50px;" onkeydown="checkforenter(event)">
+            <span class="supertiny formwarning" id="HSP_ID_Scan_warning">Ungültige Eingabe!</span>
+            <button type="button" class="fromfield_button" id="addhspid_button" onclick="addhspid()">
+                <i class="fa fa-plus" aria-hidden="true"></i>
+            </button>
+        </div>
+        <table class="table table-striped" id="hspidwrapper" style="margin-top: 40px">
+            <thead>
+                <tr>
+                    <th style="width: 50px"></th>
+                    <th>HSP-ID</th>
+                    <th>Name</th>
+                    <th style="width: 50px">Anzahl</th>
+                </tr>
+            </thead>
+            <tbody id="hspidholder">
+
+            </tbody>
+        </table>
+        <div class="small buttonholder">
+            <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="transfer_hspids()">
+                <i class="fa fa-arrow-circle-o-right" aria-hidden="true"></i> übertragen
+            </button>
+        </div>
+    </div>
+    <script>
+        function split_additional_cost() {
+            var cost = document.getElementById('additional_cost').value.replace(',','.');
+            var gross_prices = document.getElementsByClassName('gross_price_field');
+            var quantity = 0;
+            for (var i = 0; i < gross_prices.length; i++) {
+                quantity += Number(document.getElementById('quant'+gross_prices[i].name.replace('gross_price', '')).value);
+            }
+            if (quantity!==0){
+                var split_cost = Math.round(Number(cost)/quantity*100)/100;
+                var rest_cost = Number(cost)-split_cost*quantity;
+                for (var j = 0; j < gross_prices.length; j++) {
+                    var index = gross_prices[j].name.replace('gross_price', '');
+                    var prc_tax = document.getElementById("prc_tax"+index).value;
+                    prc_tax = prc_tax.replace(',','.').replace(' ','');
+                    prc_tax = Number(prc_tax);
+                    var quant = document.getElementById("quant"+index).value;
+                    quant = Number(quant);
+                    if (j===gross_prices.length-1){
+                        split_cost += Math.round(Number(rest_cost)/quant*100)/100
+                    }
+                    var gross_price = Number(gross_prices[j].value) + split_cost;
+                    var summed_gross_price = gross_price*quant;
+                    var net_price = gross_price/(1+prc_tax*0.01);
+                    document.getElementById('gross_price'+index).innerHTML = gross_price.toFixed(2) + '€ <input hidden class="gross_price_field" name="gross_price' + index + '" value="' + gross_price.toFixed(2)  + '">';
+                    document.getElementById('summed_gross_price'+index).innerHTML = summed_gross_price.toFixed(2) + '€ <input hidden name="summed_gross_price' + index + '" value="' + summed_gross_price.toFixed(2)  + '">';
+                    document.getElementById('net_price'+index).innerHTML = net_price.toFixed(2) + '€ <input hidden name="net_price' + index + '" value="' + net_price.toFixed(2)  + '">';
+                    var sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+                    var net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+                    var distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+                    var summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+                    sum_price += quant*split_cost;
+                    net_sum += quant*split_cost/(1+prc_tax*0.01);
+                    document.getElementById('summed_price').setAttribute('data-value', sum_price);
+                    document.getElementById('summed_price').setAttribute('data-netsum', net_sum);
+                    document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + sum_price.toFixed(2)+' €<br>';
+                    document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + net_sum.toFixed(2)+' €<br>';
+                    document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+                    document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+                }
+                document.getElementById('additional_cost_split_warning').style.opacity = '0';
+                document.getElementById('additional_cost').disabled = true;
+                document.getElementById('additional_cost_button').disabled = true;
+                document.getElementById('splitted_additional_cost').value = '1';
+            }else{
+                document.getElementById('additional_cost_split_warning').style.opacity = '1';
+            }
+        }
+
+        function switch_price_format(object){
+            var price_wrappers = document.getElementsByClassName('price_wrapper');
+            for (var i = 0; i < price_wrappers.length; i++) {
+                if (price_wrappers[i].id===object.value){
+                    price_wrappers[i].style.display = 'block';
+                }else{
+                    price_wrappers[i].style.display = 'None';
+                }
+            }
+        }
+
+        function price_update(object){
+            if (object.id==='prc_tax'){
+                var prc_tax = document.getElementById("prc_tax").value;
+                prc_tax = prc_tax.replace(',','.').replace(' ','');
+                prc_tax = Number(prc_tax);
+                var quantity = Number(document.getElementById("productquant").value);
+                if (!isNaN(prc_tax) && !isNaN(quantity)) {
+                    var active_price_box = document.getElementById('price_format').value.split('-')[0];
+                    if (active_price_box === 'net_price') {
+                        var net_price = document.getElementById("net_price").value;
+                        net_price = net_price.replace(',','.').replace(' ','');
+                        net_price = Number(net_price);
+                        var gross_price = (1+prc_tax*0.01)*net_price;
+                        var summed_net_price = quantity*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else if (active_price_box === 'gross_price') {
+                        var gross_price = document.getElementById("gross_price").value;
+                        gross_price = gross_price.replace(',','.').replace(' ','');
+                        gross_price = Number(gross_price);
+                        var net_price = gross_price/(1+prc_tax*0.01);
+                        var summed_net_price = quantity*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else if (active_price_box === 'summed_net_price') {
+                        var summed_net_price = document.getElementById("summed_net_price").value;
+                        summed_net_price = summed_net_price.replace(',','.').replace(' ','');
+                        summed_net_price = Number(summed_net_price);
+                        var net_price = summed_net_price/quantity;
+                        var gross_price = (1+prc_tax*0.01)*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else {
+                        var summed_gross_price = document.getElementById("summed_gross_price").value;
+                        summed_gross_price = summed_gross_price.replace(',','.').replace(' ','');
+                        summed_gross_price = Number(summed_gross_price);
+                        var gross_price = summed_gross_price/quantity;
+                        var net_price = gross_price/(1+prc_tax*0.01);
+                        var summed_net_price = quantity*net_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                    }
+                }
+            }else{
+                var prc_tax = document.getElementById("prc_tax").value;
+                prc_tax = prc_tax.replace(',','.').replace(' ','');
+                prc_tax = Number(prc_tax);
+                var quantity = Number(document.getElementById("productquant").value);
+                if (!isNaN(prc_tax) && !isNaN(quantity)) {
+                    var active_price_box = document.getElementById('price_format').value.split('-')[0];
+                    if (active_price_box === 'net_price') {
+                        var net_price = object.value;
+                        net_price = net_price.replace(',','.').replace(' ','');
+                        net_price = Number(net_price);
+                        var gross_price = (1+prc_tax*0.01)*net_price;
+                        var summed_net_price = quantity*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else if (active_price_box === 'gross_price') {
+                        var gross_price = object.value;
+                        gross_price = gross_price.replace(',','.').replace(' ','');
+                        gross_price = Number(gross_price);
+                        var net_price = gross_price/(1+prc_tax*0.01);
+                        var summed_net_price = quantity*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else if (active_price_box === 'summed_net_price') {
+                        var summed_net_price = object.value;
+                        summed_net_price = summed_net_price.replace(',','.').replace(' ','');
+                        summed_net_price = Number(summed_net_price);
+                        var net_price = summed_net_price/quantity;
+                        var gross_price = (1+prc_tax*0.01)*net_price;
+                        var summed_gross_price = quantity*gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("summed_gross_price").value = summed_gross_price;
+                    } else {
+                        var summed_gross_price = object.value;
+                        summed_gross_price = summed_gross_price.replace(',','.').replace(' ','');
+                        summed_gross_price = Number(summed_gross_price);
+                        var gross_price = summed_gross_price/quantity;
+                        var net_price = gross_price/(1+prc_tax*0.01);
+                        var summed_net_price = quantity*net_price;
+                        document.getElementById("gross_price").value = gross_price;
+                        document.getElementById("net_price").value = net_price;
+                        document.getElementById("summed_net_price").value = summed_net_price;
+                    }
+                }
+            }
+        }
+
+        function show_scanproducts_field() {
+            document.getElementById("scanproducts_field").style.display = 'Block';
+            document.getElementById("scanproducts_field").style.zIndex = '15002';
+            document.getElementById("ScreenDarkener").style.display = 'Block';
+            document.getElementById('HSP_ID_Scan').focus();
+
+            setTimeout(function() {
+                document.getElementById("scanproducts_field").style.opacity = '1';
+                document.getElementById("ScreenDarkener").style.opacity = '0.8';
+            }, 200);
+
+        }
+        function hidescanproducts_field() {
+            document.getElementById("scanproducts_field").style.opacity = '0';
+            document.getElementById("scanproducts_field").style.zIndex = '15000';
+            document.getElementById("ScreenDarkener").style.opacity = '0';
+            setTimeout(function () {
+                document.getElementById("scanproducts_field").style.display = 'None';
+                document.getElementById("ScreenDarkener").style.display = 'None';
+            }, 200);
+        }
+        function checkforname(input) {
+            fetch('/center/orders/get_hsp_id_name/'+input.value).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("prod_name").value = data.product_name;
+                    document.getElementById("idealo_link").value = data.link;
+                });
+            });
+        }
+        function addproducts() {
+            var newproduct = document.getElementById('addproduct').value;
+            fetch('/center/orders/get_hsp_id_name/'+newproduct).then(function (response) {
+                response.json().then(function (data) {
+                    newproduct = data.hsp_id;
+                    productname = document.getElementById('prod_name').value;
+                    var idealo_link = document.getElementById('idealo_link').value;
+                    productquant = document.getElementById('productquant').value;
+                    net_price = document.getElementById('net_price').value;
+                    gross_price = document.getElementById('gross_price').value;
+                    prc_tax = document.getElementById('prc_tax').value;
+                    if (productname.length > 255){
+                        document.getElementById('prod_name_length_warning').style.opacity = '1';
+                        document.getElementById('prod_name').style.borderColor = '#a54843';
+                        document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                    }
+                    else if (newproduct != '' && productquant != '' && gross_price != '' && productname != ''){
+                        net_price = net_price.replace(',','.').replace(' ','');
+                        gross_price = gross_price.replace(',','.').replace(' ','');
+                        prc_tax = prc_tax.replace(',','.').replace(' ','');
+                        productquant = Number(productquant);
+                        net_price = Number(net_price);
+                        gross_price = Number(gross_price);
+                        prc_tax = Number(prc_tax);
+                        if (!isNaN(productquant) && !isNaN(gross_price) && !isNaN(prc_tax)){
+                            thisid = document.getElementById('counter').value;
+                            document.getElementById('counter').value = Number(thisid)+1;
+                            document.getElementById('gross_price_format_warning').style.opacity = '0';
+                            document.getElementById('productquant_format_warning').style.opacity = '0';
+                            document.getElementById('addproduct').value = '';
+                            document.getElementById('prod_name').value = '';
+                            document.getElementById('idealo_link').value = '';
+                            document.getElementById('productquant').value = '';
+                            document.getElementById('prc_tax').value = '19';
+                            document.getElementById('net_price').value = '';
+                            document.getElementById('gross_price').value = '';
+                            document.getElementById('summed_net_price').value = '';
+                            document.getElementById('summed_gross_price').value = '';
+                            innerstring = '<tr id="row_' + thisid + '">';
+                            innerstring += '<td style="position: relative; padding-top: 15px">';
+                            innerstring += '<div class="dotclose visible redbutton supertiny" data-value="' + thisid + '" onclick="subtractproduct('+ thisid +', ' + newproduct + ', ' + (gross_price*productquant).toFixed(2) + ', '+ gross_price.toFixed(2) + ', ' + productquant+ ', ' + (net_price*productquant).toFixed(2)+', ' + net_price.toFixed(2)+')">';
+                            innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+                            innerstring += '</div>';
+                            innerstring += '<div style="left:5px" class="dotclose visible blackbutton supertiny" data-value="' + thisid + '" onclick="editproduct('+ thisid +', ' + newproduct +', ' + (gross_price*productquant).toFixed(2) + ', '+ gross_price.toFixed(2) + ', ' + productquant+ ', ' + (net_price*productquant).toFixed(2)+', ' + net_price.toFixed(2)+', ' + prc_tax.toFixed(2) + ')">';
+                            innerstring += '<i class="fa fa-pencil" aria-hidden="true"></i>';
+                            innerstring += '</div>';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += newproduct;
+                            innerstring += '<input hidden name="hsp_id' + thisid + '" value="' + newproduct + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += productname;
+                            innerstring += '<input hidden id="prod_name' + thisid + '" name="prod_name' + thisid + '" value="' + productname + '">';
+                            innerstring += '<input hidden id="idealo_link' + thisid + '" name="idealo_link' + thisid + '" value="' + idealo_link + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += productquant;
+                            innerstring += '<input hidden id="quant' + thisid + '" name="quant' + thisid + '" value="' + productquant + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += prc_tax.toFixed(0)+' %';
+                            innerstring += '<input hidden id="prc_tax' + thisid + '" name="prc_tax' + thisid + '" value="' + prc_tax + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td id="net_price' + thisid + '">';
+                            innerstring += net_price.toFixed(2)+' €';
+                            innerstring += '<input hidden name="net_price' + thisid + '" value="' + net_price + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td id="gross_price' + thisid + '">';
+                            innerstring += gross_price.toFixed(2)+' €';
+                            innerstring += '<input hidden class="gross_price_field" name="gross_price' + thisid + '" value="' + gross_price + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td id="summed_gross_price' + thisid + '">';
+                            innerstring += (gross_price*productquant).toFixed(2)+' €';
+                            innerstring += '</td>';
+                            innerstring += '</tr>';
+                            document.getElementById('productholder').innerHTML += innerstring;
+                            document.getElementById('addproduct_warning').style.opacity = '0';
+                            document.getElementById('addproduct').style.borderColor = '#ced4da';
+                            document.getElementById('prod_name_warning').style.opacity = '0';
+                            document.getElementById('prod_name').style.borderColor = '#ced4da';
+                            document.getElementById('productquant_warning').style.opacity = '0';
+                            document.getElementById('productquant').style.borderColor = '#ced4da';
+                            document.getElementById('gross_price_warning').style.opacity = '0';
+                            document.getElementById('gross_price').style.borderColor = '#ced4da';
+                            sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+                            net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+                            distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+                            summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+                            sum_price += productquant*gross_price;
+                            net_sum += productquant*net_price;
+                            distquant += 1;
+                            summedquant += productquant;
+                            document.getElementById('summed_price').setAttribute('data-value', sum_price);
+                            document.getElementById('summed_price').setAttribute('data-netsum', net_sum);
+                            document.getElementById('summed_price').setAttribute('data-distquant', distquant);
+                            document.getElementById('summed_price').setAttribute('data-summedquant', summedquant);
+                            document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + sum_price.toFixed(2)+' €<br>';
+                            document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + net_sum.toFixed(2)+' €<br>';
+                            document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+                            document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+                        }else{
+                            if (isNaN(productquant)){
+                                document.getElementById('productquant_format_warning').style.opacity = '1';
+                                document.getElementById('productquant').style.borderColor = '#a54843';
+                                document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                            }
+                            else {
+                                document.getElementById('productquant_format_warning').style.opacity = '0';
+                            }
+                            if (isNaN(gross_price)){
+                                document.getElementById('gross_price_format_warning').style.opacity = '1';
+                                document.getElementById('gross_price').style.borderColor = '#a54843';
+                                document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                            }
+                            else {
+                                document.getElementById('gross_price_format_warning').style.opacity = '0';
+                            }
+                        }
+                    }else{
+                        if (newproduct == ''){
+                            document.getElementById('addproduct_warning').style.opacity = '1';
+                            document.getElementById('addproduct').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }
+                        if (productname == ''){
+                            document.getElementById('prod_name_warning').style.opacity = '1';
+                            document.getElementById('prod_name').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }
+                        if (productquant == ''){
+                            document.getElementById('productquant_warning').style.opacity = '1';
+                            document.getElementById('productquant').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }else if (isNaN(productquant)){
+                            document.getElementById('productquant_format_warning').style.opacity = '1';
+                            document.getElementById('productquant').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }
+                        else{
+                            document.getElementById('productquant_format_warning').style.opacity = '0';
+                        }
+                        if (gross_price == ''){
+                            document.getElementById('gross_price_warning').style.opacity = '1';
+                            document.getElementById('gross_price').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }else if (isNaN(gross_price)){
+                            document.getElementById('gross_price_format_warning').style.opacity = '1';
+                            document.getElementById('gross_price').style.borderColor = '#a54843';
+                            document.getElementById('addproduct_button').className = 'fromfield_warningbutton';
+                        }else{
+                            document.getElementById('gross_price_format_warning').style.opacity = '0';
+                        }
+                    }
+                });
+            });
+        }
+
+        function editproduct(thisid, hspid, value, gross_price, quant, net_value, net_price, prc_tax) {
+            document.getElementById('addproduct').value = hspid;
+            document.getElementById('prod_name').value = document.getElementById('prod_name'+thisid).value;
+            document.getElementById('idealo_link').value = document.getElementById('idealo_link'+thisid).value;
+            document.getElementById('productquant').value = quant;
+            document.getElementById('prc_tax').value = prc_tax;
+            document.getElementById('net_price').value = net_price;
+            document.getElementById('gross_price').value = gross_price;
+            sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+            net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+            distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+            summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+            distquant -= 1;
+            summedquant -= quant;
+            newsum = sum_price-value;
+            newnetsum = net_sum-net_value;
+            document.getElementById('summed_price').setAttribute('data-value', newsum);
+            document.getElementById('summed_price').setAttribute('data-netsum', newnetsum);
+            document.getElementById('summed_price').setAttribute('data-distquant', distquant);
+            document.getElementById('summed_price').setAttribute('data-summedquant', summedquant);
+            document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + newsum.toFixed(2)+' €<br>';
+            document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + newnetsum.toFixed(2)+' €<br>';
+            document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+            document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+            subtracted = document.getElementById('row_'+thisid);
+            subtracted.parentNode.removeChild(subtracted);
+            document.getElementById('removed').value += thisid+',';
+        }
+        function subtractproduct(thisid, hspid, value, gross_price, quant, net_value, net_price){
+            sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+            net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+            distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+            summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+            distquant -= 1;
+            summedquant -= quant;
+            newsum = sum_price-value;
+            newnetsum = net_sum-net_value;
+            document.getElementById('summed_price').setAttribute('data-value', newsum);
+            document.getElementById('summed_price').setAttribute('data-netsum', newnetsum);
+            document.getElementById('summed_price').setAttribute('data-distquant', distquant);
+            document.getElementById('summed_price').setAttribute('data-summedquant', summedquant);
+            document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + newsum.toFixed(2)+' €<br>';
+            document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + newnetsum.toFixed(2)+' €<br>';
+            document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+            document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+            subtracted = document.getElementById('row_'+thisid);
+            subtracted.parentNode.removeChild(subtracted);
+            document.getElementById('removed').value += thisid+',';
+        }
+        function checkforenter(event) {
+            if (event.which === 13){
+                addhspid();
+            }
+        }
+        function addhspid() {
+            HSP_ID_Scan_Field = document.getElementById('HSP_ID_Scan');
+            HSP_ID_Scan = HSP_ID_Scan_Field.value;
+            if (HSP_ID_Scan.length > 10 && HSP_ID_Scan.length < 14 ){
+                while (HSP_ID_Scan.length<13){
+                    HSP_ID_Scan = '0'+HSP_ID_Scan;
+                }
+                fetch('/center/orders/get_hsp_id_name/'+HSP_ID_Scan).then(function (response) {
+                    response.json().then(function (data) {
+                        newname = data.product_name;
+
+                        checkhspidrow = document.getElementById('scanrow_'+HSP_ID_Scan);
+                        if (checkhspidrow !== null){
+                            newquantity = Number(document.getElementById(HSP_ID_Scan+'quant').getAttribute('data-quantity'))+1;
+                            document.getElementById(HSP_ID_Scan+'quantity').innerText = newquantity;
+                            document.getElementById(HSP_ID_Scan+'quant').setAttribute('data-quantity', newquantity);
+                        }else{
+                            innerstring = '<tr class="scanned_hspid" id="scanrow_' + HSP_ID_Scan + '" data-value="' + HSP_ID_Scan + '">';
+                            innerstring += '<td style="position: relative; padding-top: 15px">';
+                            innerstring += '<div class="dotclose visible redbutton supertiny" data-value="' + HSP_ID_Scan + '" onclick="subtracthspid(this)">';
+                            innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+                            innerstring += '</div>';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += HSP_ID_Scan;
+                            innerstring += '<input hidden name="' + HSP_ID_Scan + '" value="' + HSP_ID_Scan + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += newname;
+                            innerstring += '<input hidden id="' + HSP_ID_Scan + 'name" value="' + newname + '">';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += '<span id="'+ HSP_ID_Scan +'quantity">1</span>';
+                            innerstring += '<input hidden id="' + HSP_ID_Scan + 'quant" data-quantity="1" name="' + HSP_ID_Scan + 'quant">';
+                            innerstring += '</td>';
+                            innerstring += '</tr>';
+                            document.getElementById('hspidholder').innerHTML += innerstring;
+                        }
+                    });
+                });
+                HSP_ID_Scan_Field.value = '';
+            }else{
+                document.getElementById('HSP_ID_Scan_warning').style.opacity = '1';
+                document.getElementById('HSP_ID_Scan').style.borderColor = '#a54843';
+                document.getElementById('addhspid_button').className = 'fromfield_warningbutton';
+            }
+
+        }
+        function subtracthspid(val){
+            subtracted = document.getElementById('scanrow_'+val.getAttribute('data-value'));
+            subtracted.parentNode.removeChild(subtracted);
+        }
+        function transfer_hspids() {
+            scannedhspids = document.getElementsByClassName('scanned_hspid');
+            for (var i = 0; i < scannedhspids.length; i++){
+                thisid = document.getElementById('counter').value;
+                document.getElementById('counter').value = Number(thisid)+1;
+                newproduct = scannedhspids[i].getAttribute('data-value');
+                productname = document.getElementById(newproduct+'name').value;
+                productquant = Number(document.getElementById(newproduct+'quant').getAttribute('data-quantity'));
+                gross_price = 0;
+                net_price = 0;
+                innerstring = '<tr id="row_' + thisid + '">';
+                innerstring += '<td style="position: relative; padding-top: 15px">';
+                innerstring += '<div class="dotclose visible redbutton supertiny" data-value="' + thisid + '" onclick="subtractproduct('+ thisid +', ' + newproduct + ', ' + (gross_price*productquant).toFixed(2) + ', '+ gross_price.toFixed(2) + ', ' + productquant+ ', ' + (net_price*productquant).toFixed(2)+', ' + net_price.toFixed(2)+')">';
+                innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+                innerstring += '</div>';
+                innerstring += '<div style="left:5px" class="dotclose visible blackbutton supertiny" data-value="' + thisid + '" onclick="editproduct('+ thisid +', ' + newproduct +', ' + (gross_price*productquant).toFixed(2) + ', '+ gross_price.toFixed(2) + ', ' + productquant+ ', ' + (net_price*productquant).toFixed(2)+', ' + net_price.toFixed(2)+', 19)">';
+                innerstring += '<i class="fa fa-pencil" aria-hidden="true"></i>';
+                innerstring += '</div>';
+                innerstring += '</td>';
+                innerstring += '<td>';
+                innerstring += newproduct;
+                innerstring += '<input hidden name="hsp_id' + thisid + '" value="' + newproduct + '">';
+                innerstring += '</td>';
+                innerstring += '<td>';
+                innerstring += productname;
+                innerstring += '<input hidden id="prod_name' + thisid + '" name="prod_name' + thisid + '" value="' + productname + '">';
+                innerstring += '<input hidden id="idealo_link' + thisid + '" name="idealo_link' + thisid + '" value="">';
+                innerstring += '</td>';
+                innerstring += '<td>';
+                innerstring += productquant;
+                innerstring += '<input hidden id="quant' + thisid + '" name="quant' + thisid + '" value="' + productquant + '">';
+                innerstring += '</td>';
+                innerstring += '<td>';
+                innerstring += 19+' %';
+                innerstring += '<input hidden id="prc_tax' + thisid + '" name="prc_tax' + thisid + '" value="' + 19 + '">';
+                innerstring += '</td>';
+                innerstring += '<td id="net_price' + thisid + '">';
+                innerstring += net_price.toFixed(2)+' €';
+                innerstring += '<input hidden name="net_price' + thisid + '" value="' + net_price + '">';
+                innerstring += '</td>';
+                innerstring += '<td id="gross_price' + thisid + '">';
+                innerstring += gross_price.toFixed(2)+' €';
+                innerstring += '<input hidden class="gross_price_field" name="gross_price' + thisid + '" value="' + gross_price + '">';
+                innerstring += '</td>';
+                innerstring += '<td id="summed_gross_price' + thisid + '">';
+                innerstring += (gross_price*productquant).toFixed(2)+' €';
+                innerstring += '</td>';
+                innerstring += '</tr>';
+                document.getElementById('productholder').innerHTML += innerstring;
+                sum_price = Number(document.getElementById('summed_price').getAttribute('data-value'));
+                net_sum = Number(document.getElementById('summed_price').getAttribute('data-netsum'));
+                distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+                summedquant = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+                sum_price += productquant*gross_price;
+                net_sum += productquant*net_price;
+                distquant += 1;
+                summedquant += productquant;
+                document.getElementById('summed_price').setAttribute('data-value', sum_price);
+                document.getElementById('summed_price').setAttribute('data-netsum', net_sum);
+                document.getElementById('summed_price').setAttribute('data-distquant', distquant);
+                document.getElementById('summed_price').setAttribute('data-summedquant', summedquant);
+                document.getElementById('summed_price').innerHTML = 'Gesamtsumme brutto: ' + sum_price.toFixed(2)+' €<br>';
+                document.getElementById('summed_price').innerHTML += 'Gesamtsumme netto: ' + net_sum.toFixed(2)+' €<br>';
+                document.getElementById('summed_price').innerHTML += 'Anzahl Positionen: ' + distquant + '<br>';
+                document.getElementById('summed_price').innerHTML += 'Gesamtstückzahl: ' + summedquant;
+            }
+
+            document.getElementById("scanproducts_field").style.opacity = '0';
+            document.getElementById("scanproducts_field").style.zIndex = '15000';
+            document.getElementById("ScreenDarkener").style.opacity = '0';
+            setTimeout(function () {
+                document.getElementById("scanproducts_field").style.display = 'None';
+                document.getElementById("ScreenDarkener").style.display = 'None';
+            }, 200);
+            document.getElementById('hspidholder').innerHTML = '';
+        }
+        function refreshsuppliers() {
+            fetch('/center/orders/get_suppliers/').then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("supplier").innerHTML = data.out;
+                });
+            });
+        }
+        function refreshpaymentmethods() {
+            fetch('/center/orders/get_paymentmethods/').then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("payment_method").innerHTML = data.out;
+                });
+            });
+        }
+
+        function add_paymentmethod() {
+            methodfield = document.getElementById('new_paymentmethod');
+            methodfieldvalue = methodfield.value.replace(' existiert bereits', '');
+            if (methodfieldvalue != '' && methodfieldvalue != 'keine Eingabe' && methodfieldvalue != 'hinzugefügt'){
+                fetch('/center/orders/add_paymentmethod/'+methodfieldvalue).then(function (response) {
+                    response.json().then(function (data) {
+                        if (data.msg == 'danger'){
+                            methodfield.value = methodfieldvalue + ' existiert bereits';
+                            methodfield.style.borderColor = '#a54843';
+                        }else{
+                            methodfield.value = 'hinzugefügt';
+                            methodfield.style.borderColor = '#ced4da';
+                        }
+                    });
+                });
+            }else{
+                methodfield.value = 'keine Eingabe';
+                methodfield.style.borderColor = '#a54843';
+            }
+        }
+        function checkorderform() {
+            additional_cost = document.getElementById('additional_cost');
+            additional_cost_value = additional_cost.value;
+            additional_cost_value = additional_cost_value.replace(',', '.');
+            additional_cost_value = additional_cost_value.replace(' ', '');
+            additional_cost_value = additional_cost_value.replace('-', '00');
+            additional_cost_value = additional_cost_value.replace('€', '');
+            additional_cost_value = Number(additional_cost_value);
+            order_time = document.getElementById('order_time');
+            delivery_time = document.getElementById('delivery_time');
+            supplier = document.getElementById('supplier');
+            payment_method = document.getElementById('payment_method');
+            distquant = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+
+            if (!order_time.value
+                || supplier.value == ''
+                || payment_method.value == ''
+                || distquant < 1
+                || isNaN(additional_cost_value))
+            {
+                if(!order_time.value){
+                    document.getElementById('order_time_warning').style.opacity = '1';
+                    order_time.style.borderColor = '#a54843';
+                }
+                else{
+                    document.getElementById('order_time_warning').style.opacity = '0';
+                    order_time.style.borderColor = '#ced4da';
+                }
+                if(supplier.value == ''){
+                    document.getElementById('supplier_warning').style.opacity = '1';
+                    supplier.style.borderColor = '#a54843';
+                }
+                else{
+                    document.getElementById('supplier_warning').style.opacity = '0';
+                    supplier.style.borderColor = '#ced4da';
+                }
+                if(payment_method.value == ''){
+                    document.getElementById('payment_method_warning').style.opacity = '1';
+                    payment_method.style.borderColor = '#a54843';
+                }
+                else{
+                    document.getElementById('payment_method_warning').style.opacity = '0';
+                    payment_method.style.borderColor = '#ced4da';
+                }
+                if(distquant < 1){
+                    document.getElementById('productwrapper_warning').style.opacity = '1';
+                    document.getElementById('productwrapper').style.border = 'solid';
+                    document.getElementById('productwrapper').style.borderColor = '#a54843';
+                }
+                else{
+                    document.getElementById('productwrapper_warning').style.opacity = '0';
+                    document.getElementById('productwrapper').style.border = 'None';
+                }
+                if(isNaN(additional_cost_value)){
+                    document.getElementById('additional_cost_warning').style.opacity = '1';
+                    additional_cost.style.borderColor = '#a54843';
+                }
+                else {
+                    document.getElementById('additional_cost_warning').style.opacity = '0';
+                    additional_cost.style.borderColor = '#ced4da';
+                }
+            }
+
+            else{
+                document.getElementById('removed').value += '0';
+                document.getElementById('order_time_warning').style.opacity = '0';
+                order_time.style.borderColor = '#ced4da';
+                document.getElementById('supplier_warning').style.opacity = '0';
+                supplier.style.borderColor = '#ced4da';
+                document.getElementById('payment_method_warning').style.opacity = '0';
+                payment_method.style.borderColor = '#ced4da';
+                document.getElementById('productwrapper_warning').style.opacity = '0';
+                document.getElementById('productwrapper').style.border = 'None';
+                document.getElementById('additional_cost_warning').style.opacity = '0';
+                additional_cost.style.borderColor = '#ced4da';
+                document.getElementById('summed_price_value').value = Number(document.getElementById('summed_price').getAttribute('data-net_sum'));
+                document.getElementById('summed_price_distquant').value = Number(document.getElementById('summed_price').getAttribute('data-distquant'));
+                document.getElementById('summed_price_summedquant').value = Number(document.getElementById('summed_price').getAttribute('data-summedquant'));
+                document.getElementById('form').submit();
+            }
+        }
+    </script>
+{%endblock%}

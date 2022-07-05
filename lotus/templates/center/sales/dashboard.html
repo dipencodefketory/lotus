@@ -1,0 +1,223 @@
+{% extends 'center/sales/sales_basis.html' %}
+{% block title %}Sales-Dashboard{% endblock %}
+
+{% block addsheets %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.5.1/chart.min.js" integrity="sha512-Wt1bJGtlnMtGP0dqNFH1xlkLBNpEodaiQ8ZN5JLA5wpc1sUlk/O5uuOMNgvzddzkpvZ9GLyYNa8w2s7rqiTk5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% endblock %}
+
+{% block ext2 %}
+    <div class="container-fluid">
+        <h2 class="text-start py-1">Dashboard</h2>
+        <div class="row align-center">
+            <div class="col-12">
+                <input type="hidden" id="selected_wss" value="Gesamt">
+                {% for mp_name in mp_names %}
+                    <input type="radio" class="mx-1" name="wss_filter" value="{{ mp_name }}" onclick="swap_wss_view(this)" style="cursor: pointer" {% if mp_name == 'Gesamt' %}checked{% endif %}>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-6">
+                <div class="lightgrey visible" id="wss_all" style="transition: 200ms">
+                    <h4>Pünktlichkeit nach KW - <span id="wss_chosen_mp">Gesamt</span></h4>
+                    <canvas id="weekly_shipping_success"></canvas>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="lightgrey visible" id="wss_summary">
+                    <table class="table">
+                        <thead>
+                            <tr class="black">
+                            </tr>
+                            <tr class="text-start">
+                                <th>KW</th>
+                                {% for mp_name in mp_names %}
+                                <th>{{ mp_name }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody class="text-start">
+                            {% for week in weeks %}
+                                <tr>
+                                    <td>{{ week }}</td>
+                                    {% for mp_name in mp_names %}
+                                        <td>
+                                            {% if mp_summary[mp_name][week][False]+mp_summary[mp_name][week][True] > 0 %}
+                                                {{ '%0.2f' % (100*mp_summary[mp_name][week][True]/(mp_summary[mp_name][week][False]+mp_summary[mp_name][week][True])) }} %
+                                            {% endif %}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="row my-4">
+            <div class="col-6">
+                <div class="lightgrey visible">
+                    <h4>Zu Versenden</h4>
+                    <canvas id="to_send_14"></canvas>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="lightgrey visible" id="send_summary">
+                    <table class="table">
+                        <thead>
+                            <tr class="black">
+                                <th colspan="6">Übersicht</th>
+                            </tr>
+                            <tr class="text-start">
+                                <th>Datum</th>
+                                <th>Eigenes Lager</th>
+                                <th>Fremd-Lager</th>
+                                <th>PreOrder</th>
+                                <th>Gesamt</th>
+                                <th>Versandt</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-start">
+                            {% for key in send_summary %}
+                                <tr>
+                                    <td>{{ key }}</td>
+                                    <td>{{ send_summary[key]['count'] - send_summary[key]['short_sell'] }}</td>
+                                    <td>{{ send_summary[key]['short_sell'] - send_summary[key]['pre_order'] }}</td>
+                                    <td>{{ send_summary[key]['pre_order'] }}</td>
+                                    <td>{{ send_summary[key]['count'] }}</td>
+                                    <td>{{ send_summary[key]['sent'] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+        let data = {
+            {% for mp in mps %}
+            '{{ mp.name }}': {
+                labels: {{ weeks|safe }},
+                datasets: [
+                    {
+                        label: "on time",
+                        backgroundColor: 'rgb(49, 181, 75)',
+                        data: {{ wss_mp_dict[mp.name][True] }}
+                    },
+                    {
+                        label: "late",
+                        backgroundColor: "tomato",
+                        data: {{ wss_mp_dict[mp.name][False] }}
+                    }
+                ]
+            },
+            {% endfor %}
+            'Gesamt': {
+                labels: {{ weeks|safe }},
+                datasets: [
+                    {
+                        label: "on time",
+                        backgroundColor: 'rgb(49, 181, 75)',
+                        data: {{ wss_mp_dict['Gesamt'][True] }}
+                    },
+                    {
+                        label: "late",
+                        backgroundColor: "tomato",
+                        data: {{ wss_mp_dict['Gesamt'][False] }}
+                    }
+                ]
+            },
+        };
+        console.log(data);
+        let wss_graph = document.getElementById("weekly_shipping_success").getContext('2d');
+        let myBarChart = new Chart(wss_graph, {
+            type: 'bar',
+            data: data['Gesamt'],
+            options: {
+                barValueSpacing: 20,
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            min: 0,
+                        }
+                    }]
+                },
+                onClick: wssGraphClickEvent
+            }
+        });
+
+        function wssGraphClickEvent(event, array) {
+            if (array[0]) {
+                $.ajax({
+                    url: "{{ url_for('center_sales_redirect') }}",
+                    type: "POST",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify({'week_diff_index': array[0].index, 'punctual': array[0].datasetIndex === 0}),
+                    success: function () {
+                        window.open('{{ url_for("center_sales_sales") }}')
+                    }
+                });
+
+            }
+        }
+
+        let to_send_14_graph = document.getElementById("to_send_14").getContext("2d");
+        let to_send_14_constr = new Chart(to_send_14_graph, {
+            type: 'bar',
+            data: {
+                labels: {{ send_vecs[0]|safe }},
+                datasets: [
+                    {
+                        label: '',
+                        data: {{ send_vecs[1] }},
+                        fill: true,
+                        borderColor: 'rgb(49, 89, 181)',
+                        backgroundColor: 'rgb(125, 148, 202)',
+                        tension: 0.1
+                    }
+                ]
+            },
+            options: {
+                onClick: toSend14GraphClickEvent
+            }
+        });
+
+        function toSend14GraphClickEvent(event, array) {
+            if (array[0]) {
+                console.log(array[0]);
+                $.ajax({
+                    url: "{{ url_for('center_sales_redirect') }}",
+                    type: "POST",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify({'day_diff_index': array[0].index, 'cancelled': false, 'credit': false}),
+                    success: function () {
+                        window.open('{{ url_for("center_sales_sales") }}')
+                    }
+                });
+            }
+        }
+
+        function swap_wss_view(obj) {
+            let selected_wss = document.getElementById('selected_wss');
+            if (selected_wss.value !== obj.value) {
+                document.getElementById('wss_chosen_mp').innerText = obj.value;
+                myBarChart.data = data[obj.value];
+                myBarChart.update();
+                selected_wss.value = obj.value;
+            }
+        }
+    </script>
+{% endblock %}
+

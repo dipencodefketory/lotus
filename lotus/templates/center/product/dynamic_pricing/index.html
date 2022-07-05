@@ -1,0 +1,948 @@
+{% extends 'center/basis.html' %}
+{% block title %}Dynamic Pricing{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_products') }}">
+            <div class="submenu five">
+                Produkte
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_groups') }}">
+            <div class="submenu five">
+                Produkt-Gruppen
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_pim') }}">
+            <div class="submenu five">
+                PIM
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Dynamic Pricing
+        </div>
+    </div>
+    <div class="box100" style="text-align: left">
+        <a href="{{ url_for('center_product_dynamic_pricing_add_pricingaction') }}" target="_blank">
+            <div class="standardbutton greenbutton visible">
+                <i class="fa fa-plus" aria-hidden="true"></i> Aktion hinzufügen
+            </div>
+        </a>
+    </div>
+    <div class="visible small box100 " style="text-align: left; position: relative; overflow: hidden;">
+        <div class="big seven" style="padding: 15px 0 10px 20px"><i>Filter</i></div>
+        <form action="" name="filterform" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="checker" value="filter"/>
+            <div class="splitleft">
+                <div class="form-group">
+                    <label class="small five" for="product_ids" style="width: 100%">Produkte (IDs an Semikolon trennen!)
+                        <div style="float: right">
+                            <input type="radio" value="id" id="id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['dynamic_pricing_filter_infos'] %}
+                                    {% if session['dynamic_pricing_filter_infos']['product_id_type'] == 'id' %}
+                                        checked
+                                    {% endif %}
+                                    {% else %}
+                                        checked
+                                    {% endif %}
+                            >
+                            <label for="id" style="margin: 0; padding-bottom: 0">ID
+                            </label>
+                            <input type="radio" value="Internal_ID" id="Internal_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['dynamic_pricing_filter_infos'] %}
+                                    {% if session['dynamic_pricing_filter_infos']['product_id_type'] == 'Internal_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="Internal_ID" style="margin: 0; padding-bottom: 0">Interne ID
+                            </label>
+                            <input type="radio" value="HSP_ID" id="HSP_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['dynamic_pricing_filter_infos'] %}
+                                    {% if session['dynamic_pricing_filter_infos']['product_id_type'] == 'HSP_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="HSP_ID" style="margin: 0; padding-bottom: 0">HSP-ID
+                            </label>
+                            <input hidden name="product_type" id="product_type" value="{% if 'product_id_type' in session['dynamic_pricing_filter_infos'] %}{{ session['dynamic_pricing_filter_infos']['product_id_type'] }}{% else %}id{% endif %}">
+                        </div>
+                    </label>
+                    <textarea rows="4" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% if 'product_ids' in session['dynamic_pricing_filter_infos'] %}{% for p in session['dynamic_pricing_filter_infos']['product_ids'] %}{{ p }};{% endfor %}{% endif %}</textarea>
+                    <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                    <div style="position:relative;">
+                        <input type="text" name="product" style="border: solid 1px black; padding-right: 120px"  class="form-control" id="product" list="product-datalist" onkeyup="find_products(this.value)">
+                        <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                        <datalist id="product-datalist">
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                </div>
+                <div class="splitleft small five" style="padding-left: 0">
+                    <div style="border: none; box-shadow: none; padding: 0 0 5px 0; position: relative">
+                        <label for="own_own_stock">Eigener Bestand: </label>
+                        <input style="border: solid 1px black; width: 100%; display: block; padding-left: 55px" id="own_stock" type="number" min="0" name="own_stock" class="form-control tiny" value="{% if session['dynamic_pricing_filter_infos']['own_stock'] %}{{ session['dynamic_pricing_filter_infos']['own_stock'] }}{% else %}0{% endif %}">
+                        <select name="own_stock-operator" class="fromfield_dropdown_left_black">
+                            <option value=">=" {% if session['dynamic_pricing_filter_infos']['own_stock-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                            <option value=">" {% if session['dynamic_pricing_filter_infos']['own_stock-operator']=='>'%}selected{% endif %}>></option>
+                            <option value="=" {% if session['dynamic_pricing_filter_infos']['own_stock-operator']=='='%}selected{% endif %}>=</option>
+                            <option value="<" {% if session['dynamic_pricing_filter_infos']['own_stock-operator']=='<'%}selected{% endif %}><</option>
+                            <option value="<=" {% if session['dynamic_pricing_filter_infos']['own_stock-operator']=='<='%}selected{% endif %}>&le;</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="splitright small five" style="padding-right: 0">
+                    <div style="border: none; box-shadow: none; padding: 0 0 5px 0; position: relative">
+                        <label for="summed_stock">Gesamter Bestand: </label>
+                        <input style="border: solid 1px black; width: 100%; display: block; padding-left: 55px" id="summed_stock" type="number" min="0" name="summed_stock" class="form-control tiny" value="{% if session['dynamic_pricing_filter_infos']['summed_stock'] %}{{ session['dynamic_pricing_filter_infos']['summed_stock'] }}{% else %}0{% endif %}">
+                        <select name="summed_stock-operator" class="fromfield_dropdown_left_black">
+                            <option value=">=" {% if session['dynamic_pricing_filter_infos']['summed_stock-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                            <option value=">" {% if session['dynamic_pricing_filter_infos']['summed_stock-operator']=='>'%}selected{% endif %}>></option>
+                            <option value="=" {% if session['dynamic_pricing_filter_infos']['summed_stock-operator']=='='%}selected{% endif %}>=</option>
+                            <option value="<" {% if session['dynamic_pricing_filter_infos']['summed_stock-operator']=='<'%}selected{% endif %}><</option>
+                            <option value="<=" {% if session['dynamic_pricing_filter_infos']['summed_stock-operator']=='<='%}selected{% endif %}>&le;</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="splitright" style="padding-top: 3px">
+                <table class="table tiny" style="text-align: left; border: none; box-shadow: none;">
+                    <thead style="border: none; box-shadow: none">
+                        <tr style="border: none; box-shadow: none; padding: 0">
+                            <th class="small five" style="border: none; box-shadow: none; padding-left: 0">Zeitraum: </th>
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px;">
+                                <label for="start"> Start:</label>
+                                <input style="border: solid 1px black; width: 100%; display: block;" id="start" type="date" name="start" class="form-control tiny" value="{{ session['dynamic_pricing_filter_infos']['active_start'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px;">
+                                <label for="end"> Ende</label>
+                                <input style="border: solid 1px black; width: 100%; display: block;" id="end" type="date" name="end" class="form-control tiny" value="{{ session['dynamic_pricing_filter_infos']['active_end'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px;">
+                            </th>
+                        </tr>
+                        <tr style="border: none; box-shadow: none; padding: 0">
+                            <th class="small five" style="border: none; box-shadow: none; padding-left: 0">Verkäufe: </th>
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px; position: relative">
+                                <label for="sales_start"> Start:</label>
+                                <input style="border: solid 1px black; width: 100%; display: block;" id="sales_start" type="date" name="sales_start" class="form-control tiny" value="{{ session['dynamic_pricing_filter_infos']['sales_start'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px; position: relative">
+                                <label for="sales_end"> Ende</label>
+                                <input style="border: solid 1px black; width: 100%; display: block;" id="sales_end" type="date" name="sales_end" class="form-control tiny" value="{{ session['dynamic_pricing_filter_infos']['sales_end'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px; position: relative">
+                                <label for="sales_quantity">Stückzahl: </label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="sales_quantity" type="number" min="0" name="sales_quantity" class="form-control tiny" value="{{ session['dynamic_pricing_filter_infos']['sales_quantity'] }}">
+                                <select name="sales_quantity-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['sales_quantity-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['sales_quantity-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['sales_quantity-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['sales_quantity-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['sales_quantity-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </th>
+                        </tr>
+                        <tr style="border: none; box-shadow: none; padding: 0">
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px; position: relative">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px; position: relative">
+                                <label for="actionstart">Aktionsstart: </label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="actionstart" type="date" name="actionstart" class="form-control tiny" value="{{ session['dynamic_pricing_filter_infos']['actionstart'] }}">
+                                <select name="actionstart-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['actionstart-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['actionstart-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['actionstart-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['actionstart-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['actionstart-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px; position: relative">
+                                <label for="actionend">Aktionsende: </label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="actionend" type="date" name="actionend" class="form-control tiny" value="{{ session['dynamic_pricing_filter_infos']['actionend'] }}">
+                                <select name="actionend-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['actionend-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['actionend-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['actionend-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['actionend-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['actionend-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </th>
+                            <th style="border: none; box-shadow: none; padding: 0 0 5px 5px; position: relative">
+                                <label for="promotion_quantity">Aktionsmenge: </label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="promotion_quantity" type="number" min="0" name="promotion_quantity" class="form-control tiny" value="{{ session['dynamic_pricing_filter_infos']['promotion_quantity'] }}">
+                                <select name="promotion_quantity-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['promotion_quantity-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['promotion_quantity-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['promotion_quantity-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['promotion_quantity-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['promotion_quantity-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th colspan="2" style="border: none; box-shadow: none; position: relative">
+
+                            </th>
+                            <th colspan="2" style="border: none; box-shadow: none; position: relative">
+
+                            </th>
+                        </tr>
+                        <tr>
+                            <th colspan="2" style="border: none; box-shadow: none; padding: 0; position: relative">
+
+                            </th>
+                            <th colspan="2" style="border: none; box-shadow: none; padding: 0; position: relative">
+                                <label for="both" class="clickable_rowbox" style="height:100%; padding:0 5px 0 0; width: 100%">
+                                    <input type="radio" name="activity" id="both" value="None" {% if session['dynamic_pricing_filter_infos']['activity']==None %}checked{% endif %}>
+                                    egal
+                                </label>
+                            </th>
+                        </tr>
+                        <tr style="border: none; box-shadow: none; padding: 0">
+                            <th colspan="2" style="border: none; box-shadow: none; padding: 0; position: relative">
+                                <label for="kuchenboden" class="clickable_rowbox" style="height:100%; padding:0 5px 0 0; width: 100%">
+                                    <input value="Kuchenboden" type="checkbox" id="kuchenboden" name="except_mp" style="cursor: pointer; margin: 5px; position: relative; top:1.5px" {% if 'Kuchenboden' in session['dynamic_pricing_filter_infos']['except_mp'] %}checked{% endif %}>
+                                    Kuchenboden ausblenden
+                                </label>
+                            </th>
+                            <th colspan="2" style="border: none; box-shadow: none; padding: 0; position: relative">
+                                <label for="only_active" class="clickable_rowbox" style="height:100%; padding:0 5px 0 0; width: 100%">
+                                    <input type="radio" name="activity" id="only_active" value="1" {% if session['dynamic_pricing_filter_infos']['activity']==1 %}checked{% endif %}>
+                                    nur aktive
+                                </label>
+                            </th>
+                        </tr>
+                        <tr style="border: none; box-shadow: none; padding: 0">
+                            <th colspan="2" style="border: none; box-shadow: none; padding: 0; position: relative">
+                                <label for="short_sell_active">Leerverkauf aktiv:</label><br>
+                                <i class="fa fa-check-circle-o" aria-hidden="true"></i> <input type="radio" id="short_sell_active" name="short_sell_active" value="1" style="position: relative; top: 1.5px" {% if 'short_sell_active' in session['dynamic_pricing_filter_infos'] %}{% if session['dynamic_pricing_filter_infos']['short_sell_active']==True %}checked{% endif %}{% endif %}>
+                                <i class="fa fa-times-circle-o" aria-hidden="true"></i> <input type="radio" id="short_sell_active" name="short_sell_active" value="0" style="position: relative; top: 1.5px" {% if 'short_sell_active' in session['dynamic_pricing_filter_infos'] %}{% if session['dynamic_pricing_filter_infos']['short_sell_active']==False %}checked{% endif %}{% endif %}>
+                                <i class="fa fa-circle-o" aria-hidden="true"></i> <input type="radio" id="short_sell_active" name="short_sell_active" value="" style="position: relative; top: 1.5px" {% if 'short_sell_active' in session['dynamic_pricing_filter_infos'] %}{% if session['dynamic_pricing_filter_infos']['short_sell_active']==None %}checked{% endif %}{% else %}checked{% endif %}>
+                            </th>
+                            <th colspan="2" style="border: none; box-shadow: none; padding: 0; position: relative">
+                                <label for="only_inactive" class="clickable_rowbox" style="height:100%; padding:0 5px 0 0; width: 100%">
+                                    <input type="radio" name="activity" id="only_inactive" value="" {% if session['dynamic_pricing_filter_infos']['activity']==0 %}checked{% endif %}>
+                                    nur inaktive
+                                </label>
+                            </th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <div class="box100" style="border-bottom: #ebeef2 1px solid; padding: 10px">
+                <table class="table" style="margin-bottom: 10px">
+                    <thead>
+                        <tr class="lightgrey">
+                            <th>
+                                Marketplace-Optionen:
+                            </th>
+                            <th>
+                                <input type="radio" id="one_marketplace" name="marketplace_options"
+                                       value="one_marketplace" checked onchange="display_marketplaces()"
+                                {% if session['dynamic_pricing_filter_infos']['marketplace_options']['option'] == 'one_marketplace' %}
+                                checked {% endif %}>
+                                <label style="margin-bottom: 0" for="one_marketplace">Min. ein Marketplace</label>
+                            </th>
+                            <th>
+                                <input type="radio" id="all_marketplaces" name="marketplace_options"
+                                       value="all_marketplaces" onchange="display_marketplaces()"
+                                {% if session['dynamic_pricing_filter_infos']['marketplace_options']['option'] == 'all_marketplaces' %}
+                                checked {% endif %}>
+                                <label style="margin-bottom: 0" for="all_marketplaces">Alle Marketplaces</label>
+                            </th>
+                            <th>
+                                <input type="radio" id="specific_marketplaces" name="marketplace_options"
+                                       value="specific_marketplaces" onchange="display_marketplaces()"
+                                {% if session['dynamic_pricing_filter_infos']['marketplace_options']['option'] == 'spec_marketplace' %}
+                                checked {% endif %}>
+                                <label style="margin-bottom: 0" for="specific_marketplaces">Einzeln entscheiden</label>
+                            </th>
+                            <th>
+                            </th>
+                            <th>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="five">
+                        <tr class="one_marketplace marketplacerow" id="one_marketplace"
+                                {% if 'option' in session['dynamic_pricing_filter_infos']['marketplace_options'] %}
+                                    {% if session['dynamic_pricing_filter_infos']['marketplace_options']['option']!='one_marketplace' %}
+                            style="display: None"
+                                    {% endif %}
+                                {% endif %}>
+                            <td style="padding: 5px; width: 16.6%; position: relative">
+                                <label for="strategy_one">Strategie</label>
+                                <select style="border: solid 1px black; width: 100%; display: block; border-radius: .25rem; height: 32px" id="strategy_one" name="strategy_one" class="form-control tiny">
+                                    <option value="-"></option>
+                                    <option value="3" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy_one'] == 3 %} selected {% endif %}>Abverkauf</option>
+                                    <option value="0" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy_one'] == 0 %} selected {% endif %}>Keine Aktion</option>
+                                    <option value="1" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy_one'] == 1 %} selected {% endif %}>Optimarge</option>
+                                    <option value="2" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy_one'] == 2 %} selected {% endif %}>Platzierung</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="min_margin_one">Mindestmarge in %</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="min_margin_one" type="number" step="0.1" name="min_margin_one" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_one'] }}">
+                                <select name="min_margin_one-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_one-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_one-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_one-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_one-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_one-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="latest_prc_margin_one">Letzte Marge in %</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="latest_prc_margin_one" type="number" step="0.1" name="latest_prc_margin_one" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_one'] }}">
+                                <select name="latest_prc_margin_one-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_one-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_one-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_one-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_one-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_one-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="mean_prc_margin_one">&Oslash Realisierte Marge in %</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="mean_prc_margin_one" type="number" step="0.1" name="mean_prc_margin_one" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_one'] }}">
+                                <select name="mean_prc_margin_one-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_one-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_one-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_one-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_one-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_one-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="real_sales_one">Realisierte Verkäufe</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="real_sales_one" type="number" name="real_sales_one" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_one'] }}">
+                                <select name="real_sales_one-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_one-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_one-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_one-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_one-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_one-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="mean_price_one">&Oslash VK</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="mean_price_one" type="number" step="0.01" name="mean_price_one" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price_one'] }}">
+                                <select name="mean_price_one-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price_one-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price_one-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price_one-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price_one-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price_one-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr class="all_marketplaces marketplacerow" id="all_marketplaces"
+                                {% if 'option' in session['dynamic_pricing_filter_infos']['marketplace_options'] %}
+                                    {% if session['dynamic_pricing_filter_infos']['marketplace_options']['option']!='all_marketplaces' %}
+                            style="display: None"
+                                    {% endif %}
+                                {% else %}
+                            style="display: None"
+                                {% endif %}>
+                            <td style="padding: 5px; width: 16.6%; position: relative">
+                                <label for="strategy_all">Strategie</label>
+                                <select style="border: solid 1px black; width: 100%; display: block; border-radius: .25rem; height: 32px"  id="strategy_all" name="strategy_all" class="form-control tiny">
+                                    <option value="-"></option>
+                                    <option value="3"
+                                            {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy_all'] == 3 %}
+                                            selected {% endif %}>Abverkauf</option>
+                                    <option value="0"
+                                            {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy_all'] == 0 %}
+                                            selected {% endif %}>Keine Aktion</option>
+                                    <option value="1"
+                                            {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy_all'] == 1 %}
+                                            selected {% endif %}>Optimarge</option>
+                                    <option value="2"
+                                            {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy_all'] == 2 %}
+                                            selected {% endif %}>Platzierung</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="min_margin_all">Mindestmarge in %</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="min_margin_all" type="number" step="0.1" name="min_margin_all" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_all'] }}">
+                                <select name="min_margin_all-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_all-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_all-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_all-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_all-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin_all-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="latest_prc_margin_all">Letzte Marge in %</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="latest_prc_margin_all" type="number" step="0.1" name="latest_prc_margin_all" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_all'] }}">
+                                <select name="latest_prc_margin_all-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_all-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_all-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_all-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_all-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin_all-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="mean_prc_margin_all">&Oslash Realisierte Marge in %</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="mean_prc_margin_all" type="number" step="0.1" name="mean_prc_margin_all" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_all'] }}">
+                                <select name="mean_prc_margin_all-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_all-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_all-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_all-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_all-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin_all-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="real_sales_all">Realisierte Verkäufe</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="real_sales_all" type="number" name="real_sales_all" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all'] }}">
+                                <select name="real_sales_all-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="padding: 5px; position: relative">
+                                <label for="mean_price_all">&Oslash VK</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="mean_price_all" type="number" step="0.01" name="mean_price_all" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price_all'] }}">
+                                <select name="mean_price_all-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales_all-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                        </tr>
+                        {% for marketplace in marketplaces %}
+                        <tr class="specific_marketplaces marketplacerow" id="specific_marketplaces"
+                                {% if 'option' in session['dynamic_pricing_filter_infos']['marketplace_options'] %}
+                                    {% if session['dynamic_pricing_filter_infos']['marketplace_options']['option']!='spec_marketplace' %}
+                            style="display: None"
+                                    {% endif %}
+                                {% else %}
+                            style="display: None"
+                                {% endif %}>
+                            <td style="padding: 5px; position: relative">
+                                <label for="marketplace{{ marketplace.id }}" style="height:100%; margin-left: 0; padding: 5px 5px 5px 0; width: 100%">
+                                    <input type="checkbox" value="{{ marketplace.id }}" style="margin: 5px 5px 5px 0; padding-left: 0; position: relative; top:1.5px" class="marketplace_filter" name="marketplace_filter" id="marketplace{{ marketplace.id }}"
+                                    {% if 'marketplace_options' in session['dynamic_pricing_filter_infos'] %}
+                                            {% if marketplace.id in session['dynamic_pricing_filter_infos']['marketplace_options']['marketplace_ids'] %}
+                                    checked
+                                            {% endif %}
+                                    {% else %}
+                                    checked
+                                    {% endif %}>
+                                    {{ marketplace.name }}
+                                </label>
+                            </td>
+                            <td style="padding: 5px 5px 5px 50px; position: relative">
+                                <label for="rank{{ marketplace.id }}" style="position: absolute; left: 0; top:10px">Rang</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="rank{{ marketplace.id }}" type="number" step="0.1" name="rank{{ marketplace.id }}" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['rank'+ marketplace.id|string ] }}">
+                                <select name="rank{{ marketplace.id }}-operator" class="fromfield_dropdown_left_black" style="left:50px; bottom:16px">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['rank'+ marketplace.id|string +'-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['rank'+ marketplace.id|string +'-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['rank'+ marketplace.id|string +'-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['rank'+ marketplace.id|string +'-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['rank'+ marketplace.id|string +'-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select></td>
+                            <td style="padding: 5px; position: relative"></td>
+                            <td style="padding: 5px; position: relative"></td>
+                            <td style="padding: 5px; position: relative"></td>
+                            <td style="padding: 5px; position: relative"></td>
+                        </tr>
+                        <tr class="specific_marketplaces marketplacerow" id="specific_marketplaces"
+                                {% if 'option' in session['dynamic_pricing_filter_infos']['marketplace_options'] %}
+                                    {% if session['dynamic_pricing_filter_infos']['marketplace_options']['option']!='spec_marketplace' %}
+                            style="display: None"
+                                    {% endif %}
+                                {% else %}
+                            style="display: None"
+                                {% endif %}>
+                            <td style="border-top: none; width: 16.6%; padding: 5px; position: relative">
+                                <label for="strategy{{ marketplace.id }}">Strategie</label>
+                                <select style="border: solid 1px black; width: 100%; display: block; border-radius: .25rem; height: 32px"  id="strategy{{ marketplace.id }}" name="strategy{{ marketplace.id }}" class="form-control tiny">
+                                    <option value="-"></option>
+                                    <option value="3"
+                                            {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy'+ marketplace.id|string] == 3 %}
+                                            selected {% endif %}>Abverkauf</option>
+                                    <option value="0"
+                                            {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy'+ marketplace.id|string] == 0 %}
+                                            selected {% endif %}>Keine Aktion</option>
+                                    <option value="1"
+                                            {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy'+ marketplace.id|string] == 1 %}
+                                            selected {% endif %}>Optimarge</option>
+                                    <option value="2"
+                                            {% if session['dynamic_pricing_filter_infos']['marketplace_options']['strategy'+ marketplace.id|string] == 2 %}
+                                            selected {% endif %}>Platzierung</option>
+                                </select>
+                            </td>
+                            <td style="border-top: none; padding: 5px; position: relative">
+                                <label for="min_margin{{ marketplace.id }}">Mindestmarge in %</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="min_margin{{ marketplace.id }}" type="number" step="0.1" name="min_margin{{ marketplace.id }}" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin'+ marketplace.id|string ] }}">
+                                <select name="min_margin{{ marketplace.id }}-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin'+ marketplace.id|string +'-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin'+ marketplace.id|string +'-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin'+ marketplace.id|string +'-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin'+ marketplace.id|string +'-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['min_margin'+ marketplace.id|string +'-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="border-top: none; padding: 5px; position: relative">
+                                <label for="latest_prc_margin{{ marketplace.id }}">Letzte Marge in %</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="latest_prc_margin{{ marketplace.id }}" type="number" step="0.1" name="latest_prc_margin{{ marketplace.id }}" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin'+ marketplace.id|string] }}">
+                                <select name="latest_prc_margin{{ marketplace.id }}-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin{{ marketplace.id }}-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin{{ marketplace.id }}-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin{{ marketplace.id }}-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin{{ marketplace.id }}-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['latest_prc_margin{{ marketplace.id }}-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="border-top: none; padding: 5px; position: relative">
+                                <label for="mean_prc_margin{{ marketplace.id }}">&Oslash Realisierte Marge in %</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="mean_prc_margin{{ marketplace.id }}" type="number" step="0.1" name="mean_prc_margin{{ marketplace.id }}" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin'+ marketplace.id|string] }}">
+                                <select name="mean_prc_margin{{ marketplace.id }}-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin'+ marketplace.id|string +'-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin'+ marketplace.id|string +'-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin'+ marketplace.id|string +'-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin'+ marketplace.id|string +'-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_prc_margin'+ marketplace.id|string +'-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="border-top: none; padding: 5px; position: relative">
+                                <label for="real_sales{{ marketplace.id }}">Realisierte Verkäufe</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="real_sales{{ marketplace.id }}" type="number" name="real_sales{{ marketplace.id }}" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales'+ marketplace.id|string] }}">
+                                <select name="real_sales{{ marketplace.id }}-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales'+ marketplace.id|string +'-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales'+ marketplace.id|string +'-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales'+ marketplace.id|string +'-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales'+ marketplace.id|string +'-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['real_sales'+ marketplace.id|string +'-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                            <td style="border-top: none; padding: 5px; position: relative">
+                                <label for="mean_price{{ marketplace.id }}">&Oslash VK</label>
+                                <input style="border: solid 1px black; width: 100%; display: block; padding-left: 50px" id="mean_price{{ marketplace.id }}" type="number" step="0.01" name="mean_price{{ marketplace.id }}" class="form-control tiny"
+                                       value="{{ session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price'+ marketplace.id|string] }}">
+                                <select name="mean_price{{ marketplace.id }}-operator" class="fromfield_dropdown_left_black">
+                                    <option value=">=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price'+ marketplace.id|string +'-operator']=='>=' %}selected{% endif %}>&ge;</option>
+                                    <option value=">" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price'+ marketplace.id|string +'-operator']=='>'%}selected{% endif %}>></option>
+                                    <option value="=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price'+ marketplace.id|string +'-operator']=='='%}selected{% endif %}>=</option>
+                                    <option value="<" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price'+ marketplace.id|string +'-operator']=='<'%}selected{% endif %}><</option>
+                                    <option value="<=" {% if session['dynamic_pricing_filter_infos']['marketplace_options']['mean_price'+ marketplace.id|string +'-operator']=='<='%}selected{% endif %}>&le;</option>
+                                </select>
+                            </td>
+                        </tr>
+                            <tr>
+                                <td style="border-top: none; padding: 5px; position: relative"></td>
+                                <td style="border-top: none; padding: 5px; position: relative"></td>
+                                <td style="border-top: none; padding: 5px; position: relative"></td>
+                                <td style="border-top: none; padding: 5px; position: relative"></td>
+                                <td style="border-top: none; padding: 5px; position: relative"></td>
+                                <td style="border-top: none; padding: 5px; position: relative"></td>
+
+                            </tr>
+                        {% endfor %}
+                        <tr>
+                            <td style="border-bottom: none; box-shadow: none; padding: 5px; position: relative">
+
+                            </td>
+                            <td style="border-bottom: none; box-shadow: none; padding: 5px; position: relative">
+
+                            </td>
+                            <td style="border-bottom: none; box-shadow: none; padding: 5px; position: relative">
+
+                            </td>
+                            <td style="border-bottom: none; box-shadow: none; padding: 5px; position: relative">
+                            </td>
+                            <td style="border-bottom: none; box-shadow: none; padding: 5px; position: relative">
+                                <label class="small five" for="resultlimit"> Ergebnislimit</label>
+                                <input class="tiny form-control" style="border: solid 1px black; width: 100%; display: block;" type="number" step="1" id="resultlimit" name="resultlimit"
+                                       value="{{ session['dynamic_pricing_filter_infos']['resultlimit'] if 'resultlimit' in session['dynamic_pricing_filter_infos'] else 10 }}">
+                            </td>
+                            <td style="border-bottom: none; box-shadow: none; position: relative; text-align: center; padding-top: 25px">
+                                <button class="standardbutton small redbutton visible" type="button" value="filter" name="btn" onclick="reset_form()">
+                                    <i class="fa fa-eraser" aria-hidden="true"></i> Leeren
+                                </button>
+                                <button class="standardbutton small blackbutton visible" type="submit" value="filter" name="btn">
+                                    <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </form>
+        <div class="box100title">
+            <span class="reg 500"><span id="shown_results">{{ pricingactions|length }}</span> / {{ result_length }} Treffer</span>
+        </div>
+    </div>
+    <div class="box100">
+        <form id="redirect_form" action="{{ url_for('center_product_redirect_pricingaction') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <table class="table table-hover tiny sortable" style="text-align: left; margin-bottom: 0">
+                <thead class="black">
+                    <tr>
+                        <th style="position: relative">
+                            <label for="product" class="clickable_rowbox" style="width: 40px; height: 50px; padding-top: 14px; position: absolute; top:0;cursor: pointer">
+                                <input type="checkbox" id="product" style="cursor: pointer" onchange="selectall_pricingactions(this.checked)">
+                            </label>
+                        </th>
+                        <th class="sortable" onclick="sort('p_name')">
+                            Produktname
+                            {% if session['dynamic_pricing_filter_infos']['order_by'] == 'p_name' %}
+                                {% if session['dynamic_pricing_filter_infos']['order_by_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('id')">
+                            ID
+                            {% if session['dynamic_pricing_filter_infos']['order_by'] == 'id' %}
+                                {% if session['dynamic_pricing_filter_infos']['order_by_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('name')">
+                            Bezeichnung
+                            {% if session['dynamic_pricing_filter_infos']['order_by'] == 'name' %}
+                                {% if session['dynamic_pricing_filter_infos']['order_by_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('start')">
+                            Start
+                            {% if session['dynamic_pricing_filter_infos']['order_by'] == 'start' %}
+                                {% if session['dynamic_pricing_filter_infos']['order_by_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('end')">
+                            Ende
+                            {% if session['dynamic_pricing_filter_infos']['order_by'] == 'end' %}
+                                {% if session['dynamic_pricing_filter_infos']['order_by_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable" onclick="sort('promotion_quantity')">
+                            Aktionsmenge
+                            {% if session['dynamic_pricing_filter_infos']['order_by'] == 'promotion_quantity' %}
+                                {% if session['dynamic_pricing_filter_infos']['order_by_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                        <th class="sortable">
+                            Marktplatz & Rang
+                        </th>
+                        <th class="sortable" onclick="sort('active')">
+                            Status
+                            {% if session['dynamic_pricing_filter_infos']['order_by'] == 'active' %}
+                                {% if session['dynamic_pricing_filter_infos']['order_by_dir'] == 'ASC' %}
+                                    <i class="fa fa-caret-up" aria-hidden="true"></i>
+                                {% else %}
+                                    <i class="fa fa-caret-down" aria-hidden="true"></i>
+                                {% endif %}
+                            {% endif %}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="pricingaction_holder" style="border-bottom: solid 1px rgb(222, 226, 230);">
+                    {% for pricingaction in pricingactions %}
+                        <tr class="trclick" onclick="show_pricingaction('{{ pricingaction.id }}')">
+                            <td style="position: relative" onclick="event.cancelBubble=true;">
+                                <label for="pricingaction_{{ pricingaction.id }}" class="clickable_rowbox" style="width: 50px; height: 50px; padding-top: 14px; position: absolute; top:0; cursor: pointer" onclick="event.cancelBubble=true;">
+                                    <input value="{{ pricingaction.id }}" type="checkbox" name="pricingaction" class="pricingaction" id="pricingaction_{{ pricingaction.id }}" style="cursor: pointer" onclick="event.cancelBubble=true;">
+                                </label>
+                            </td>
+                            <td>
+                                {{ pricingaction.product.name }}
+                            </td>
+                            <td>
+                                {{ pricingaction.id }}
+                            </td>
+                            <td>
+                                {{ pricingaction.name }}
+                            </td>
+                            <td>
+                                {{ pricingaction.start.strftime('%d.%m.%Y') }}
+                            </td>
+                            <td>
+                                {{ pricingaction.end.strftime('%d.%m.%Y') }}
+                            </td>
+                            <td>
+                                {{ pricingaction.promotion_quantity }}
+                            </td>
+                            <td>
+                                <table>
+                                    <tr style="border: None">
+                                        {% for strategy in pricingaction.strategies %}
+                                        <td style="padding: 0; border: None" {% if strategy.marketplace.get_productlink(pricingaction.product.id).link!='' and strategy.marketplace.get_productlink(pricingaction.product.id).link!='-' %}class="glow" onclick="open_marketplace_link('{{ strategy.marketplace.get_productlink(pricingaction.product.id).link }}'); event.cancelBubble=true;"{% endif %}>
+                                            <img src="{{ url_for('static', filename='images/foreignicons/' + strategy.marketplace.name + '_icon.png') }}" style="height:20px; width: 20px; margin: 0 2px 0 2px">
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    <tr style="border: None">
+                                        {% for strategy in pricingaction.strategies %}
+                                        <td style="border: None; padding: 0; text-align: center">
+                                            {{ pricingaction.product.current_rank_by_marketplace(strategy.marketplace_id) if pricingaction.product.current_rank_by_marketplace(strategy.marketplace_id) else '-' }}
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                </table>
+                            </td>
+                            <td>
+                                {% if pricingaction.active %}
+                                    <a href="{{ url_for('center_product_dynamic_pricing_activate_pricingaction', pricingaction_id=pricingaction.id) }}" onclick="event.cancelBubble=true;">
+                                        <div class="tiny five green smallbutton visible" style="cursor: default">
+                                            <i class="fa fa-thumbs-up" aria-hidden="true"></i> <i>aktiv</i>
+                                        </div>
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('center_product_dynamic_pricing_activate_pricingaction', pricingaction_id=pricingaction.id) }}" onclick="event.cancelBubble=true;">
+                                        <div class="tiny five redbutton smallbutton visible" style="">
+                                            <i class="fa fa-thumbs-down" aria-hidden="true"></i> <i>inaktiv</i>
+                                        </div>
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <input hidden id="off" value="1">
+            <div id="pricingaction_adder" class="blackbutton standardbutton visible" style="width: 100%; margin: 0; border-radius: 0" onclick="add10()">
+                <i class="fa fa-plus" aria-hidden="true"></i> {{ session['dynamic_pricing_filter_infos']['resultlimit']  }}
+            </div>
+            <div hidden id="pricingaction_no_more" class="blackbutton standardbutton visible" style="width: 100%; margin: 0; border-radius: 0; background: black; color: white">
+                Keine weiteren Aktionen
+            </div>
+            <div class="tiny" style="text-align: left; width: 650px; padding: 10px">
+                <input type="checkbox" class="send_all" id="send_all" name="send_all" value="True">
+                <input type="hidden" id="checker" name="checker" value="redirect">
+                <input value="{{ ','.join(hidden_ids) }}" name="pricingaction_hidden" class="pricingaction_hidden" id="pricingaction_hidden" type="hidden" >
+                <label for="send_all" >Alle gefilterten Pricing-Aktionen (inkl. der oben nicht aufgeführten)</label>
+                <br>
+                <label for="service_start" style="padding: 5px;">Start</label>
+                <input type="date" id="service_start" name="service_start" min="{{ now }}" style="width: 110px" onchange="update_dates(this)">
+                <label for="service_name" style="padding: 5px;">Bezeichnung</label>
+                <input type="text" id="service_name" name="service_name"style="width: 110px">
+                <br>
+                <label for="service_end" style="padding: 5px;">Ende</label>
+                <input type="date" id="service_end" name="service_end" min="{{ now }}" style="width: 110px" onchange="update_dates(this)">
+                <label for="service" style="padding: 5px 27px 5px 5px;">Auswahl</label>
+                <select id="service" name="service" style="width: 110px">
+                    <option value="extend">verlängern</option>
+                    <option value="activate">aktivieren</option>
+                    <option value="archive">archivieren</option>
+                    <option value="copy_products">Produkte kopieren</option>
+                </select>
+                <button name="btn" type="btn" class="standardbutton visible blackbutton supertiny" style="margin-top: 0" onclick="redirect_form()">
+                    <i class="fa fa-play-circle-o" aria-hidden="true"></i> Ausführen
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        function reset_form(){
+            $(":input:not([type=hidden],[type=radio],[type=checkbox],select,[name=marketplace_options])").val('');
+            $("#product_ids").innerText('');
+        }
+        function sort(val){
+            fetch('/center/product/dynamic_pricing/sort/' + val);
+            setTimeout(function() {
+                document.filterform.submit();
+            }, 400);
+        }
+        function redirect_form(){
+            var form = document.getElementById('redirect_form');
+            if (document.getElementById('service').value==='copy_products'){
+                form.action = '{{ url_for('center_product_dynamic_pricing_add_pricingaction') }}';
+                form.submit();
+            }else{
+                form.submit();
+            }
+        }
+        function update_dates(object){
+            if (object.id==='service_start'){
+                document.getElementById('service_end').setAttribute("min", object.value);
+            }
+            else if (object.id==='service_end'){
+                document.getElementById('service_start').setAttribute("max", object.value);
+            }
+        }
+        function selectall_pricingactions(check) {
+            all = document.getElementsByClassName("pricingaction");
+            if (check===true){
+                for (i=0; i < all.length ; i++){
+                    all[i].checked = true;
+                    }
+                }
+            else{
+                for (i=0; i < all.length ; i++){
+                    all[i].checked = false;
+                    }
+                }
+        }
+
+        function open_marketplace_link(link) {
+            window.open(link, '_blank');
+        }
+
+        function display_marketplaces() {
+            var mp_list = document.getElementsByName('marketplace_options');
+            for (i=0; i < mp_list.length ; i++) {
+                if (mp_list[i].checked === true) {
+                    var mp_rows = document.getElementsByClassName('marketplacerow');
+                    for (j = 0; j < mp_rows.length; j++) {
+                        mp_rows[j].style.display = 'None';
+                    }
+                    var mp_checked_rows = document.getElementsByClassName(mp_list[i].value);
+                    for (j = 0; j < mp_checked_rows.length; j++) {
+                        mp_checked_rows[j].style.display = '';
+                    }
+
+                }
+            }
+        }
+
+
+        function add_product() {
+            var value = document.getElementById('product').value;
+            var values = value.split(' - ');
+            var type = document.getElementById('product_type').value;
+            if (values.length > 2 && !isNaN(Number(values[0])) && !isNaN(Number(values[1])) && !isNaN(Number(values[2]))) {
+                if (type === 'id') {
+                    var prod_id = document.getElementById('product').value.split(" - ")[0];
+                } else if (type === 'Internal_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[1];
+                } else if (type === 'HSP_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[2];
+                }
+                var prod_ids = document.getElementById('product_ids');
+                if (prod_ids.value.replace(' ', '') === '') {
+                    prod_ids.value = prod_id;
+                }
+                else {
+                    prod_ids.value += ';' + prod_id;
+                }
+            } else {
+                var list = document.getElementById("product-datalist").children;
+                for (var i = 0; i < list.length; i++) {
+                    if (type === 'id') {
+                        prod_id = list[i].value.split(" - ")[0];
+                    } else if (type === 'Internal_ID') {
+                        prod_id = list[i].value.split(" - ")[1];
+                    } else if (type === 'HSP_ID') {
+                        prod_id = list[i].value.split(" - ")[2];
+                    }
+                    prod_ids = document.getElementById('product_ids');
+                    if (prod_ids.value.replace(' ', '') === '') {
+                        prod_ids.value = prod_id;
+                    }
+                    else {
+                        prod_ids.value += ';' + prod_id;
+                    }
+                }
+            }
+        }
+
+        function transform_ids(val) {
+            old_type = document.getElementById('product_type').value;
+            document.getElementById('product_type').value = val;
+            ids = document.getElementById('product_ids').value.replace(' ','');
+            fetch('/center/product/dynamic_pricing/transform_ids/'+ids+','+old_type+','+val).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('product_ids').value = data.ids;
+                    if(data.not_found!==''){
+                        alert("Die IDs "+data.not_found+" konnten nicht umgewandelt werden.");
+                    }
+                });
+            });
+        }
+
+        function add10() {
+            document.getElementById('pricingaction_adder').innerHTML = '<i class="fa fa-hourglass-half" aria-hidden="true"></i>';
+            var off = Number(document.getElementById("off").value);
+            document.getElementById("off").value = off+1;
+            fetch('/center/product/dynamic_pricing/add10/' + off).then(function (response) {
+                response.json().then(function (data) {
+                    $('#pricingaction_holder').append(data.rows);
+                    document.getElementById('pricingaction_adder').innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i> {{ session['dynamic_pricing_filter_infos']['resultlimit']  }}';
+                    if (data.rows==='' || data.length !== {{ session['dynamic_pricing_filter_infos']['resultlimit']  }}){
+                        var shown = Number(document.getElementById('shown_results').innerText)+ data.length;
+                        document.getElementById('shown_results').innerText = shown.toString();
+                        document.getElementById('pricingaction_adder').hidden = true;
+                        document.getElementById('pricingaction_no_more').hidden = false;
+                    }else{
+                        var shown = Number(document.getElementById('shown_results').innerText)+{{ session['dynamic_pricing_filter_infos']['resultlimit']  }};
+                        document.getElementById('shown_results').innerText = shown.toString();
+                    }
+                });
+            });
+        }
+
+        function find_products(val){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)) {
+                fetch('/center/product/products/find_products/' + val).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("product-datalist").innerHTML = data.out;
+                    });
+                });
+            }
+        }
+
+        function show_pricingaction(id){
+            window.open('/center/product/pricingaction/'+ id, '_blank');
+        }
+    </script>
+{%endblock%}

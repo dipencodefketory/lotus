@@ -1,0 +1,817 @@
+{% extends 'center/basis.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block addsheets %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.5.1/chart.min.js" integrity="sha512-Wt1bJGtlnMtGP0dqNFH1xlkLBNpEodaiQ8ZN5JLA5wpc1sUlk/O5uuOMNgvzddzkpvZ9GLyYNa8w2s7rqiTk5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% endblock %}
+
+{% block ext %}
+    {% if 'Admin' in session['roles'] %}
+        <div class="box100 visible five" style="text-align: left;">
+            <div class="box100title big" style="text-align: left">
+                Dashboard <span style="float: right">{{ today_date.strftime('%d.%m.%Y') }}</span>
+            </div>
+        </div>
+        <div class="box100 visible five" style="text-align: left; min-height: 400px; padding-top: 40px">
+            <div class="splitleft" style="padding-right: 15px; position: relative">
+                <div class="regbig lightgrey visible" id="graph_daily_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                    <span>Tages-Reports</span>
+                    <canvas id="graph_daily" style="width: 100%; min-width: 200px; min-height: 200px"></canvas>
+                </div>
+            </div>
+            <div class="splitright" style="padding-left: 15px; position: relative">
+                <div class="lightgrey visible"  style="padding: 25px; width: 100%; transition: 200ms;">
+                    <span class="regbig">Live-Report</span>
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <td>Verkaufbare Produkte</td>
+                                <td>{{ live_report["sellable"] }}</td>
+                            </tr>
+                            <tr>
+                                <td>Produkte mit pos. Bestand</td>
+                                <td>{{ live_report["pos_stock"] }}</td>
+                            </tr>
+                            <tr>
+                                <td>Produkte im Null-Verkauf</td>
+                                <td>{{ live_report["zero_sell"] }}</td>
+                            </tr>
+                            <tr>
+                                <td>Produkte im Pre-Order-Verkauf</td>
+                                <td>{{ live_report["pre_order"] }}</td>
+                            </tr>
+                            <tr>
+                                <td>Bearbeitbare Produkte</td>
+                                <td>{{ live_report["proc_prods"] }}</td>
+                            </tr>
+                            <tr>
+                                <td>Kontrollierbare Produkte</td>
+                                <td>{{ live_report["to_conf_prods"] }}</td>
+                            </tr>
+                            <tr>
+                                <td>Akzeptierte Produkte</td>
+                                <td>{{ live_report["conf_prods"] }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="box100 visible five" style="text-align: left; min-height: 400px; padding: 40px 0">
+            <div class="splitleft66" style="padding-right: 15px; position: relative">
+                <div class="regbig lightgrey visible" id="sales_goals_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                    <span>Tägliche Zielerreichung</span>
+                    <canvas id="sales_goals_graph" style="width: 100%; min-width: 200px; min-height: 200px"></canvas>
+                </div>
+            </div>
+            <div class="splitright33" style="padding-left: 15px; min-height: 100%">
+                <div class="regbig lightgrey visible" id="m_sales_goals_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                    <span>Mtl. Zielerreichung</span>
+                    <canvas id="m_sales_goals_graph" style="width: 100%; min-width: 200px; min-height: 200px; margin-top: 15px"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="box100 visible five" style="text-align: left; min-height: 400px; padding-top: 40px">
+            <div class="splitleft" style="padding-right: 15px; position: relative">
+                <div class="regbig" style="padding-bottom: 10px">Bestand</div>
+                {% for mp_id in mp_reports %}
+                    <div class="regbig lightgrey visible" id="graph_{{ mp_id }}_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; {% if mp_id != 1 %}display: None; opacity: 0{% endif %}">
+                        <a class="blackfont" onclick="swap_mps('{{ mp_id }}', '{{ mp_reports[mp_id]['id_tuple'][0] }}')" style="width: 50px; padding: 10px"><i class="fa fa-caret-left" aria-hidden="true"></i></a>
+                        <span>{{ mp_dict[mp_id].name }}</span>
+                        <a class="blackfont" onclick="swap_mps('{{ mp_id }}', '{{ mp_reports[mp_id]['id_tuple'][1] }}')" style="width: 50px; padding: 10px"><i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                        <canvas id="graph_{{ mp_id }}" style="width: 100%; min-width: 200px; min-height: 200px;"></canvas>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="splitright" style="padding-left: 15px; position: relative">
+                <div class="regbig" style="padding-bottom: 10px">Verkäufe</div>
+                {% for mp_id in mp_sales_reports %}
+                    <div class="regbig lightgrey visible" id="graph_sales_{{ mp_id }}_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; {% if mp_id != 0 %}display: None; opacity: 0{% endif %}">
+                        <a class="blackfont" onclick="swap_sales_mps('{{ mp_id }}', '{{ mp_sales_reports[mp_id]['id_tuple'][0] }}')" style="width: 50px; padding: 10px"><i class="fa fa-caret-left" aria-hidden="true"></i></a>
+                        <span>{{ mp_dict[mp_id].name if mp_id > 0 else mp_dict[mp_id] }}</span>
+                        <a class="blackfont" onclick="swap_sales_mps('{{ mp_id }}', '{{ mp_sales_reports[mp_id]['id_tuple'][1] }}')" style="width: 50px; padding: 10px"><i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                        <canvas id="graph_sales_{{ mp_id }}" style="width: 100%; min-width: 200px; min-height: 200px;"></canvas>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="box100 visible five" style="text-align: left; min-height: 400px; padding-top: 40px">
+            <div class="splitleft" style="padding-right: 15px; position: relative">
+                <div class="regbig lightgrey visible" id="graph_pra_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                    <span>Pricing-Aktionen</span>
+                    <canvas id="graph_pra" style="width: 100%; min-width: 200px; min-height: 200px"></canvas>
+                </div>
+            </div>
+            <div class="splitright" style="padding-left: 15px; position: relative">
+                {% for mp_id in mp_pra_reports %}
+                    <div class="regbig lightgrey visible" id="graph_pra_{{ mp_id }}_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; {% if mp_id != 1 %}display: None; opacity: 0{% endif %}">
+                        <a class="blackfont" onclick="swap_pra_mps('{{ mp_id }}', '{{ mp_pra_reports[mp_id]['id_tuple'][0] }}')" style="width: 50px; padding: 10px"><i class="fa fa-caret-left" aria-hidden="true"></i></a>
+                        <span>{{ mp_dict[mp_id].name }}</span>
+                        <a class="blackfont" onclick="swap_pra_mps('{{ mp_id }}', '{{ mp_pra_reports[mp_id]['id_tuple'][1] }}')" style="width: 50px; padding: 10px"><i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                        <canvas id="graph_pra_{{ mp_id }}" style="width: 100%; min-width: 200px; min-height: 200px;"></canvas>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="box100 visible five" style="text-align: left; min-height: 400px; padding: 40px 0">
+            <div class="splitleft" style="padding-right: 15px; position: relative">
+                <div class="regbig lightgrey visible" id="daily_cat_sales_graph_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                    <span>Verkäufe nach Hauptkategorie</span>
+                    <canvas id="daily_cat_sales_graph" style="width: 100%; min-width: 200px; min-height: 200px"></canvas>
+                </div>
+            </div>
+            <div class="splitright" style="padding-left: 15px">
+                <div class="regbig lightgrey visible" id="thirty_cat_sales_graph_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                    <span>Verkäufe der letzten 30 Tage</span>
+                    <canvas id="thirty_cat_sales_graph" style="width: 100%; min-width: 200px; min-height: 200px"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="box100 visible five" style="text-align: left; min-height: 400px; padding: 40px 0">
+            <div class="splitleft" style="padding-right: 15px; position: relative">
+                <div class="regbig lightgrey visible" id="proc_graph_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                    <span>Bearbeitungsstand - Monat</span>
+                    <canvas id="proc_graph" style="width: 100%; min-width: 200px; min-height: 200px"></canvas>
+                </div>
+            </div>
+            <div class="splitright" style="padding-left: 15px">
+                <div class="regbig lightgrey visible" id="proc_monthly_graph_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; margin-bottom: 20px">
+                    <span>Bearbeitungsstand - Jahr</span>
+                    <canvas id="proc_monthly_graph" style="width: 100%; min-width: 200px; min-height: 200px"></canvas>
+                </div>
+            </div>
+        </div>
+        <!--
+        <div class="box100 visible five" style="text-align: left; min-height: 400px; padding: 40px 0">
+            <div class="splitleft" style="padding-right: 15px; position: relative">
+                {% for ws_id in ws_reports %}
+                    <div class="regbig lightgrey visible" id="ws_graph_{{ ws_id }}_wrapper" style="padding: 25px; top: 0; width: 100%; transition: 200ms; {% if ws_id != 1 %}display: None; opacity: 0{% endif %}">
+                        <div style="width: 100%; height: 100%; padding: 25px">
+                            <a class="blackfont" onclick="swap_wss('{{ ws_id }}', '{{ ws_reports[ws_id]['id_tuple'][0] }}')" style="width: 50px; padding: 10px"><i class="fa fa-caret-left" aria-hidden="true"></i></a>
+                            <span>{{ ws_dict[ws_id].name }}</span>
+                            <a class="blackfont" onclick="swap_wss('{{ ws_id }}', '{{ ws_reports[ws_id]['id_tuple'][1] }}')" style="width: 50px; padding: 10px"><i class="fa fa-caret-right" aria-hidden="true"></i></a>
+                            <canvas id="ws_graph_{{ ws_id }}" style="width: 100%; min-width: 200px; min-height: 200px;"></canvas>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="splitright" style="padding-left: 15px">
+            </div>
+        </div>
+        -->
+        <script>
+            {% for mp_id in mp_reports %}
+                var graph_{{ mp_id }} = document.getElementById("graph_{{ mp_id }}").getContext("2d");
+                var graph_{{ mp_id }}_constr = new Chart(graph_{{ mp_id }}, {
+                    options : {
+                        scales : {
+                            y : {
+                                min: 0
+                            },
+                            x: {
+                                grid: {
+                                  display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: "right",
+                                align: "middle"
+                            }
+                        }
+                    },
+                    type: 'line',
+                    data: {
+                        labels: {{ mp_report_dates|safe }},
+                        datasets: [
+                            {
+                                label: 'Gesch. uploaded',
+                                data: {{ mp_reports[mp_id]['est_uploaded'] }},
+                                fill: false,
+                                borderColor: 'rgb(125, 148, 202)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Uploaded',
+                                data: {{ mp_reports[mp_id]['uploaded'] }},
+                                fill: false,
+                                borderColor: 'rgb(49, 89, 181)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Gesch. aktiv',
+                                data: {{ mp_reports[mp_id]['est_active'] }},
+                                fill: false,
+                                borderColor: 'rgb(105, 201, 124)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Aktiv',
+                                data: {{ mp_reports[mp_id]['active'] }},
+                                fill: false,
+                                borderColor: 'rgb(49, 181, 75)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Gesch. aktive Leerverkauf-Angebote',
+                                data: {{ mp_reports[mp_id]['est_active_short_sell'] }},
+                                fill: false,
+                                borderColor: 'rgb(201, 185, 125)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Aktive Leerverkauf-Angebote',
+                                data: {{ mp_reports[mp_id]['active_short_sell'] }},
+                                fill: false,
+                                borderColor: 'rgb(181, 150, 49)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Gesch. aktive Pre-Order-Angebote',
+                                data: {{ mp_reports[mp_id]['est_active_pre_order'] }},
+                                fill: false,
+                                borderColor: 'rgb(173, 125, 201)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Aktive Pre-Order-Angebote',
+                                data: {{ mp_reports[mp_id]['active_pre_order'] }},
+                                fill: false,
+                                borderColor: 'rgb(133, 49, 181)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Est. inactive',
+                                data: {{ mp_reports[mp_id]['est_inactive'] }},
+                                fill: false,
+                                borderColor: 'rgb(202, 125, 125)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Inactive',
+                                data: {{ mp_reports[mp_id]['inactive'] }},
+                                fill: false,
+                                borderColor: 'rgb(181, 49, 49)',
+                                tension: 0.1
+                            }
+                            ]
+                    }
+                }
+                );
+
+            {% endfor %}
+            {% for mp_id in mp_sales_reports %}
+                var graph_sales_{{ mp_id }} = document.getElementById("graph_sales_{{ mp_id }}").getContext("2d");
+                var graph_sales_{{ mp_id }}_constr = new Chart(graph_sales_{{ mp_id }}, {
+                    options : {
+                        scales : {
+                            y : {
+                                min: -20
+                            },
+                            x: {
+                                grid: {
+                                  display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: "right",
+                                align: "middle"
+                            }
+                        }
+                    },
+                    type: 'line',
+                    data: {
+                        labels: {{ mp_report_dates_yesterday|safe }},
+                        datasets: [
+                            {
+                                label: 'Alle Verkäufe',
+                                data: {{ mp_sales_reports[mp_id]['num_sales'] }},
+                                fill: false,
+                                borderColor: 'rgb(49, 89, 181)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Aus eigenem Lager',
+                                data: {{ mp_sales_reports[mp_id]['num_own'] }},
+                                fill: false,
+                                borderColor: 'rgb(49, 181, 75)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Null-Verkäufe',
+                                data: {{ mp_sales_reports[mp_id]['num_zero_sell'] }},
+                                fill: false,
+                                borderColor: 'rgb(181, 150, 49)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Pre-Order-Verkäufe',
+                                data: {{ mp_sales_reports[mp_id]['num_pre_order'] }},
+                                fill: false,
+                                borderColor: 'rgb(133, 49, 181)',
+                                tension: 0.1
+                            }
+                            ]
+                    }
+                }
+                );
+
+            {% endfor %}
+            {% for mp_id in mp_pra_reports %}
+                var graph_pra_{{ mp_id }} = document.getElementById("graph_pra_{{ mp_id }}").getContext("2d");
+                var graph_pra_{{ mp_id }}_constr = new Chart(graph_pra_{{ mp_id }}, {
+                    options : {
+                        scales : {
+                            y : {
+                                min: 0
+                            },
+                            x: {
+                                grid: {
+                                  display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: "right",
+                                align: "middle"
+                            }
+                        }
+                    },
+                    type: 'line',
+                    data: {
+                        labels: {{ mp_report_dates_yesterday|safe }},
+                        datasets: [
+                            {% for pa_name in mp_pra_reports[mp_id] %}
+                                {% if pa_name != 'id_tuple' %}
+                                    {
+                                        label: '{{ pa_name }} - Verkäufe',
+                                        data: {{ mp_pra_reports[mp_id][pa_name]['num_sales'] }},
+                                        fill: false,
+                                        borderColor: '{{ mp_pra_reports[mp_id][pa_name]['color_tuple'][1] }}',
+                                        tension: 0.1
+                                    },
+                                {% endif %}
+                            {% endfor %}
+                            ]
+                    }
+                }
+                );
+
+            {% endfor %}
+            {% for ws_id in ws_reports %}
+                /*
+                var ws_graph_{{ ws_id }} = document.getElementById("ws_graph_{{ ws_id }}").getContext("2d");
+                var ws_graph_{{ ws_id }}_constr = new Chart(ws_graph_{{ ws_id }}, {
+                    options : {
+                        scales : {
+                            y : {
+                                min: 0
+                            },
+                            x: {
+                                grid: {
+                                  display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: "right",
+                                align: "middle"
+                            }
+                        }
+                    },
+                    type: 'line',
+                    data: {
+                        labels: {{ mp_report_dates|safe }},
+                        datasets: [
+                            {
+                                label: 'Alle Angebote',
+                                data: {{ ws_reports[ws_id]['num_all'] }},
+                                fill: false,
+                                borderColor: 'rgb(125, 148, 202)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Pos. Bestand',
+                                data: {{ ws_reports[ws_id]['num_pos_stock'] }},
+                                fill: false,
+                                borderColor: 'rgb(105, 201, 124)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Pre-Order',
+                                data: {{ ws_reports[ws_id]['num_pre_order'] }},
+                                fill: false,
+                                borderColor: 'rgb(173, 125, 201)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Import. Angebote',
+                                data: {{ ws_reports[ws_id]['num_imp'] }},
+                                fill: false,
+                                borderColor: 'rgb(49, 89, 181)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Pos. Bestand (imp.)',
+                                data: {{ ws_reports[ws_id]['num_imp_pos_stock'] }},
+                                fill: false,
+                                borderColor: 'rgb(49, 181, 75)',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Pre-Order (imp.)',
+                                data: {{ ws_reports[ws_id]['num_imp_pre_order'] }},
+                                fill: false,
+                                borderColor: 'rgb(133, 49, 181)',
+                                tension: 0.1
+                            }
+                            ]
+                    }
+
+weekly_cat_sales_graph
+                }
+                );
+            */
+            {% endfor %}
+            var daily_cat_sales_graph = document.getElementById("daily_cat_sales_graph").getContext("2d");
+            var daily_cat_sales_graph_constr = new Chart(daily_cat_sales_graph, {
+                options : {
+                    scales : {
+                        y : {
+                            min: 0
+                        },
+                        x: {
+                            grid: {
+                              display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: "right",
+                            align: "middle"
+                        }
+                    }
+                },
+                type: 'line',
+                data: {
+                    labels: {{ mp_report_dates|safe }},
+                    datasets: [
+                        {% for cat_id in daily_cat_sales_report %}
+                            {
+                                label: '{{ main_cat_dict[cat_id].name|safe }}',
+                                data: {{ daily_cat_sales_report[cat_id]['values'] }},
+                                fill: false,
+                                borderColor: '{{ daily_cat_sales_report[cat_id]['color'] }}',
+                                tension: 0.1
+                            },
+                        {% endfor %}
+                        ]
+                }
+            }
+            );
+            var sales_goals_graph = document.getElementById("sales_goals_graph").getContext("2d");
+            var sales_goals_graph_constr = new Chart(
+                sales_goals_graph, {
+                    options : {
+                        scales : {
+                            y : {
+                                min: 0
+                            },
+                            x: {
+                                grid: {
+                                  display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: "right",
+                                align: "middle"
+                            }
+                        }
+                    },
+                    data: {
+                        labels: {{ sg_dates|safe }},
+                        datasets: [
+                            {
+                                type: 'line',
+                                label: 'Durchschn. Ziel-Umsätze Stufe 3',
+                                borderColor: 'tomato',
+                                data: {{ sales_goal }},
+                                pointRadius: 0
+                            },
+                            {
+                                type: 'line',
+                                label: 'Durchschn. Ziel-Umsätze Stufe 2',
+                                borderColor: 'orange',
+                                data: {{ sales_goal_2 }},
+                                pointRadius: 0
+                            },{
+                                type: 'bar',
+                                label: 'Erreichte Umsätze',
+                                borderColor: 'rgb(49, 89, 181)',
+                                backgroundColor: 'rgb(125, 148, 202)',
+                                data: {{ sales_goal_report }}
+                            }
+                        ]
+                    }
+                }
+            );
+            var m_sales_goals_graph = document.getElementById("m_sales_goals_graph").getContext("2d");
+            var m_sales_goals_graph_constr = new Chart(
+                m_sales_goals_graph, {
+                    options : {
+                        plugins: {
+                            legend: {
+                                position: "bottom",
+                                align: "bottom"
+                            }
+                        },
+                        responsive: true,
+                        aspectRatio: 1
+                    },
+                    type: 'doughnut',
+                    data: {
+                        labels: ['erreicht', {% if ms_goal-ms_goal_report <= 0 %}'übertroffen'{% else %}'offen'{% endif %}],
+                        datasets: [
+                            {
+                                data: [ {{ ms_goal_report }}, {{ ms_goal-ms_goal_report if ms_goal-ms_goal_report>=0 else ms_goal_report-ms_goal }}],
+                                backgroundColor: [
+                                    'rgb(125, 148, 202)',
+                                    {% if ms_goal-ms_goal_report <= 0 %}'rgb(124, 230, 145)'{% else %}'tomato'{% endif %}
+
+                                ]
+                            }
+                        ]
+                    }
+                }
+            );
+            var thirty_cat_sales_graph = document.getElementById("thirty_cat_sales_graph").getContext("2d");
+            var thirty_cat_sales_graph_constr = new Chart(thirty_cat_sales_graph, {
+                options : {
+                    scales : {
+                        y : {
+                            min: 0
+                        },
+                        x: {
+                            grid: {
+                              display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: "right",
+                            align: "middle"
+                        }
+                    }
+                },
+                type: 'bar',
+                data: {
+                    labels: [''],
+                    datasets: [
+                        {% for label, val, color in thirty_cat_sales_report['values'] %}
+                            {
+                                label: '{{ label|safe }}',
+                                data: ['{{ val}}'],
+                                fill: false,
+                                tension: 0.1,
+                                backgroundColor: ['{{ color|safe }}']
+                            },
+                        {% endfor %}
+                    ]
+                }
+            }
+            );
+            var graph_pra_ = document.getElementById("graph_pra").getContext("2d");
+            var graph_pra_constr = new Chart(graph_pra, {
+                options : {
+                    scales : {
+                        y : {
+                            min: 0
+                        },
+                        x: {
+                            grid: {
+                              display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: "right",
+                            align: "middle"
+                        }
+                    }
+                },
+                type: 'line',
+                data: {
+                    labels: {{ mp_report_dates_yesterday|safe }},
+                    datasets: [
+                        {% for pa_name in pra_reports %}
+                            {% if pa_name != 'id_tuple' %}
+                                {
+                                    label: '{{ pa_name }} - Verkäufe',
+                                    data: {{ pra_reports[pa_name]['num_sales'] }},
+                                    fill: false,
+                                    borderColor: '{{ pra_reports[pa_name]['color_tuple'][1] }}',
+                                    tension: 0.1
+                                },
+                            {% endif %}
+                        {% endfor %}
+                        ]
+                }
+            }
+            );
+            var graph_daily = document.getElementById("graph_daily").getContext("2d");
+            var graph_daily_constr = new Chart(graph_daily, {
+                type: 'line',
+                data: {
+                    labels: {{ mp_report_dates|safe }},
+                    datasets: [
+                        {
+                            label: 'Verkaufbar',
+                            data: {{ daily_reports['sellable'] }},
+                            fill: false,
+                            borderColor: 'rgb(49, 89, 181)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Pos. Bestand',
+                            data: {{ daily_reports['pos_stock'] }},
+                            fill: false,
+                            borderColor: 'rgb(49, 181, 75)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Null-Verkauf',
+                            data: {{ daily_reports['zero_sell'] }},
+                            fill: false,
+                            borderColor: 'rgb(181, 150, 49)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Pre-Order',
+                            data: {{ daily_reports['pre_order'] }},
+                            fill: false,
+                            borderColor: 'rgb(133, 49, 181)',
+                            tension: 0.1
+                        }
+                        ]
+                },
+                options : {
+                    plugins: {
+                        legend: {
+                            position: "right",
+                            align: "middle"
+                        }
+                    },
+                    scales : {
+                        y : {
+                            min: 0
+                        },
+                        x: {
+                            grid: {
+                              display: false
+                            }
+                        }
+                    }
+                }
+            }
+            );
+            var proc_graph = document.getElementById("proc_graph").getContext("2d");
+            var proc_graph_constr = new Chart(proc_graph, {
+                type: 'bar',
+                data: {
+                    labels: {{ mp_report_dates|safe }},
+                    datasets: [
+                        {
+                            label: 'Bearbeitet',
+                            data: {{ proc_reports }},
+                            fill: true,
+                            borderColor: 'rgb(49, 89, 181)',
+                            backgroundColor: 'rgb(125, 148, 202)',
+                            tension: 0.1
+                        }
+                        ]
+                },
+                options : {
+                    plugins: {
+                        legend: {
+                            position: "right",
+                            align: "middle"
+                        }
+                    },
+                    scales : {
+                        y : {
+                            min: 0
+                        },
+                        x: {
+                            grid: {
+                              display: false
+                            }
+                        }
+                    }
+                }
+            }
+            );
+            var proc_monthly_graph = document.getElementById("proc_monthly_graph").getContext("2d");
+            var proc_monthly_graph_constr = new Chart(proc_monthly_graph, {
+                type: 'bar',
+                data: {
+                    labels: {{ m_dates|safe }},
+                    datasets: [
+                        {
+                            label: 'Bearbeitet',
+                            data: {{ proc_monthly_reports }},
+                            fill: true,
+                            borderColor: 'rgb(49, 89, 181)',
+                            backgroundColor: 'rgb(125, 148, 202)',
+                            tension: 0.1
+                        }
+                        ]
+                },
+                options : {
+                    plugins: {
+                        legend: {
+                            position: "right",
+                            align: "middle"
+                        }
+                    },
+                    scales : {
+                        y : {
+                            min: 0
+                        },
+                        x: {
+                            grid: {
+                              display: false
+                            }
+                        }
+                    }
+                }
+            }
+            );
+
+            function swap_mps(from_id, to_id) {
+                var from_wrapper = document.getElementById("graph_"+ from_id +"_wrapper");
+                var to_wrapper = document.getElementById("graph_"+ to_id +"_wrapper");
+
+                from_wrapper.style.opacity = '0';
+                setTimeout(function () {
+                    from_wrapper.style.display = 'None';
+                    to_wrapper.style.display = 'Block';
+                    setTimeout(function() {
+                        to_wrapper.style.opacity = '1';
+                    }, 100);
+                }, 100);
+            }
+
+            function swap_sales_mps(from_id, to_id) {
+                var from_wrapper = document.getElementById("graph_sales_"+ from_id +"_wrapper");
+                var to_wrapper = document.getElementById("graph_sales_"+ to_id +"_wrapper");
+
+                from_wrapper.style.opacity = '0';
+                setTimeout(function () {
+                    from_wrapper.style.display = 'None';
+                    to_wrapper.style.display = 'Block';
+                    setTimeout(function() {
+                        to_wrapper.style.opacity = '1';
+                    }, 100);
+                }, 100);
+            }
+
+            function swap_pra_mps(from_id, to_id) {
+                var from_wrapper = document.getElementById("graph_pra_"+ from_id +"_wrapper");
+                var to_wrapper = document.getElementById("graph_pra_"+ to_id +"_wrapper");
+
+                from_wrapper.style.opacity = '0';
+                setTimeout(function () {
+                    from_wrapper.style.display = 'None';
+                    to_wrapper.style.display = 'Block';
+                    setTimeout(function() {
+                        to_wrapper.style.opacity = '1';
+                    }, 100);
+                }, 100);
+            }
+
+            function swap_wss(from_id, to_id) {
+                var from_wrapper = document.getElementById("ws_graph_"+ from_id +"_wrapper");
+                var to_wrapper = document.getElementById("ws_graph_"+ to_id +"_wrapper");
+
+                from_wrapper.style.opacity = '0';
+                setTimeout(function () {
+                    from_wrapper.style.display = 'None';
+                    to_wrapper.style.display = 'Block';
+                    setTimeout(function() {
+                        to_wrapper.style.opacity = '1';
+                    }, 100);
+                }, 100);
+            }
+        </script>
+    {% endif %}
+{%endblock%}

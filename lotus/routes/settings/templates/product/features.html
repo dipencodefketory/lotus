@@ -1,0 +1,81 @@
+{% extends 'index.html' %}
+{% block title %}Produkt-Features{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div id="productfeatures" class="visible white small box100" style="text-align: left; position: relative; min-height: 80px;
+            max-height: {{ 267 + 50*product_features|length }}px; overflow: hidden; transition: 600ms ease-in-out">
+        <div class="big box100title" style="text-align: left">
+            Produkt-Features
+        </div>
+        <table class="table table-hover tiny">
+            <thead class="black">
+                <tr>
+                    <th></th>
+                    <th>Interne ID</th>
+                    <th>Name</th>
+                    <th>Werte</th>
+                    <th>Aktiv</th>
+                    <th>Fixe Werte</th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+            {% for feature in product_features %}
+                <tr class="trclick" onclick="open_featurevalues('{{ feature.id }}')">
+                    <td>
+                        <a href="{{ url_for('settings.product_.delete_feature', feature_id=feature.id) }}">
+                            <div class="redbutton visible standardbutton supertiny" style="margin: 0">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </div>
+                        </a>
+                    </td>
+                    <td>{{ feature.internal_id }}</td>
+                    <td>{{ feature.name }}</td>
+                    <td>{{ feature.values|length }}</td>
+                    <td style="position: relative">
+                        <label for="active{{ feature.id }}" class="clickable_rowbox" style="width: 15px; height: 15px; left: 0; padding: 1px; position: absolute;cursor: pointer">
+                            <input type="checkbox" id="active{{ feature.id }}" {% if feature.active == True %}checked{% endif %} onchange="change_feature_active('{{ feature.id }}');event.cancelBubble=true;">
+                        </label>
+                    </td>
+                    <td style="position: relative">
+                        <label for="fixed{{ feature.id }}" class="clickable_rowbox" style="width: 15px; height: 15px; left: 0; padding: 1px; position: absolute;cursor: pointer">
+                            <input type="checkbox" id="fixed{{ feature.id }}" {% if feature.fixed_values == True %}checked{% endif %} onchange="change_feature_fixed('{{ feature.id }}');event.cancelBubble=true;">
+                        </label>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <form action="" method="POST" style="text-align: left">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="width: 100%; padding: 0 70px 0 150px; position: relative">
+                <div style="position: absolute; left:10px; width: 130px">
+                    <label for="ID">Interne ID:</label>
+                    <input id="ID" type="text" name="ID" maxlength="20" class="form-control tinyhead" onkeyup="lowerbound_warning(this,1)">
+                    <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                </div>
+                <label for="name">Featurename:</label>
+                <input id="name" type="text" name="name" maxlength="100" class="form-control tinyhead" onkeyup="lowerbound_warning(this,1)">
+                <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                <button name="btn" type="submit" class="standardbutton green greenbutton tiny" value="add_feature" style="position: absolute; right: 0; top: 25px">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        function change_feature_active(feature) {
+            fetch('/settings/product/change_feature_active/' + feature);
+        }
+        function change_feature_fixed(feature) {
+            fetch('/settings/product/change_feature_fixed/' + feature);
+        }
+
+        function open_featurevalues(id) {
+            window.open('/settings/product/featurevalues/'+ id, '_self');
+        }
+    </script>
+{%endblock%}

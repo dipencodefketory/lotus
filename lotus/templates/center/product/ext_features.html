@@ -1,0 +1,94 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkt editieren{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_product', id=product.id) }}">
+            <div class="submenu five">
+                Produkt-Attribute
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Produkt-Features
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_marketplace_data', id=product.id) }}">
+            <div class="submenu five">
+                Marketplace-Attribute
+            </div>
+        </a>
+        {% if 'Produkt-Management' in session.roles %}
+            <a class="blackfont" href="{{ url_for('center_product_pricingactions', id=product.id) }}">
+                <div class="submenu five">
+                    Pricing-Aktionen
+                </div>
+            </a>
+            <a class="blackfont" href="{{ url_for('center_product_update_logs', p_id=product.id) }}">
+                <div class="submenu five">
+                    Update-Logs
+                </div>
+            </a>
+        {% endif %}
+    </div>
+    <div class="visible white small box100" style="text-align: left; position: relative; overflow: hidden; transition: 1200ms ease-in-out">
+        <div class="big box100title" style="text-align: left">
+            {{ product.name }}<br>
+            <div class="standardbutton blackbutton small visible" onclick="openlinks()" style="margin-left: 0">
+                <i class="fa fa-external-link" aria-hidden="true"></i> Externe Links
+            </div>
+            <form action="" method="POST" style="display: inline-block">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="standardbutton blackbutton small visible" style="margin-left: 0">
+                    <i class="fa fa-refresh" aria-hidden="true"></i> Update
+                </button>
+            </form>
+        </div>
+        <table class="table table-hover" style="text-align: left">
+            <thead class="black">
+                <tr>
+                    <th>Quelle</th>
+                    <th>Feature</th>
+                    <th>Wert</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for source in feature_dict %}
+                    {% for feature in feature_dict[source] %}
+                        <tr>
+                            <td>
+                                {{ source }}
+                            </td>
+                            <td>
+                                {{ feature }}
+                            </td>
+                            <td>
+                                {{ feature_dict[source][feature] }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="visible white small box100" style="text-align: left; position: relative; overflow: hidden; transition: 1200ms ease-in-out">
+        <div class="box100title regbig" style="text-align: left">
+            Daten generieren
+        </div>
+        <form action="{{ url_for('center_product_ext_features_scrape_data', id=product.id) }}" method="POST" style="padding:0 20px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <label for="idealo_data">Idealo-Quellcode (Produkt bei Idealo öffnen und STRG+U drücken)</label>
+            <textarea rows="5" class="form-control" id="idealo_data" name="idealo_data"></textarea>
+            <button id="scrape" class="standardbutton blackbutton visible" type="submit" style="float: right"><i class="fa fa-magic" aria-hidden="true"></i> Abschicken</button>
+        </form>
+    </div>
+    <script>
+        function openlinks(){
+            {% for link in product.links if link and link.link!='-' and link.link!=''%}
+            window.open('{{ link.link }}', '_blank');
+            {% endfor %}
+        }
+    </script>
+{%endblock%}

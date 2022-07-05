@@ -1,0 +1,204 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkt hinzufügen{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white small box100" style="text-align: left">
+        <div class="big box100title" style="text-align: left">Neues Produkt</div>
+
+        <div class="tiny three box100title" style="text-align: left">
+            <form action="" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <label for="productchoices">
+                    Aus anderem Produkt generieren:
+                </label>
+                <input type="text" name="productattrchoices" id="productattrchoices" list="productattrname" onchange="changegenattrvalue(this.value)">
+                <datalist id="productattrname">
+                    {% for product in products %}
+                        <option id="{{ product.id }} - {{ product.name }}" value="{{ product.id }} - {{ product.name }}" data-value="{{ product.id }}">
+                        </option>
+                    {% endfor %}
+                </datalist>
+                <button name="btn" class="standardbutton blackbutton visible" onclick="pre_fill_attr(this.value)" id="attributebtn" value="{{ attrid }}">
+                    <i class="fa fa-magic" aria-hidden="true"></i> Generieren
+                </button>
+            </form>
+        </div>
+        <form action="" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <div class="form-group">
+                    <div style="width: 50%; padding: 0 10px 15px 0; float: left;">
+                        <label for="internal_id">Interne ID</label>
+                        <input type="text" id="internal_id" name="internal_id" class="form-control" {% if genprod %} value="{{ genprod.internal_id if genprod.internal_id }}" {% endif %}>
+                    </div>
+                    <div style="width: 50%; padding: 0 0 15px 10px; float: left;">
+                        <label for="mpn">MPN</label>
+                        <input type="text" id="mpn" name="mpn" class="form-control" {% if genprod %} value="{{ genprod.mpn if genprod.mpn }}" {% endif %}>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="width: 50%; padding: 0 10px 15px 0; float: left;">
+                        <label for="hsp_id_type">HSP-ID-Typ</label>
+                        <select id="hsp_id_type" name="hsp_id_type" class="form-control">
+                            <option value="EAN" {% if genprod %}{% if genprod.HSP_ID_Type == 'EAN' %} selected {% endif %}{% endif %}>EAN</option>
+                            <option value="ISBN" {% if genprod %}{% if genprod.HSP_ID_Type == 'ISBN' %} selected {% endif %}{% endif %}>ISBN</option>
+                            <option value="ASIN" {% if genprod %}{% if genprod.HSP_ID_Type == 'ASIN' %} selected {% endif %}{% endif %}>ASIN</option>
+                            <option value="GTIN" {% if genprod %}{% if genprod.HSP_ID_Type == 'GTIN' %} selected {% endif %}{% endif %}>GTIN</option>
+                            <option value="UPC" {% if genprod %}{% if genprod.HSP_ID_Type == 'UPC' %} selected {% endif %}{% endif %}>UPC</option>
+                        </select>
+                    </div>
+                    <div style="width: 50%; padding: 0 0 15px 10px; float: left;">
+                        <label for="hsp_id">HSP-ID *</label>
+                        <input type="text" id="hsp_id" name="hsp_id" class="form-control" {% if genprod %} value="{{ genprod.hsp_id if genprod.hsp_id }}" {% endif %}>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" class="form-control" maxlength="80" {% if genprod %} value="{{ genprod.name if genprod.name }}" {% endif %}>
+                </div>
+                <div class="form-group">
+                    <div style="width: 50%; padding: 0 10px 15px 0; float: left;">
+                        <label for="product_category">Produkt-Kategorie</label>
+                        <select id="product_category" name="product_category" class="form-control">
+                            <option value=""></option>
+                            {% for productcategory in productcategories %}
+                                <option value="{{ productcategory.id }}" {% if genprod %}{% if genprod.category_id == productcategory.id %}selected{% endif %}{% endif %}>{{ productcategory.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="width: 50%; padding: 0 0 15px 10px; float: left;">
+                        <label for="brand">Marke</label>
+                        <input type="text" id="brand" name="brand" class="form-control" maxlength="80" {% if genprod %} value="{{ genprod.brand if genprod.brand }}" {% endif %}>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="width: 50%; padding: 0 10px 15px 0; float: left;">
+                        <label for="shipping_dhl">Versandkosten DHL</label>
+                        <input type="text" id="shipping_dhl" name="shipping_dhl" class="form-control" {% if genprod %} value="{{ genprod.shipping_dhl if genprod.shipping_dhl }}" {% endif %}>
+                    </div>
+                    <div style="width: 50%; padding: 0 0 15px 10px; float: left;">
+                        <label for="shipping_dp">Versandkosten Deutsche Post</label>
+                        <input type="text" id="shipping_dp" name="shipping_dp" class="form-control" {% if genprod %} value="{{ genprod.shipping_dp if genprod.shipping_dp }}" {% endif %}>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="width: 50%; padding: 0 10px 15px 0; float: left;">
+                        <label for="shipping_dpd">Versandkosten DPD</label>
+                        <input type="text" id="shipping_dpd" name="shipping_dpd" class="form-control" {% if genprod %} value="{{ genprod.shipping_dpd if genprod.shipping_dpd }}" {% endif %}>
+                    </div>
+                    <div style="width: 50%; padding: 0 0 15px 10px; float: left;">
+                        <label for="shipping_hermes">Versandkosten Hermes</label>
+                        <input type="text" id="shipping_hermes" name="shipping_hermes" class="form-control" {% if genprod %} value="{{ genprod.shipping_hermes if genprod.shipping_hermes }}" {% endif %}>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="width: 33.3%; padding: 0 10px 15px 0; float: left;">
+                        <label for="measurements">Maße</label>
+                        <input type="text" id="measurements" name="measurements" class="form-control" {% if genprod %} value="{{ genprod.measurements if genprod.measurements }}" {% endif %}>
+                    </div>
+                    <div style="width: 33.3%; padding: 0 10px 15px 10px; float: left;">
+                        <label for="weight">Gewicht</label>
+                        <input type="text" id="weight" name="weight" class="form-control" {% if genprod %} value="{{ genprod.weight if genprod.weight }}" {% endif %}>
+                    </div>
+                    <div style="width: 33.3%; padding: 0 0 15px 10px; float: left;">
+                        <label for="packagenr">Verpackungsgröße</label>
+                        <input type="text" id="packagenr" name="packagenr" class="form-control" {% if genprod %} value="{{ genprod.packagenr if genprod.packagenr }}" {% endif %}>
+                    </div>
+                </div>
+                {% for category in productlinkcategories %}
+                    <div class="form-group">
+                        <label for="link{{ category.id }}">{{ category.name }}-Link</label>
+                        <input type="text" id="link{{ category.id }}" name="link{{ category.id }}" class="form-control" maxlength="200" {% if genprod %} value="{{ genprod.productlink(category.id) }}" {% endif %}>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="splitright" style="padding-bottom: 75px">
+                <div class="form-group">
+                    <label for="bigpic">Hauptbild 1 groß *</label>
+                    <input type="text" id="bigpic" name="bigpic" class="form-control"
+                            {% if genprod %}
+                                {% if genprod.bigpic() %}
+                           value="{{ genprod.bigpic().link }}"
+                                {% endif %}
+                            {% endif %}>
+                </div>
+                <div class="form-group">
+                    <label for="smallpic">Hauptbild 2 klein *</label>
+                    <input type="text" id="smallpic" name="smallpic" class="form-control"
+                            {% if genprod %}
+                                {% if genprod.smallpic() %}
+                           value="{{ genprod.smallpic().link }}"
+                                {% endif %}
+                            {% endif %}>
+                </div>
+                <div class="form-group" style="position: relative">
+                    <label for="addpics">Weitere Bilder</label>
+                    <input type="text" id="addpics" name="addpics" class="form-control" style="padding-right: 50px;" onkeyup="lowerbound_warning(this, 1)">
+                    <button type="button" class="fromfield_button" id="addpics_button" onclick="addpic()">
+                        <i class="fa fa-plus" aria-hidden="true"></i>
+                    </button>
+                    <span class="supertiny formwarning" id="addpics_warning">keine Eingabe</span>
+                </div>
+                <div id="ProductsAddPicHolder">
+                    {% if genprod %}
+                        {% for pic in genprod.otherpics() %}
+                            <div id="added{{ pic.link }}" class="productsaddpic lightgrey visible tiny">
+                                <a href="{{ session['picture_server'] + pic.link }}" target="_blank">
+                                    <i class="fa fa-file-image-o" aria-hidden="true"></i>
+                                </a>
+                                {{ pic.link }}
+                                <div class="dotclose redbutton" data-value="{{ pic.link }}" onclick="subtractpic(this)">
+                                    <i class="fa fa-times" aria-hidden="true"></i>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                <input hidden id="additional_pictures" name="additional_pictures" value="{% if genprod %}{% for pic in genprod.otherpics() %}{{ pic.link[27:] }} {% endfor %}{% endif %}">
+                <div class="small buttonholder">
+                    <a href="{{ url_for('center_product_products')}}">
+                        <button type="button" class="standardbutton redbutton visible" style="display: inline-block; margin-right: 15px">
+                            <i class="fa fa-reply" aria-hidden="true"></i> zurück
+                        </button>
+                    </a>
+                    <button name="btn" type="submit" class="standardbutton blackbutton visible " style="display: inline-block" value="addproduct">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+    document.getElementById('additional_pictures').value = '';
+    function addpic() {
+        newpic = document.getElementById('addpics').value;
+        if (newpic != ''){
+            document.getElementById('additional_pictures').value += newpic + ' ';
+            document.getElementById('addpics').value = '';
+            innerstring = '<div id="added' + newpic + '" class="productsaddpic lightgrey visible tiny">';
+            innerstring += '<a href="{{ session['picture_server'] }}' + newpic + '" target="_blank">';
+            innerstring += '<i class="fa fa-file-image-o" aria-hidden="true"></i></a> ' + newpic;
+            innerstring += '<div class="dotclose redbutton" data-value="' + newpic + '" onclick="subtractpic(this)">';
+            innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+            innerstring += '</div></div>';
+            document.getElementById('ProductsAddPicHolder').innerHTML += innerstring;
+            document.getElementById('addpics_warning').style.opacity = '0';
+            document.getElementById('addpics').style.borderColor = '#ced4da';
+            document.getElementById('addpics_button').className = 'fromfield_button';
+        }else{
+            document.getElementById('addpics_warning').style.opacity = '1';
+            document.getElementById('addpics').style.borderColor = '#a54843';
+            document.getElementById('addpics_button').className = 'fromfield_warningbutton';
+        }
+    }
+    function subtractpic(obj){
+        document.getElementById('additional_pictures').value = document.getElementById('additional_pictures').value.replace(obj.getAttribute('data-value')+' ','');
+        subtracted = document.getElementById('added'+obj.getAttribute('data-value'));
+        subtracted.parentNode.removeChild(subtracted);
+    }
+    </script>
+{%endblock%}

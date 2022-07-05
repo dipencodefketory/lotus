@@ -1,0 +1,186 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkte{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="box100">
+        <div class="big seven" style="padding: 15px 0 10px 20px; text-align: left">Schnelles Einstellen</div>
+    </div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_proc_sources') }}">
+            <div class="submenu five">
+                Quellen auswerten
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step1') }}">
+            <div class="submenu fives">
+                Schritt 1
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step2') }}">
+            <div class="submenu five ">
+                Schritt 2
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Schritt 3
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step4') }}">
+            <div class="submenu five">
+                Schritt 4
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_upload') }}">
+            <div class="submenu five">
+                Upload
+            </div>
+        </a>
+    </div>
+    <form id="red_form" action="{{ url_for('center_product_quickedit_step3_worker') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        {% for mpa in mpas %}
+            <div class="box100 black reg" style="text-align: left; padding: 25px">
+                {{ mpa.product.name }}
+            </div>
+            <div class="box100" style="text-align: left; padding: 25px">
+                <div id="description_holder_{{ mpa.id }}">
+                    {% for description in mpa.descriptions %}
+                        <div id="descriptionbox_{{ mpa.id }}_{{ loop.index }}" class="form-group" style="position: relative;">
+                            <label for="description_{{ mpa.id }}_{{ loop.index }}">Beschreibung {{ loop.index }}
+                                <button type="button" style="margin: 0 10px" class="tiny standardbutton blackbutton" onclick="drop_ast('description_{{ mpa.id }}_{{ loop.index }}')">Drop *</button>
+                                <button type="button" style="margin: 0 10px" class="tiny standardbutton blackbutton" onclick="translate('description_{{ mpa.id }}_{{ loop.index }}')">Übersetzen</button>
+                                <div class="dotclose redbutton small visible" data-value="{{ mpa.id }}_{{ loop.index }}" onclick="drop_desciptionbox(this)">
+                                    <i class="fa fa-times" aria-hidden="true"></i>
+                                </div>
+                            </label>
+                            <textarea rows="4" id="description_{{ mpa.id }}_{{ loop.index }}" name="description_{{ mpa.id }}_{{ loop.index }}" class="form-control description_{{ mpa.id }}">{{ description.text }}</textarea>
+                        </div>
+                    {% endfor %}
+                </div>
+                <input hidden name="descriptionindex_{{ mpa.id }}" id="descriptionindex_{{ mpa.id }}" value="{{ mpa.descriptions|length + 1 }}">
+                <div class="standardbutton greenbutton visible" onclick="add_desciptionbox({{ mpa.id }})">
+                    <i class="fa fa-plus" aria-hidden="true"></i> Beschreibung hinzufügen
+                </div>
+            </div>
+        {% endfor %}
+        <div class="box100" style="text-align: left; position: relative; height: 50px; width: 100%">
+            <button name="button" type="button" id="real_button" class="standardbutton visible blackbutton" style="position: absolute; right: 10px; bottom: 10px; margin-top: 0" onclick="submit_form()">
+                <i class="fa fa-floppy-o" aria-hidden="true"></i> Speichern
+            </button>
+        </div>
+        <div id="ScreenDarkener">
+            <div class="loader"></div>
+        </div>
+    </form>
+    <script>
+        function drop_ast(id){
+            var descr = document.getElementById(id);
+            var d_val = descr.value.replace(new RegExp('  \\*  ', 'g'), '');
+            d_val = d_val.replace(new RegExp('  \\* ', 'g'), '');
+            d_val = d_val.replace(new RegExp(' \\*  ', 'g'), '');
+            d_val = d_val.replace(new RegExp('  \\*', 'g'), '');
+            d_val = d_val.replace(new RegExp('\\*  ', 'g'), '');
+            d_val = d_val.replace(new RegExp(' \\*', 'g'), '');
+            d_val = d_val.replace(new RegExp('\\* ', 'g'), '');
+            d_val = d_val.replace(new RegExp('\\*', 'g'), '');
+            descr.value = d_val;
+        }
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+
+        function translate(id){
+            var descr = document.getElementById(id);
+            $.ajax({
+                url: "{{ url_for('center_product_quickedit_step3_translator') }}",
+                type: "POST",
+                data: {'text': descr.value},
+                success: function(data) {
+                    if (data.status==='success') {
+                        descr.value = data.translation;
+                    }
+                    else{
+                        document.getElementById('price_update_message').innerText = data.msg;
+                        document.getElementById('price_update_message').className = 'alert alert-danger small visible messagedown';
+                        setTimeout(function () {
+                            document.getElementById('price_update_message').className = 'alert alert-danger small visible';
+                        }, 6000)
+                    }
+                },
+                error: function() {
+                    document.getElementById('price_update_message').innerText = 'ERROR';
+                    document.getElementById('price_update_message').className = 'alert alert-danger small visible messagedown';
+                    setTimeout(function () {
+                        document.getElementById('price_update_message').className = 'alert alert-danger small visible';
+                    }, 6000)
+                }
+            });
+        }
+        function submit_form(){
+            document.getElementById("ScreenDarkener").style.display = 'Block';
+            setTimeout(function() {
+                document.getElementById("ScreenDarkener").style.opacity = '0.8';
+            }, 200);
+            var data = {};
+            {% for mpa in mpas %}
+                var descriptions = document.getElementsByClassName('form-control description_{{ mpa.id }}');
+                for (var i = 0; i < descriptions.length; i++) {
+                    data[descriptions[i].id] = descriptions[i].value;
+                }
+                data['descriptionindex_{{ mpa.id }}'] = document.getElementById('descriptionindex_{{ mpa.id }}').value;
+            {% endfor %}
+            $.ajax({
+                url: "{{ url_for('center_product_quickedit_step3_worker') }}",
+                type: "POST",
+                data: data,
+                success: function() {
+                    setTimeout(function () {
+                        document.getElementById("ScreenDarkener").style.opacity = '0';
+                        setTimeout(function () {
+                            document.getElementById("ScreenDarkener").style.display = 'None';
+                        }, 200);
+                    }, 1000);
+                },
+                error: function() {
+                    setTimeout(function () {
+                        document.getElementById("ScreenDarkener").style.opacity = '0';
+                        setTimeout(function () {
+                            document.getElementById("ScreenDarkener").style.display = 'None';
+                        }, 200);
+                    }, 1000);
+                }
+            });
+        }
+
+        function add_desciptionbox(mpa_id) {
+            index = document.getElementById('descriptionindex_'+mpa_id).value;
+            document.getElementById('descriptionindex_'+mpa_id).value = Number(index)+1;
+            var div = document.createElement("div");
+            div.id = "descriptionbox_" + mpa_id + "_" + index.toString();
+            div.class = "form-group";
+            div.style.position = "relative";
+            innerstring = '<label for="description_' + mpa_id + "_" + index.toString() + '">Beschreibung '+ index.toString();
+            innerstring += '<div class="dotclose redbutton small visible" data-value="' + mpa_id + '_' + index.toString() +'" onclick="drop_desciptionbox(this)">';
+            innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+            innerstring += '</div>';
+            innerstring += '</label>';
+            innerstring += '<textarea rows="4" id="description_' + mpa_id + "_" + index.toString() + '" name="description_' + mpa_id + "_" + index.toString() + '" class="form-control description_' + mpa_id + '" ></textarea>';
+            div.innerHTML = innerstring;
+            document.getElementById('description_holder_' + mpa_id).appendChild(div);
+        }
+
+        function drop_desciptionbox(obj){
+            subtracted = document.getElementById('descriptionbox_'+obj.getAttribute('data-value'));
+            subtracted.parentNode.removeChild(subtracted);
+        }
+    </script>
+{%endblock%}

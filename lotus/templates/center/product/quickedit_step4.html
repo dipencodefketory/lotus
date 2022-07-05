@@ -1,0 +1,342 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkte{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="box100">
+        <div class="big seven" style="padding: 15px 0 10px 20px; text-align: left">Schnelles Einstellen</div>
+    </div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_proc_sources') }}">
+            <div class="submenu five">
+                Quellen auswerten
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step1') }}">
+            <div class="submenu fives">
+                Schritt 1
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step2') }}">
+            <div class="submenu five ">
+                Schritt 2
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step3') }}">
+            <div class="submenu five">
+                Schritt 3
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Schritt 4
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_upload') }}">
+            <div class="submenu five">
+                Upload
+            </div>
+        </a>
+    </div>
+    <div class="box100">
+        <form id="red_form" action="{{ url_for('center_product_quickedit_step4_worker') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <table class="table table-hover tiny" style="text-align: left">
+                <thead class="black">
+                    <tr>
+                        <th style="width: 100px">
+                            ID<br>
+                            EAN<br>
+                            Interne ID<br>
+                            <br>
+                            <br>
+                        </th>
+                        <th style="width: 400px">
+                            Name<br>
+                            Merkmal 0<br>
+                            Merkmal 1<br>
+                            Merkmal 2<br>
+                            Merkmal 3
+                        </th>
+                        <th style="width: 250px">
+                            Versand-Profil<br>
+                            Nationaler Versand 1<br>
+                            Nationaler Versand 2<br>
+                            Internationaler Versand 1<br>
+                            Internationaler Versand 2
+                        </th>
+                        {% for mp in mps %}
+                        <th style="min-width: 300px">
+                            {{ mp.name }}-Name<br>
+                            {{ mp.name }}-Suchwort<br>
+                            {{ mp.name }}-Kategorie-ID<br>
+                            <br>
+                            <br>
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% for row in query %}
+                    {% if row[1].marketplace_id==1 %}
+                        <tr id="{{ row[0].id }}">
+                            <td>
+                                {{ row[0].id }}<br>
+                                {{ row[0].hsp_id }}<br>
+                                {{ row[0].internal_id }}
+                            </td>
+                            <td>
+                                {{ row[0].name }}<br>
+                                {{ row[0].spec_trait_0 }}<br>
+                                {{ row[0].spec_trait_1 }}<br>
+                                {{ row[0].spec_trait_2 }}<br>
+                                {{ row[0].spec_trait_3 }}
+                            </td>
+                            <td>
+                                <select class="form-control tiny" id="shipping_profile_{{ row[0].id }}" name="shipping_profile_{{ row[0].id }}" onchange="update_shipping(this, 'all')">
+                                    {% for sp in shipping_profiles %}
+                                        <option value="{{ sp.id }}" {% if row[0].shipping_profile_id == sp.id %}selected{% endif %}>{{ sp.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select class="form-control tiny" id="nat_shipping_1_{{ row[0].id }}" name="nat_shipping_1_{{ row[0].id }}" onchange="update_shipping(this, 'nat_shipping_1')">
+                                    <option value="0"></option>
+                                    {% for ss in nat_shipping_services %}
+                                        <option value="{{ ss.id }}" {% if row[0].nat_shipping_1_id == ss.id %}selected{% endif %}>{{ ss.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select class="form-control tiny" id="nat_shipping_2_{{ row[0].id }}" name="nat_shipping_2_{{ row[0].id }}" onchange="update_shipping(this, 'nat_shipping_2')">
+                                    <option value="0"></option>
+                                    {% for ss in nat_shipping_services %}
+                                        <option value="{{ ss.id }}" {% if row[0].nat_shipping_2_id == ss.id %}selected{% endif %}>{{ ss.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select class="form-control tiny" id="int_shipping_1_{{ row[0].id }}" name="int_shipping_1_{{ row[0].id }}" onchange="update_shipping(this, 'int_shipping_1')">
+                                    <option value="0"></option>
+                                    {% for ss in int_shipping_services %}
+                                        <option value="{{ ss.id }}" {% if row[0].int_shipping_1_id == ss.id %}selected{% endif %}>{{ ss.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select class="form-control tiny" id="int_shipping_2_{{ row[0].id }}" name="int_shipping_2_{{ row[0].id }}" onchange="update_shipping(this, 'int_shipping_2')">
+                                    <option value="0"></option>
+                                    {% for ss in int_shipping_services %}
+                                        <option value="{{ ss.id }}" {% if row[0].int_shipping_2_id == ss.id %}selected{% endif %}>{{ ss.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td style="position: relative">
+                                <input class="tiny form-control" id="name_{{ row[0].id }}_{{ row[1].marketplace_id }}" name="name_{{ row[0].id }}_{{ row[1].marketplace_id }}" value="{{ row[1].name if row[1].name else '' }}"/>
+                                <input class="tiny form-control" id="search_term_{{ row[0].id }}_{{ row[1].marketplace_id }}" name="search_term_{{ row[0].id }}_{{ row[1].marketplace_id }}" value="{{ row[1].search_term if row[1].search_term else '' }}"/>
+                                <input class="tiny form-control" id="mp_cat_id_{{ row[0].id }}_{{ row[1].marketplace_id }}" name="mp_cat_id_{{ row[0].id }}_{{ row[1].marketplace_id }}" value="{{ row[1].mp_cat_id if row[1].mp_cat_id else '' }}"/>
+                                <div class="tiny" style="height: 300px; overflow-y: scroll; padding: 25px; border: inset 2px #ced4da">
+                                    {% if row[0].id in mp_cat_dict %}
+                                        {% if mp_cat_dict[row[0].id][row[1].marketplace_id] != None %}
+                                            <div style="cursor: pointer; width: 100%; transition: 200ms" data-chv="true" onclick="show_children(this, '{{ mp_cat_dict[row[0].id][row[1].marketplace_id].id }}')">
+                                                {% if mp_cat_dict[row[0].id][row[1].marketplace_id].leaf == True %}
+                                                    <input checked name="cat_boxes_{{ row[0].id }}" value="{{ mp_cat_dict[row[0].id][row[1].marketplace_id].id }}" type="radio"
+                                                           id="cat_{{ mp_cat_dict[row[0].id][row[1].marketplace_id].id }}_{{ row[0].id }}"
+                                                           onclick="add_mp_cat_id('{{ row[0].id }}', '{{ row[1].marketplace_id }}', '{{ mp_cat_dict[row[0].id][row[1].marketplace_id].mp_cat_id }}')"
+                                                    >
+                                                {% endif %}
+                                                {{ mp_cat_dict[row[0].id][row[1].marketplace_id].name }} ({{ mp_cat_dict[row[0].id][row[1].marketplace_id].mp_cat_id }}){% if mp_cat_dict[row[0].id][row[1].marketplace_id].children %} &#9660; {% endif %}
+                                            </div>
+                                            {% for cat in mp_cat_dict[row[0].id][row[1].marketplace_id].get_successor_tree() %}
+                                                <div style="cursor: pointer; width: 100%; height: 1.1rem; opacity: 1; display: block; transition: 200ms" data-chv="true" data-par_id="{{ cat[0].id }}" class="{{ cat[2] }}_child" onclick="show_children(this, '{{ cat[0].id }}')">
+                                                    {% if cat[0].leaf == True %}
+                                                        <input name="cat_boxes_{{ row[0].id }}" value="{{ cat[0].id }}" type="radio" id="cat_{{ cat[0].id }}_{{ row[0].id }}"
+                                                               onclick="add_mp_cat_id('{{ row[0].id }}', '{{ row[1].marketplace_id }}', '{{ cat[0].mp_cat_id }}')"
+                                                        >
+                                                    {% endif %}
+                                                    {{ (cat[1] + 1)*"&nbsp;&nbsp;&nbsp;&nbsp;"|safe }}{{ cat[0].name }} ({{ cat[0].mp_cat_id }}){% if cat[0].children %} &#9660; {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% else %}
+                                        {% for main_cat in mp_cats[row[1].marketplace_id] %}
+                                            <div style="cursor: pointer; width: 100%; transition: 200ms" data-chv="false" onclick="show_children(this, '{{ main_cat.id }}')">
+                                                {% if main_cat.leaf == True %}
+                                                    <input name="cat_boxes_{{ row[1].marketplace_id }}" value="{{ main_cat.id }}" type="radio" id="cat_{{ main_cat.id }}_{{ row[1].marketplace_id }}"
+                                                           onclick="add_mp_cat_id('{{ row[0].id }}', '{{ row[1].marketplace_id }}', '{{ main_cat.mp_cat_id }}')"
+                                                    >
+                                                {% endif %}
+                                                {{ main_cat.name }} ({{ main_cat.mp_cat_id }}){% if main_cat.children %} &#9660; {% endif %}
+                                            </div>
+                                            {% for cat in main_cat.get_family_tree() %}
+                                                <div style="cursor: pointer; width: 100%; height: 0; opacity: 0; display: None; transition: 200ms" data-chv="false" data-par_id="{{ cat[0].id }}" class="{{ cat[2] }}_child" onclick="show_children(this, '{{ cat[0].id }}')">
+                                                    {% if cat[0].leaf == True %}
+                                                        <input name="cat_boxes_{{ row[1].marketplace_id }}" value="{{ cat[0].id }}" type="radio" id="cat_{{ cat[0].id }}_{{ row[1].marketplace_id }}" onclick="add_mp_cat_id('{{ row[0].id }}', '{{ row[1].marketplace_id }}', '{{ cat[0].mp_cat_id }}')">
+                                                    {% endif %}
+                                                    {{ (cat[1] + 1)*"&nbsp;&nbsp;&nbsp;&nbsp;"|safe }}{{ cat[0].name }} ({{ cat[0].mp_cat_id }}){% if cat[0].children %} &#9660; {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <br>
+                                <br>
+                            </td>
+                    {% else %}
+                            <td style="position: relative">
+                                <span class="supertiny formwarning" id="name_{{ row[0].id }}_{{ row[1].marketplace_id }}_warning"  style="position: absolute; right: 15px; {% if row[1].name|length > 80 %}visibility: visible; opacity: 1;{% endif %}">Maximal 80 Zeichen</span>
+                                <input {% if row[1].name|length > 80 %}style="border-color: #a54843;" {% endif %}onkeyup="upperbound_warning(this, 80)" class="tiny form-control" id="name_{{ row[0].id }}_{{ row[1].marketplace_id }}" name="name_{{ row[0].id }}_{{ row[1].marketplace_id }}" value="{{ row[1].name if row[1].name else '' }}"/>
+                                <input class="tiny form-control" id="search_term_{{ row[0].id }}_{{ row[1].marketplace_id }}" name="search_term_{{ row[0].id }}_{{ row[1].marketplace_id }}" value="{{ row[1].search_term if row[1].search_term else '' }}"/>
+                                <input class="tiny form-control" id="mp_cat_id_{{ row[0].id }}_{{ row[1].marketplace_id }}" name="mp_cat_id_{{ row[0].id }}_{{ row[1].marketplace_id }}" value="{{ row[1].mp_cat_id if row[1].mp_cat_id else '' }}"/>
+                                <div class="tiny" style="height: 300px; overflow-y: scroll; padding: 25px; border: inset 2px #ced4da">
+                                    {% if row[0].id in mp_cat_dict %}
+                                        {% if mp_cat_dict[row[0].id][row[1].marketplace_id] != None %}
+                                            <div style="cursor: pointer; width: 100%; transition: 200ms" data-chv="true" onclick="show_children(this, '{{ mp_cat_dict[row[0].id][row[1].marketplace_id].id }}')">
+                                                {% if mp_cat_dict[row[0].id][row[1].marketplace_id].leaf == True %}
+                                                    <input checked name="cat_boxes_{{ row[0].id }}" value="{{ mp_cat_dict[row[0].id][row[1].marketplace_id].id }}" type="radio"
+                                                           id="cat_{{ mp_cat_dict[row[0].id][row[1].marketplace_id].id }}_{{ row[0].id }}"
+                                                           onclick="add_mp_cat_id('{{ row[0].id }}', '{{ row[1].marketplace_id }}', '{{ mp_cat_dict[row[0].id][row[1].marketplace_id].mp_cat_id }}')"
+                                                    >
+                                                {% endif %}
+                                                {{ mp_cat_dict[row[0].id][row[1].marketplace_id].name }} ({{ mp_cat_dict[row[0].id][row[1].marketplace_id].mp_cat_id }}){% if mp_cat_dict[row[0].id][row[1].marketplace_id].children %} &#9660; {% endif %}
+                                            </div>
+                                            {% for cat in mp_cat_dict[row[0].id][row[1].marketplace_id].get_successor_tree() %}
+                                                <div style="cursor: pointer; width: 100%; height: 1.1rem; opacity: 1; display: block; transition: 200ms" data-chv="true" data-par_id="{{ cat[0].id }}" class="{{ cat[2] }}_child" onclick="show_children(this, '{{ cat[0].id }}')">
+                                                    {% if cat[0].leaf == True %}
+                                                        <input name="cat_boxes_{{ row[0].id }}" value="{{ cat[0].id }}" type="radio" id="cat_{{ cat[0].id }}_{{ row[0].id }}"
+                                                               onclick="add_mp_cat_id('{{ row[0].id }}', '{{ row[1].marketplace_id }}', '{{ cat[0].mp_cat_id }}')"
+                                                        >
+                                                    {% endif %}
+                                                    {{ (cat[1] + 1)*"&nbsp;&nbsp;&nbsp;&nbsp;"|safe }}{{ cat[0].name }} ({{ cat[0].mp_cat_id }}){% if cat[0].children %} &#9660; {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% else %}
+                                        {% for main_cat in mp_cats[row[1].marketplace_id] %}
+                                            <div style="cursor: pointer; width: 100%; transition: 200ms" data-chv="false" onclick="show_children(this, '{{ main_cat.id }}')">
+                                                {% if main_cat.leaf == True %}
+                                                    <input name="cat_boxes_{{ row[1].marketplace_id }}" value="{{ main_cat.id }}" type="radio" id="cat_{{ main_cat.id }}_{{ row[1].marketplace_id }}"
+                                                           onclick="add_mp_cat_id('{{ row[0].id }}', '{{ row[1].marketplace_id }}', '{{ main_cat.mp_cat_id }}')"
+                                                    >
+                                                {% endif %}
+                                                {{ main_cat.name }} ({{ main_cat.mp_cat_id }}){% if main_cat.children %} &#9660; {% endif %}
+                                            </div>
+                                            {% for cat in main_cat.get_family_tree() %}
+                                                <div style="cursor: pointer; width: 100%; height: 0; opacity: 0; display: None; transition: 200ms" data-chv="false" data-par_id="{{ cat[0].id }}" class="{{ cat[2] }}_child" onclick="show_children(this, '{{ cat[0].id }}')">
+                                                    {% if cat[0].leaf == True %}
+                                                        <input name="cat_boxes_{{ row[1].marketplace_id }}" value="{{ cat[0].id }}" type="radio" id="cat_{{ cat[0].id }}_{{ row[1].marketplace_id }}" onclick="add_mp_cat_id('{{ row[0].id }}', '{{ row[1].marketplace_id }}', '{{ cat[0].mp_cat_id }}')">
+                                                    {% endif %}
+                                                    {{ (cat[1] + 1)*"&nbsp;&nbsp;&nbsp;&nbsp;"|safe }}{{ cat[0].name }} ({{ cat[0].mp_cat_id }}){% if cat[0].children %} &#9660; {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <br>
+                                <br>
+                            </td>
+                        {% if row[1].marketplace_id==3 %}
+                            </tr>
+                            <tr class="trclick" id="load_{{ row[0].id }}" style="display: None">
+                                <td>
+                                    {{ row[0].id }}<br>
+                                    {{ row[0].hsp_id }}
+                                </td>
+                                <td>
+                                    {{ row[0].name }}
+                                </td>
+                                <td colspan="2">
+                                    <div style="width: 100%; height: 60px; position: relative;">
+                                        <div class="loader" style="height: 50px; width: 50px; margin: -25px"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="trclick" id="error_{{ row[0].id }}" style="display: None">
+                                <td>
+                                    {{ row[0].id }}<br>
+                                    {{ row[0].hsp_id }}
+                                </td>
+                                <td>
+                                    {{ row[0].name }}
+                                </td>
+                                <td colspan="2">
+                                    <b>FEHLER</b>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="box100" style="position: relative; height: 50px; width: 100%">
+                <button name="button" type="button" id="real_button" class="standardbutton visible blackbutton" style="position: absolute; right: 10px; bottom: 10px; margin-top: 0" onclick="submit_form()">
+                    <i class="fa fa-floppy-o" aria-hidden="true"></i> Speichern
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+        function submit_form(){
+            {% for product in products %}
+                document.getElementById("{{ product.id }}").style.display = 'None';
+                document.getElementById("load_{{ product.id }}").style.display = 'table-row';
+            {% endfor %}
+            {% for product in products %}
+                $.ajax({
+                    url: "{{ url_for('center_product_quickedit_step4_worker') }}",
+                    type: "POST",
+                    data: {
+                        shipping_profile: document.getElementById("shipping_profile_{{product.id}}").value,
+                        nat_shipping_1: document.getElementById("nat_shipping_1_{{product.id}}").value,
+                        nat_shipping_2: document.getElementById("nat_shipping_2_{{product.id}}").value,
+                        int_shipping_1: document.getElementById("int_shipping_1_{{product.id}}").value,
+                        int_shipping_2: document.getElementById("int_shipping_2_{{product.id}}").value,
+                    {% for mp in mps %}
+                        name_{{ mp.id }}: document.getElementById("name_{{product.id}}_{{ mp.id }}").value,
+                        search_term_{{ mp.id }}: document.getElementById("search_term_{{product.id}}_{{ mp.id }}").value,
+                        mp_cat_id_{{ mp.id }}: document.getElementById("mp_cat_id_{{product.id}}_{{ mp.id }}").value,
+                    {% endfor %}
+                        product_id: {{ product.id }}
+                    },
+                    success: function() {
+                        document.getElementById("{{ product.id }}").style.display = 'table-row';
+                        document.getElementById("load_{{ product.id }}").style.display = 'None';
+                    },
+                    error: function() {
+                        document.getElementById("error_{{ product.id }}").style.display = 'table-row';
+                        document.getElementById("load_{{ product.id }}").style.display = 'None';
+                    }
+                });
+            {% endfor %}
+        }
+
+        function add_mp_cat_id(p_id, mp_id, mp_cat_id) {
+            document.getElementById("mp_cat_id_" + p_id + "_" + mp_id).value = mp_cat_id;
+        }
+
+        function show_children(obj, par_id) {
+            var children = document.getElementsByClassName(par_id + '_child');
+            if (obj.getAttribute('data-chv') === 'false'){
+                for (var i = 0; i < children.length; i++) {
+                    children[i].style.display = 'block';
+                    children[i].style.opacity = '1';
+                    children[i].style.height = '1.1rem';
+                }
+                obj.setAttribute('data-chv', 'true');
+            }
+            else {
+                for (var j = 0; j < children.length; j++) {
+                    if (children[j].getAttribute('data-chv') === 'true') {
+                        show_children(children[j], children[j].getAttribute('data-par_id'));
+                    }
+                        children[j].style.opacity = '0';
+                        children[j].style.height = '0';
+                        children[j].style.display = 'None';
+                }
+                obj.setAttribute('data-chv', 'false');
+            }
+        }
+    </script>
+{%endblock%}

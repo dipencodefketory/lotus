@@ -1,0 +1,101 @@
+{% extends 'center/basis.html' %}
+{% block title %}Lieferant hinzufügen{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white small box100" style="text-align: left">
+        <div class="big box100title">Lieferant anlegen</div>
+
+        <form id="form" action="" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <div class="form-group">
+                    <label for="firmname">Firmenname</label>
+                    <input type="text" id="firmname" name="firmname" class="form-control" value="-">
+                    <span class="supertiny formwarning" id="firmname_warning">Entweder Firmenname oder Vor- und Nachname angeben!</span>
+                </div>
+                <div class="form-group" style="position: absolute; width: 80px">
+                    <label for="salutation">Anrede</label>
+                    <select id="salutation" name="salutation" class="form-control">
+                        <option value="Herr">Herr</option>
+                        <option value="Frau">Frau</option>
+                    </select>
+                </div>
+                <div class="form-group"  style="padding-left: 90px">
+                    <div style="width: 50%; position: absolute; right: 10px; padding-left: 65px">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name" class="form-control">
+                        <span class="supertiny formwarning" id="name_warning">Entweder Firmenname oder Vor- und Nachname angeben!</span>
+                    </div>
+                    <div style="width: 50%; padding-right: 5px">
+                        <label for="firstname">Vorname</label>
+                        <input type="text" id="firstname" name="firstname" class="form-control">
+                        <span class="supertiny formwarning" id="name_warning">Entweder Firmenname oder Vor- und Nachname angeben!</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="fon">Telefonnummer</label>
+                    <input type="text" id="fon" name="fon" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="email">E-Mail-Adresse</label>
+                    <input type="text" id="email" name="email" class="form-control">
+                </div>
+            </div>
+            <div class="splitright" style="padding-bottom: 75px">
+                <div class="form-group">
+                    <label for="address">Straße und Hausnummer</label>
+                    <input type="text" id="address" name="address" class="form-control">
+                </div>
+                <div class="form-group">
+                    <div style="width: 75%; position: absolute; right: 10px; padding-left: 15px">
+                        <label for="city">Stadt</label>
+                        <input type="text" id="city" name="city" class="form-control">
+                    </div>
+                    <div style="width: 25%; padding-right: 5px">
+                        <label for="zipcode">PLZ</label>
+                        <input type="text" id="zipcode" name="zipcode" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="country">Land</label>
+                    <input type="text" id="country" name="country" class="form-control">
+                </div>
+                <div class="form-group" style="position: absolute; width: 25%; z-index: 100000000">
+                    <label for="std_tax">Steuergruppe</label>
+                    <select id="std_tax" name="std_tax" class="form-control">
+                        <option value="national">National</option>
+                        <option value="international">International</option>
+                    </select>
+                </div>
+                <div class="small buttonholder">
+                    <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block; float: right" value="addproduct" onclick="checkform()">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+        function checkform() {
+            firmname = document.getElementById('firmname');
+            name = document.getElementById('name');
+            firstname = document.getElementById('firstname');
+
+            if ((firmname.value == '-' || firmname.value == '') && (firstname.value == '' || name.value == '' )){
+                document.getElementById('firmname_warning').style.opacity = '1';
+                document.getElementById('name_warning').style.opacity = '1';
+                document.getElementById('firstname_warning').style.opacity = '1';
+                firmname.style.borderColor = '#a54843';
+                name.style.borderColor = '#a54843';
+                firstname.style.borderColor = '#a54843';
+            }
+            else{
+                document.getElementById('form').submit();
+            }
+        }
+    </script>
+{%endblock%}

@@ -1,0 +1,79 @@
+{% extends 'center/stock/stock_basis.html' %}
+{% block title %}Wareneingänge{% endblock %}
+
+{% block ext2 %}
+    <div class="box100">
+        <table class="table table-hover tiny sortable" style="text-align: left">
+            <thead class="black">
+                <tr>
+                    <th class="sortable">
+
+                    </th>
+                    <th class="sortable">
+                        ID
+                    </th>
+                    <th class="sortable">
+                        Datum
+                    </th>
+                    <th class="sortable">
+                        Bezeichnung
+                    </th>
+                    <th class="sortable">
+                        Lieferant
+                    </th>
+                    <th class="sortable">
+                        Zusatzkosten
+                    </th>
+                    <th class="sortable">
+                        Summe brutto
+                    </th>
+                    <th class="sortable">
+
+                    </th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% for sr in srs %}
+                <tr class="trclick" onclick="show_receipt('{{sr.id}}')">
+                    <td>
+                        <a onclick="delete_sr('{{ sr.id }}');event.cancelBubble=true;">
+                            <div class="redbutton visible standardbutton supertiny" style="margin: 0">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </div>
+                        </a>
+                    </td>
+                    <td>
+                        {{ sr.id }}
+                    </td>
+                    <td>
+                        {{ sr.delivery_time.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td>
+                        {{ sr.name }}
+                    </td>
+                    <td>
+                        {{ sr.supplier.get_name() }}
+                    </td>
+                    <td>
+                        {{ sr.add_cost }}
+                    </td>
+                    <td>
+                        {{ sr.price }}
+                    </td>
+                    <td>
+
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+        function show_receipt(id) {
+            window.open('/center/stock/receipt/' + id, '_blank');
+        }
+        function delete_sr(sr_id) {
+            window.open('/center/stock/receipt/delete/' + sr_id, '_self');
+        }
+    </script>
+{%endblock%}

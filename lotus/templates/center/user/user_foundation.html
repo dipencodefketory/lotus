@@ -1,0 +1,24 @@
+{% extends 'center/basis.html' %}
+{% block title %}User{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/users.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_user_workdays') }}">
+            <div class="submenu five">
+                Arbeitstage
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_user_proc_products') }}">
+            <div class="submenu five">
+                Bearbeitete Produkte
+            </div>
+        </a>
+    </div>
+
+    {% block ext2 %}
+    {% endblock %}
+{%endblock%}

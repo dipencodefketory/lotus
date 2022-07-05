@@ -1,0 +1,350 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkt-Gruppe - {{ pgr.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="alert alert-success small visible" id="price_update_message" style="position: absolute; left: 25%; width: 50%; top: -100%; z-index: 5000"></div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_products') }}">
+            <div class="submenu five">
+                Produkte
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_groups') }}">
+            <div class="submenu five">
+                Produkt-Gruppen
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_pim') }}">
+            <div class="submenu five">
+                PIM
+            </div>
+        </a>
+        {% if 'Produkt-Management' in session.roles %}
+            <a class="blackfont" href="{{ url_for('center_product_dynamic_pricing') }}">
+                <div class="submenu five">
+                    Dynamic Pricing
+                </div>
+            </a>
+        {% endif %}
+    </div>
+    <div class="box100">
+        <div style="padding: 15px 0 10px 20px; text-align: left">
+            <span id="pgr_name" class="regbig seven">{{ pgr.name }}</span> <br>
+            <input type="text" id="pgr_name_update" value="">
+            <button class="standardbutton blackbutton visible" onclick="patch_group_name()">
+                <i class="fa fa-pencil-square-o" aria-hidden="true"></i> Gruppen-Namen ändern
+            </button>
+         </div>
+        <table class="table tiny" style="text-align: left">
+            <thead>
+                <tr class="black">
+                    <td class="five reg" colspan="7" style="text-align: center">Schablone</td>
+                </tr>
+                <tr>
+                    <td>
+
+                    </td>
+                    <td>
+                        <button type="button" style="margin: 0 10px" class="tiny standardbutton blackbutton visible" onclick="translate('descr_2_transfer')">Übersetzen</button>
+                        <textarea class="form-control" rows="6" id="descr_2_transfer" style="margin-bottom: 15px"></textarea>
+                        <button type="button" style="margin: 0 10px" class="tiny standardbutton blackbutton visible" onclick="translate('descr_3_transfer')">Übersetzen</button>
+                        <textarea class="form-control" rows="6" id="descr_3_transfer"></textarea>
+                    </td>
+                    <td>
+                        <table>
+                            {% for feature in features %}
+                                <tr>
+                                    <td style="border: None; padding: .2rem .4rem 0 .4rem; width: 200px; overflow: hidden; white-space: nowrap; text-overflow:ellipsis; text-align: right;">{{ feature.name }}</td>
+                                    <td style="border: None; padding: 0 .25rem 0 .25rem">
+                                        <input type="text" style="width: 300px" id="feature_{{ feature.id }}_transfer">
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>
+                        <button class="smallbutton blackbutton tiny visible" onclick="transfer_data()"><i class="fa fa-caret-down" aria-hidden="true"></i> übertragen</button>
+                    </td>
+                    <td>
+                    </td>
+                </tr>
+                <tr class="black">
+                    <th style="vertical-align: top; width: 400px">
+                        ID<br>
+                        HSP-ID<br>
+                        Interne ID
+                    </th>
+                    <th style="vertical-align: top; width: 400px">
+                        Titel<br>
+                        Beschreibung 2<br>
+                        Beschreibung 3
+                    </th>
+                    <th>
+                        Features
+                    </th>
+                    <th style="vertical-align: top">
+
+                    </th>
+                    <th style="vertical-align: top">
+
+                    </th>
+                    <th style="vertical-align: top">
+
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="table_body" style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% for p in ps %}
+                    <tr>
+                        <td>
+                            {{ p['p_id'] }}<br>
+                            {{ p['p_hsp_id'] }}<br>
+                            {{ p['p_internal_id'] }}
+                        </td>
+                        <td>
+                            {{ p['p_name'] }}<br>
+                            <textarea class="form-control" rows="6" id="descr_2_{{ p['p_id'] }}" style="margin-bottom: 15px">{{ p['descr_2'] }}</textarea>
+                            <textarea class="form-control" rows="6" id="descr_3_{{ p['p_id'] }}">{{ p['descr_3'] }}</textarea>
+                        </td>
+                        <td>
+                            <table>
+                                {% for feature in features %}
+                                    <tr>
+                                        <td style="border: None; padding: .2rem .4rem 0 .4rem; width: 200px; overflow: hidden; white-space: nowrap; text-overflow:ellipsis; text-align: right;">{{ feature.name }}</td>
+                                        <td style="border: None; padding: 0 .25rem 0 .25rem">
+                                            <input type="text" style="width: 300px" id="feature_{{ feature.id }}_{{ p['p_id'] }}" value="{{ ', '.join(p['pfs'][feature.id]) }}">
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        </td>
+                        <td>
+                            <button class="smallbutton blackbutton tiny visible" onclick="transfer_data_up('{{ p['p_id'] }}')"><i class="fa fa-caret-up" aria-hidden="true"></i> übertragen</button>
+                        </td>
+                        <td>
+                            <button class="smallbutton blackbutton tiny visible" onclick="patch_product('{{ p['p_id'] }}')"><i class="fa fa-floppy-o" aria-hidden="true"></i> speichern</button>
+                        </td>
+                        <td>
+                            <input class="p_check" type="checkbox" id="check_{{ p['p_id'] }}"{% if p['proc'] != True %} checked{% endif %}>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button class="standardbutton blackbutton visible" onclick="save_all()">
+            <i class="fa fa-floppy-o" aria-hidden="true"></i> Alle speichen
+        </button>
+        <button class="standardbutton blackbutton visible" onclick="complete_all()">
+            <i class="fa fa-floppy-o" aria-hidden="true"></i> Produktdaten vervollständigen
+        </button>
+        <button class="standardbutton blackbutton visible" onclick="window.open('{{ url_for('center_product_group_to_quickedit3', pgr_id=pgr.id) }}')">
+            <i class="fa fa-share" aria-hidden="true"></i> Schnelles Einstellen
+        </button>
+        <div id="ScreenDarkener">
+            <div class="loader"></div>
+        </div>
+    </div>
+    <script>
+        var p_ids = {{ p_ids }};
+        function transfer_data_up(p_id) {
+            document.getElementById('descr_2_transfer').value = document.getElementById('descr_2_' + p_id).value;
+            document.getElementById('descr_3_transfer').value = document.getElementById('descr_3_' + p_id).value;
+            {% for feature in features %}
+            document.getElementById('feature_{{ feature.id }}_transfer').value = document.getElementById('feature_{{ feature.id }}_' + p_id).value;
+            {% endfor %}
+        }
+
+        function transfer_data() {
+            var descr_2 = document.getElementById('descr_2_transfer').value;
+            var descr_3 = document.getElementById('descr_3_transfer').value;
+            {% for feature in features %}
+            var feature_{{ feature.id }} = document.getElementById('feature_{{ feature.id }}_transfer').value;
+            {% endfor %}
+            for (var i = 0; i < p_ids.length; i++) {
+                if (document.getElementById('check_' + p_ids[i]).checked === true) {
+                    if (descr_2 !== '') {document.getElementById('descr_2_' + p_ids[i]).value = descr_2;}
+                    if (descr_3 !== '') {document.getElementById('descr_3_' + p_ids[i]).value = descr_3;}
+                    {% for feature in features %}
+                    if (feature_{{ feature.id }} !== '') {document.getElementById('feature_{{ feature.id }}_' + p_ids[i]).value = feature_{{ feature.id }};}
+                    {% endfor %}
+                }
+            }
+        }
+
+        function translate(id){
+            var descr = document.getElementById(id);
+            $.ajax({
+                url: "{{ url_for('center_product_quickedit_step3_translator') }}",
+                type: "POST",
+                data: {'text': descr.value},
+                success: function(data) {
+                    if (data.status==='success') {
+                        descr.value = data.translation;
+                    }
+                    else{
+                        document.getElementById('price_update_message').innerText = data.msg;
+                        document.getElementById('price_update_message').className = 'alert alert-danger small visible messagedown';
+                        setTimeout(function () {
+                            document.getElementById('price_update_message').className = 'alert alert-danger small visible';
+                        }, 6000)
+                    }
+                },
+                error: function() {
+                    document.getElementById('price_update_message').innerText = 'ERROR';
+                    document.getElementById('price_update_message').className = 'alert alert-danger small visible messagedown';
+                    setTimeout(function () {
+                        document.getElementById('price_update_message').className = 'alert alert-danger small visible';
+                    }, 6000)
+                }
+            });
+        }
+
+        function patch_group_name(){
+            var data = {};
+            var new_name = document.getElementById('pgr_name_update').value;
+            data[{{ pgr.id }}] = {'name': new_name};
+            $.ajax({
+                url: "{{ url_for('api.product_group.patch') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function() {
+                    document.getElementById('pgr_name').innerText = new_name;
+                },
+                error: function() {
+                }
+            });
+        }
+
+        function patch_product(p_id){
+            var features = {};
+            {% for feature in features %}
+            var feature_{{ feature.id }} = document.getElementById('feature_{{ feature.id }}_' + p_id).value;
+            if (feature_{{ feature.id }} !== '') {features[{{ feature.id }}] = feature_{{ feature.id }};}
+            {% endfor %}
+            var descriptions = {};
+            var descr_2 = document.getElementById('descr_2_' + p_id).value;
+            var descr_3 = document.getElementById('descr_3_' + p_id).value;
+            if (descr_2 !== '') {descriptions[2] = descr_2;}
+            if (descr_3 !== '') {descriptions[3] = descr_3;}
+            var data = {};
+            data[p_id] = {
+                'name': null,
+                'mpn': null,
+                'release_date': null,
+                'brand': null,
+                'spec_trait_0': null,
+                'spec_trait_1': null,
+                'spec_trait_2': null,
+                'spec_trait_3': null,
+                'length': null,
+                'width': null,
+                'height': null,
+                'weight': null,
+                'main_group_id': null,
+                'category_id': null,
+                'descriptions': descriptions,
+                'features': features,
+                'pricing_rules': []
+            };
+            $.ajax({
+                url: "{{ url_for('api.product.patch') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function() {
+                },
+                error: function() {
+                }
+            });
+        }
+
+        function save_all() {
+            document.getElementById("ScreenDarkener").style.display = 'Block';
+            setTimeout(function() {
+                document.getElementById("ScreenDarkener").style.opacity = '0.8';
+            }, 200);
+            var proc = 0;
+            for (var i = 0; i < p_ids.length; i++) {
+                if (document.getElementById('check_' + p_ids[i]).checked === true) {
+                    patch_product(p_ids[i]);
+                    proc += 1;
+                }
+            }
+            var checkboxes = document.getElementsByClassName('p_check');
+            var checked = 0;
+            for (var j = 0; j < checkboxes.length; j++){
+                if (checkboxes[j].checked === true) {
+                    checked += 1;
+                }
+            }
+            function check() {
+                if (proc === checked) {
+                    document.getElementById("ScreenDarkener").style.opacity = '0';
+                    setTimeout(function () {
+                        document.getElementById("ScreenDarkener").style.display = 'None';
+                    }, 200);
+                }
+                else {
+                    return setTimeout(check, 1000);
+                }
+            }
+            check();
+        }
+
+        function complete_all() {
+            document.getElementById("ScreenDarkener").style.display = 'Block';
+            setTimeout(function() {
+                document.getElementById("ScreenDarkener").style.opacity = '0.8';
+            }, 200);
+            var proc = 0;
+            for (var i = 0; i < p_ids.length; i++) {
+                if (document.getElementById('check_' + p_ids[i]).checked === true) {
+                    $.ajax({
+                        url: "{{ url_for('api.product.complete_basic_data') }}",
+                        type: "PATCH",
+                        contentType: 'application/json; charset=utf-8',
+                        dataType: 'json',
+                        data: JSON.stringify([p_ids[i]]),
+                        success: function() {
+                            proc += 1;
+                        },
+                        error: function() {
+                            proc += 1;
+                        }
+                    });
+                }
+            }
+            var checkboxes = document.getElementsByClassName('p_check');
+            var checked = 0;
+            for (var j = 0; j < checkboxes.length; j++){
+                if (checkboxes[j].checked === true) {
+                    checked += 1;
+                }
+            }
+            function check() {
+                if (proc === checked) {
+                    document.getElementById("ScreenDarkener").style.opacity = '0';
+                    setTimeout(function () {
+                        document.getElementById("ScreenDarkener").style.display = 'None';
+                    }, 200);
+                }
+                else {
+                    return setTimeout(check, 1000);
+                }
+            }
+            check();
+        }
+
+
+    </script>
+{%endblock%}

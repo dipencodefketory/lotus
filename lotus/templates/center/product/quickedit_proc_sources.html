@@ -1,0 +1,316 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkte{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="box100">
+        <div class="big seven" style="padding: 15px 0 10px 20px; text-align: left">Schnelles Einstellen</div>
+    </div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <div class="submenu five lightgrey">
+            Quellen auswerten
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step1') }}">
+            <div class="submenu fives">
+                Schritt 1
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step2') }}">
+            <div class="submenu five">
+                Schritt 2
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step3') }}">
+            <div class="submenu five">
+                Schritt 3
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step4') }}">
+            <div class="submenu five ">
+                Schritt 4
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_upload') }}">
+            <div class="submenu five">
+                Upload
+            </div>
+        </a>
+    </div>
+    <div class="box100">
+        <form id="red_form" action="{{ url_for('center_product_quickedit_proc_sources_worker') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <table class="table table-hover tiny" style="text-align: left">
+                <thead class="black">
+                    <tr>
+                        <th class="black" style="width: 100px">
+                            ID<br>
+                            EAN<br>
+                            Interne ID<br>
+                            <br>
+                            <br>
+                        </th>
+                        <th class="black" style="width: 400px">
+                            Name<br>
+                            Merkmal 0<br>
+                            Merkmal 1<br>
+                            Merkmal 2<br>
+                            Merkmal 3
+                        </th>
+                        <th>
+                            Ebay-Link<br>
+                            Vitrex-Link<br>
+                            OGDB-Link<br>
+                            Idealo-Link
+                        </th>
+                        <th>
+                            Idealo-Quellcode<br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                        </th>
+                        <th>
+                            Produkt-Feeds<br>
+                            <br>
+                            <br>
+                            <br>
+                            <br>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% for product in products %}
+                    <tr id="{{ product.id }}">
+                        <td>
+                            {{ product.id }}<br>
+                            {{ product.hsp_id }}<br>
+                            {{ product.internal_id }}
+                        </td>
+                        <td>
+                            {{ product.name }}<br>
+                            {{ product.spec_trait_0 if product.spec_trait_0 }}<br>
+                            {{ product.spec_trait_1 if product.spec_trait_1 }}<br>
+                            {{ product.spec_trait_2 if product.spec_trait_2 }}<br>
+                            {{ product.spec_trait_3 if product.spec_trait_3 }}
+                        </td>
+                        <td style="width: 500px">
+                            <input class="tiny form-control" id="ebay_{{ product.id }}" name="ebay_{{ product.id }}" value="{{ product.productlink(3) }}"/>
+                            {% if product.productlink(3) %}
+                                <div style="float: right" onclick="window.open('{{ product.productlink(3) }}', '_blank'); event.cancelBubble=true;">
+                                    <i class="fa fa-external-link" aria-hidden="true"></i>
+                                </div>
+                            {% endif %}<br>
+                            <input class="tiny form-control" id="vitrex_{{ product.id }}" name="vitrex_{{ product.id }}" value="{{ product.productlink(5) }}"/>
+                            {% if product.productlink(5) %}
+                                <div style="float: right" onclick="window.open('{{ product.productlink(5) }}', '_blank'); event.cancelBubble=true;">
+                                    <i class="fa fa-external-link" aria-hidden="true"></i>
+                                </div>
+                            {% endif %}<br>
+                            <input class="tiny form-control" id="ogdb_{{ product.id }}" name="ogdb_{{ product.id }}" value="{{ product.productlink(1) }}"/>
+                            {% if product.productlink(1) %}
+                                <div style="float: right" onclick="window.open('{{ product.productlink(1) }}', '_blank'); event.cancelBubble=true;">
+                                    <i class="fa fa-external-link" aria-hidden="true"></i>
+                                </div>
+                            {% endif %}<br>
+                            <input class="tiny form-control" id="idealo_{{ product.id }}" name="idealo_{{ product.id }}" value="{{ product.productlink(4) }}"/>
+                            {% if product.productlink(4) %}
+                                <div style="float: right" onclick="window.open('{{ product.productlink(4) }}', '_blank'); event.cancelBubble=true;">
+                                    <i class="fa fa-external-link" aria-hidden="true"></i>
+                                </div>
+                            {% endif %}<br>
+                        </td>
+                        <td>
+                            <textarea rows="7" id="idealo_source_{{ product.id }}" name="idealo_source_{{ product.id }}" class="form-control"></textarea>
+                        </td>
+                        <td>
+                            <label for="check_ent_trading_{{ product.id }}">
+                                <input type="checkbox" id="check_ent_trading_{{ product.id }}" name="check_ent_trading_{{ product.id }}">
+                                Entertainment-Trading
+                            </label><br>
+                            <label for="check_vitrex_{{ product.id }}">
+                                <input type="checkbox" id="check_vitrex_{{ product.id }}" name="check_vitrex_{{ product.id }}">
+                                Vitrex
+                            </label>
+                        </td>
+                    </tr>
+                    <tr class="trclick" id="load_{{ product.id }}" style="display: None">
+                        <td>
+                            {{ product.id }}<br>
+                            {{ product.hsp_id }}
+                        </td>
+                        <td>
+                            {{ product.name }}
+                        </td>
+                        <td colspan="6">
+                            <div style="width: 100%; height: 60px; position: relative;">
+                                <div class="loader" style="height: 50px; width: 50px; margin: -25px"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="trclick" id="error_{{ product.id }}" style="display: None">
+                        <td>
+                            {{ product.id }}<br>
+                            {{ product.hsp_id }}
+                        </td>
+                        <td>
+                            {{ product.name }}
+                        </td>
+                        <td colspan="6">
+                            <b>FEHLER</b>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <button name="button" type="button" id="real_button" class="standardbutton visible blackbutton" style="float: right; margin-top: 0" onclick="submit_form()">
+                <i class="fa fa-play-circle-o" aria-hidden="true"></i> Ausführen
+            </button>
+        </form>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+
+        function submit_form(){
+            {% for product in products %}
+                document.getElementById("{{ product.id }}").style.display = 'None';
+                document.getElementById("load_{{ product.id }}").style.display = 'table-row';
+            {% endfor %}
+            {% for product in products %}
+                var p_{{ product.id }}_done = false;
+                var p_{{ product.id }}_vitrex_done = false;
+                var p_{{ product.id }}_et_done = false;
+                var p_{{ product.id }}_error = false;
+                var p_{{ product.id }}_vitrex_error = false;
+                var p_{{ product.id }}_et_error = false;
+            {% endfor %}
+            var idealo_data = {};
+            idealo_data['task'] = 'Idealo';
+            {% for product in products %}
+                idealo_data['ebay_{{ product.id }}'] = document.getElementById("ebay_{{ product.id }}").value;
+                idealo_data['vitrex_{{ product.id }}'] = document.getElementById("vitrex_{{ product.id }}").value;
+                idealo_data['ogdb_{{ product.id }}'] = document.getElementById("ogdb_{{ product.id }}").value;
+                idealo_data['idealo_{{ product.id }}'] = document.getElementById("idealo_{{ product.id }}").value;
+                idealo_data['idealo_source_{{ product.id }}'] = document.getElementById("idealo_source_{{ product.id }}").value;
+            {% endfor %}
+            $.ajax({
+                url: "{{ url_for('center_product_quickedit_proc_sources_worker') }}",
+                type: "POST",
+                data: idealo_data,
+                success: function() {
+                    {% for product in products %}
+                        p_{{ product.id }}_done = true;
+                    {% endfor %}
+                },
+                error: function() {
+                    {% for product in products %}
+                        p_{{ product.id }}_error = true;
+                    {% endfor %}
+                }
+            });
+
+            var vitrex_data = {};
+            {% for product in products %}
+                if (document.getElementById("check_vitrex_{{ product.id }}").checked) {
+                    vitrex_data = {'task': 'Vitrex', 'p_id': {{ product.id }}};
+                    $.ajax({
+                        url: "{{ url_for('center_product_quickedit_proc_sources_worker') }}",
+                        type: "POST",
+                        data: vitrex_data,
+                        success: function () {
+                            p_{{ product.id }}_vitrex_done = true;
+                        },
+                        error: function () {
+                            p_{{ product.id }}_vitrex_error = true;
+                        }
+                    });
+                }
+            {% endfor %}
+
+            var et_data = {};
+            {% for product in products %}
+                if (document.getElementById("check_ent_trading_{{ product.id }}").checked){
+                    et_data = {'task': 'ET', 'p_id': {{ product.id }}};
+                    $.ajax({
+                        url: "{{ url_for('center_product_quickedit_proc_sources_worker') }}",
+                        type: "POST",
+                        data: et_data,
+                        success: function() {
+                            p_{{ product.id }}_et_done = true;
+                        },
+                        error: function() {
+                            p_{{ product.id }}_et_error = true;
+                        }
+                    });
+                }
+            {% endfor %}
+            {% for product in products %}
+                function check_{{ product.id }}() {
+                    var done = 0;
+                    if (p_{{ product.id }}_done === true) {
+                        done += 1;
+                    }
+                    if (document.getElementById("check_vitrex_{{ product.id }}").checked) {
+                        if (p_{{ product.id }}_vitrex_done === true) {
+                            done += 1;
+                        }
+                    }
+                    else {
+                        done += 1;
+                    }
+                    if (document.getElementById("check_ent_trading_{{ product.id }}").checked) {
+                        if (p_{{ product.id }}_et_done === true) {
+                            done += 1;
+                        }
+                    }
+                    else {
+                        done += 1;
+                    }
+                    if (done < 3) {
+                        if (p_{{ product.id }}_error === true ||
+                            document.getElementById("check_vitrex_{{ product.id }}").checked && p_{{ product.id }}_vitrex_error === true ||
+                            document.getElementById("check_ent_trading_{{ product.id }}").checked && p_{{ product.id }}_et_error === true
+                        ){
+                            document.getElementById("error_{{ product.id }}").style.display = 'table-row';
+                            document.getElementById("load_{{ product.id }}").style.display = 'None';
+                        }
+                        else {
+                            return setTimeout(check_{{ product.id }}, 1000);
+                        }
+                    }
+                    else {
+                        $.ajax({
+                            url: "{{ url_for('center_product_quickedit_proc_sources_worker') }}",
+                            type: "POST",
+                            data: {'task': 'Proc_Product', 'p_id': {{ product.id }}},
+                            success: function() {
+                                document.getElementById("{{ product.id }}").style.display = 'table-row';
+                                document.getElementById("load_{{ product.id }}").style.display = 'None';
+                            },
+                            error: function() {
+                                document.getElementById("error_{{ product.id }}").style.display = 'table-row';
+                                document.getElementById("load_{{ product.id }}").style.display = 'None';
+                            }
+                        });
+                    }
+                }
+            {% endfor %}
+
+            {% for product in products %}
+                check_{{ product.id }}();
+            {% endfor %}
+        }
+    </script>
+{%endblock%}
+
+

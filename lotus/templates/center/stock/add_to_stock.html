@@ -1,0 +1,138 @@
+{% extends 'center/stock/stock_basis.html' %}
+{% block title %}Lager - {{ stock.name }}{% endblock %}
+
+{% block ext2 %}
+    <div class="visible white small box100" style="text-align: left; overflow: hidden;">
+        <div class="big box100title" style="text-align: left">
+            {{ stock.name }} {% if not stock.owned %}({{ stock.supplier.get_name() }}){% endif %}
+        </div>
+        <form action="" method="POST" id="form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <div class="form-group">
+                    <label for="internal_id">Interne-ID</label>
+                    <input type="text" id="internal_id" name="internal_id" class="form-control" onkeyup="checkforname(this)">
+                    <span class="supertiny formwarning" id="internal_id_warning">Keine Eingabe!</span>
+                </div>
+                <div class="form-group">
+                    <label for="hsp_id">HSP-ID</label>
+                    <input type="text" id="hsp_id" name="hsp_id" class="form-control" onkeyup="checkforname(this)">
+                    <span class="supertiny formwarning" id="hsp_id_warning">Keine Eingabe!</span>
+                </div>
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" maxlength="80" name="name" class="form-control" onkeyup="">
+                    <span class="supertiny formwarning" id="prod_name_warning">keine Eingabe</span>
+                </div>
+                <div class="form-group">
+                    <label for="idealo_link">Idealo-Link</label>
+                    <input type="text" id="idealo_link" name="idealo_link" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="release_date">Release-Datum</label>
+                    <input placeholder="dd.mm.yyyy" type="text" id="release_date" name="release_date" class="form-control" maxlength="10">
+                    <span class="supertiny formwarning" id="release_date_warning">Ungültiges Format!</span>
+                </div>
+            </div>
+            <div class="splitright" style="padding-bottom: 75px">
+                <div class="form-group">
+                    <label for="start">Start</label>
+                    <input type="date" id="start" name="start" class="form-control" value="">
+                    <span class="supertiny formwarning" id="start_warning">Keine Eingabe!</span>
+                </div>
+                <div class="form-group">
+                    <label for="end">Ende</label>
+                    <input type="date" id="end" name="end" class="form-control">
+                    <span class="supertiny formwarning" id="end_warning">Keine Eingabe!</span>
+                </div>
+                <div class="form-group">
+                    <label for="price">Preis</label>
+                    <input type="number" step="0.01" id="price" name="price" class="form-control">
+                    <span class="supertiny formwarning" id="price_warning">Keine Eingabe!</span>
+                </div>
+                <div class="form-group">
+                    <label for="quantity">Stückzahl</label>
+                    <input type="number" step="1" id="quantity" name="quantity" class="form-control" value="0">
+                    <span class="supertiny formwarning" id="quantity_warning">Keine Eingabe!</span>
+                </div>
+                <div class="small buttonholder">
+                    <a href="{{ url_for('center_stock_stock', stock_id=stock.id)}}">
+                        <button type="button" class="standardbutton redbutton visible" style="display: inline-block; margin-right: 15px">
+                            <i class="fa fa-reply" aria-hidden="true"></i> zurück
+                        </button>
+                    </a>
+                    <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="checkform()">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+        function checkforname(input) {
+            fetch('/center/orders/get_hsp_id_name/'+input.value).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("name").value = data.product_name;
+                    document.getElementById("idealo_link").value = data.link;
+                    document.getElementById("release_date").value = data.release_date;
+                    document.getElementById("release_date").disabled = data.block_release_date === true;
+                });
+            });
+        }
+
+        function checkform() {
+
+            var hsp_id = document.getElementById('hsp_id');
+            var start = document.getElementById('start');
+            var end = document.getElementById('end');
+            var price = document.getElementById('price');
+            var quantity = document.getElementById('quantity');
+
+            if (hsp_id.value == ''
+                || !start.value
+                || !end.value
+                || price.value == ''
+                || quantity.value == '')
+            {
+                if(hsp_id.value == ''){
+                    document.getElementById('hsp_id_warning').style.opacity = '1';
+                    hsp_id.style.borderColor = '#a54843';
+                }else{
+                    document.getElementById('hsp_id_warning').style.opacity = '0';
+                    hsp_id.style.borderColor = '#ced4da';
+                }
+                if(!start.value){
+                    document.getElementById('start_warning').style.opacity = '1';
+                    start.style.borderColor = '#a54843';
+                }else{
+                    document.getElementById('start_warning').style.opacity = '0';
+                    start.style.borderColor = '#ced4da';
+                }
+                if(!end.value){
+                    document.getElementById('end_warning').style.opacity = '1';
+                    end.style.borderColor = '#a54843';
+                }else{
+                    document.getElementById('end_warning').style.opacity = '0';
+                    end.style.borderColor = '#ced4da';
+                }
+                if(price.value == ''){
+                    document.getElementById('price_warning').style.opacity = '1';
+                    price.style.borderColor = '#a54843';
+                }else{
+                    document.getElementById('price_warning').style.opacity = '0';
+                    price.style.borderColor = '#ced4da';
+                }
+                if(quantity.value == ''){
+                    document.getElementById('quantity_warning').style.opacity = '1';
+                    quantity.style.borderColor = '#a54843';
+                }else{
+                    document.getElementById('quantity_warning').style.opacity = '0';
+                    quantity.style.borderColor = '#ced4da';
+                }
+            }
+            else{
+                document.getElementById('form').submit();
+            }
+        }
+    </script>
+{%endblock%}

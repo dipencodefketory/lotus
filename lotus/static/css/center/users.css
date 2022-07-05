@@ -1,0 +1,115 @@
+@media screen and (max-width: 640px) {
+
+    div#UserMain{
+        position: relative;
+        display: inline-block;
+        width: 100%;
+        padding-left: 140px;
+        vertical-align: top;
+    }
+
+    div#UserMainPicture{
+        position: absolute;
+        left: 0;
+        margin: 20px;
+        height: 100px;
+        width: 100px;
+        border-radius: 100%;
+        overflow: hidden;
+    }
+
+    div#UserMainData{
+        float: right;
+        display: inline-block;
+        height: 140px;
+        width: 100%;
+        padding: 25px 15px 25px 0;
+        text-align: left;
+        background: white;
+        box-shadow: none;
+    }
+
+    div#UserAddData{
+        width: 100%;
+        padding: 20px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    div#UserSellins{
+        width: 100%;
+        text-align: left;
+        margin-top: 20px;
+        min-height: 300px;
+    }
+
+    div#UserRoles{
+        width: 100%;
+        text-align: left;
+        margin-top: 20px;
+        min-height: 300px;
+    }
+
+    div#UserWorkdays{
+        width: 100%;
+        text-align: left;
+        margin-top: 20px;
+        min-height: 300px;
+    }
+
+}
+
+@media screen and (min-width: 640px) {
+
+    div#UserMain{
+        width: 100%;
+        padding-top: 300px;
+    }
+
+    div#UserMainPicture{
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        height: 250px;
+        width: 250px;
+        margin-top: 25px;
+        border-radius: 100%;
+        overflow: hidden;
+        z-index: 0;
+    }
+
+    div#UserMainData{
+        width: 100%;
+        padding: 20px;
+        text-align: left;
+    }
+
+    div#UserAddData{
+        width: 100%;
+        padding: 20px;
+        text-align: left;
+        z-index: 1000;
+    }
+
+    div#UserSellins{
+        width: 100%;
+        text-align: left;
+        min-height: 280px;
+    }
+
+    div#UserRoles{
+        width: 100%;
+        text-align: left;
+        margin-top: 20px;
+        min-height: 300px;
+    }
+
+    div#UserWorkdays{
+        width: 100%;
+        text-align: left;
+        margin-top: 20px;
+        min-height: 300px;
+    }
+
+}

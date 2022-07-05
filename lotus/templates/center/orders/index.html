@@ -1,0 +1,27 @@
+{% extends 'center/basis.html' %}
+{% block title %}Bestellungen{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/orders.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative;">
+        <a class="blackfont" href="{{ url_for('center_orders') }}">
+            <div class="submenu five">
+                Bestellungen
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_ws_receipts') }}">
+            <div class="submenu five">
+                Waren-Eingänge
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_ws_invoices') }}">
+            <div class="submenu five">
+                Rechnungen
+            </div>
+        </a>
+    </div>
+    {% block ext2 %}{% endblock %}
+{% endblock %}

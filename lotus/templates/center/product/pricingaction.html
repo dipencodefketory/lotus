@@ -1,0 +1,143 @@
+{% extends 'center/basis.html' %}
+{% block title %}Pricing-Aktion hinzufügen - {{ pricingaction.product.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_product', id=pricingaction.product.id) }}">
+            <div class="submenu five">
+                Produkt-Attribute
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_features', id=pricingaction.product.id) }}">
+            <div class="submenu five">
+                Produkt-Features
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_marketplace_data', id=pricingaction.product.id) }}">
+            <div class="submenu five">
+                Marketplace-Attribute
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_pricingactions', id=pricingaction.product.id) }}">
+            <div class="submenu five">
+                Pricing-Aktionen
+            </div>
+        </a>
+    </div>
+    <div class="visible white small box100 " style="text-align: left; position: relative; overflow: hidden;">
+        <div class="big box100title" style="text-align: left">
+            {{ pricingaction.product.name }}<br>
+            <div class="standardbutton blackbutton small visible" onclick="openlinks()" style="margin-left: 0">
+                <i class="fa fa-external-link" aria-hidden="true"></i> Externe Links
+            </div>
+        </div>
+    </div>
+    <div class="visible white small box100" style="position: relative">
+        <div class="small box100title" style="text-align: left">
+            Marketplaces
+        </div>
+        <table class="table">
+            <thead class="black">
+                <tr>
+                    <th>
+                        Marketplace
+                    </th>
+                    <th>
+                        Label
+                    </th>
+                    <th>
+                        Marge in %
+                    </th>
+                    <th>
+                        Max. Marge in %
+                    </th>
+                    <th>
+                        Rang
+                    </th>
+                    <th>
+                        Aktionsmenge
+                    </th>
+                    <th>
+                        Update-Faktor
+                    </th>
+                    <th>
+                        Update-Stunden
+                    </th>
+                    <th>
+                        Update-Anzahl
+                    </th>
+                    <th>
+                        Aktiv
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for strategy in pricingaction.strategies %}
+                <tr>
+                    <td class="seven">
+                        {{ strategy.marketplace.name }}
+                    </td>
+                    <td>
+                        {{ strategy.get_label() }}
+                    </td>
+                    <td>
+                        {{ strategy.prc_margin }}
+                    </td>
+                    <td>
+                        {{ strategy.prc_max_margin if strategy.prc_max_margin }}
+                    </td>
+                    <td>
+                        {{ strategy.rank if strategy.rank }}
+                    </td>
+                    <td>
+                        {{ strategy.promotion_quantity if strategy.promotion_quantity }}
+                    </td>
+                    <td>
+                        {{ strategy.update_factor if strategy.update_factor }}
+                    </td>
+                    <td>
+                        {{ strategy.update_rule_hours if strategy.update_rule_hours }}
+                    </td>
+                    <td>
+                        {{ strategy.update_rule_quantity if strategy.update_rule_quantity }}
+                    </td>
+                    <td>
+                        {% if strategy.active %}
+                            <div class="tiny seven green smallbutton visible" style="cursor: default">
+                                <i class="fa fa-thumbs-up" aria-hidden="true"></i> <i>aktiv</i>
+                            </div>
+                        {% else %}
+                            <div class="tiny seven red smallbutton visible" style="cursor: default">
+                                <i class="fa fa-thumbs-down" aria-hidden="true"></i> <i>inaktiv</i>
+                            </div>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="visible white small box100" style="position: relative">
+        <div class="small box100title" style="text-align: left">
+            Verkäufe
+        </div>
+    </div>
+    <div class="visible white small box100" style="position: relative">
+        <div class="small box100title" style="text-align: left">
+            Gesetzte Preise
+        </div>
+    </div>
+    <script>
+
+        function openlinks(){
+            {% for link in pricingaction.product.links if link and link.link!='-' and link.link!=''%}
+            window.open('{{ link.link }}', '_blank');
+            {% endfor %}
+        }
+
+    </script>
+{%endblock%}

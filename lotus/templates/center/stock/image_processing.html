@@ -1,0 +1,472 @@
+{% extends 'center/stock/stock_basis.html' %}
+{% block title %}Bild-Bearbeitung{% endblock %}
+
+{% block ext2 %}
+    <div class="container-fluid h-100">
+        <div class="row text-start py-3">
+            <div class="col-xxl-3 col-12">
+            </div>
+            <div class="col-xxl-1  col-md-2 col-6">
+                <label for="prefix">Präfix:</label>
+                <input id="prefix" type="text" name="prefix" class="form-control tinyhead" value="DSC" required>
+            </div>
+            <div class="col-xxl-1  col-md-2 col-6">
+                <label for="digits">Ziffern:</label>
+                <input id="digits" type="number" step="1" name="digits" class="form-control tinyhead" value="5" required>
+            </div>
+            <div class="col-xxl-1  col-md-2 col-6">
+                <label for="min_int">Von:</label>
+                <input id="min_int" type="number" step="1" name="min_int" class="form-control tinyhead" min="1" required>
+            </div>
+            <div class="col-xxl-1  col-md-2 col-6">
+                <label for="max_int">Bis:</label>
+                <input id="max_int" type="number" step="1" name="max_int" class="form-control tinyhead" required>
+            </div>
+            <div class="col-xxl-1  col-md-2 col-6">
+                <label for="suffix">Suffix:</label>
+                <input id="suffix" type="text" name="suffix" class="form-control tinyhead" value=".JPG" required>
+            </div>
+            <div class="col-xxl-1  col-md-2 col-6 align-bottom d-flex">
+                <input type="hidden" id="url" value="{{ url }}">
+                <button name="btn" type="submit" class="standardbutton green greenbutton tiny mt-auto w-100" onclick="process_inputs('{{ url }}')">
+                    <i class="fa fa-search" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="col-xxl-3 col-12">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 text-center">
+                or
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xxl-3 col-12">
+            </div>
+            <div class="col-xxl-6 col-12 py-2 position-relative">
+                <label for="images" class="w-100 text-center text-bold regbig">DROP FILES</label>
+                <input class="form-control grey_hover" type="file" id="images" multiple style="height: 200px; transition: 200ms">
+                <button class="standardbutton blackbutton visible" onclick="upload_images()"><i class="fa fa-upload" aria-hidden="true"></i>Upload</button>
+            </div>
+            <div class="col-xxl-3 col-12">
+            </div>
+        </div>
+        <div class="row">
+            <table class="table text-start">
+                <thead>
+                    <tr class="black">
+                        <th>
+                            ID<br>Interne ID<br>HSP-ID
+                        </th>
+                        <th>
+                            Name
+                        </th>
+                        <th>
+                            Bilder
+                        </th>
+                        <th>
+                            Modus
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="tbody">
+
+                </tbody>
+            </table>
+        </div>
+        <button name="btn" type="submit" class="standardbutton green blackbutton tiny mt-auto" onclick="transform_images()">
+            <i class="fa fa-magic" aria-hidden="true"></i> Transformieren
+        </button>
+    </div>
+    <script>
+        let csrf_token = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrf_token)
+                }
+            }
+        });
+
+        function process_inputs(url) {
+            let prefix = document.getElementById('prefix').value;
+            let digits = document.getElementById('digits').value;
+            let min_int = document.getElementById('min_int').value;
+            let max_int = document.getElementById('max_int').value;
+            let suffix = document.getElementById('suffix').value;
+            let data = {
+                'url': url,
+                'prefix': prefix,
+                'digits': digits,
+                'min_int': min_int,
+                'max_int': max_int,
+                'suffix': suffix
+            };
+            get_images(data);
+        }
+
+        function get_images(data) {
+            darken();
+            $.ajax({
+                url: "/center/stock/image_processing/get_images",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function (response) {
+                    let data = response.data;
+                    let table_body = document.getElementById('tbody');
+                    table_body.innerHTML = '';
+                    for (let i = 0; i < data.length; i++) {
+                        let product = data[i];
+                        let t_row = table_body.insertRow();
+                        t_row.id = 'row_' + product.p_id;
+                        let p_id_cell = t_row.insertCell();
+                        p_id_cell.innerHTML = product.p_id + '<br>' + product.p_internal_id + '<br>' + product.p_hsp_id;
+                        let p_name_cell = t_row.insertCell();
+                        let p_name_cell_innerHTML = product.p_name + '<br>';
+                        product.p_images.map(image => {p_name_cell_innerHTML += '<a style="margin-right: .25em;" onclick="window.open(\'' + image.image_url + '\')"<i class="fa fa-image" aria-hidden="true"></i>';});
+                        p_name_cell.innerHTML = p_name_cell_innerHTML;
+                        let image_cell = t_row.insertCell();
+                        image_cell.id = 'image_cell_' + product.p_id;
+                        let images = product.images;
+                        for (let j = 0; j < images.length; j++)  {
+                            let image = images[j];
+                            let img_container = document.createElement("div");
+                            img_container.style.height = "300px";
+                            img_container.style.width = "300px";
+                            img_container.style.transition = '200ms';
+                            img_container.className = 'd-inline-block p-1 product_' + product.p_id;
+                            img_container.setAttribute('cont_index', j);
+                            img_container.setAttribute('image', image.image);
+                            img_container.id = 'img_container_' + image.image;
+                            let img = document.createElement("img");
+                            img.src = image.image_url;
+                            img.setAttribute('data-toggle', 'magnify');
+                            img.id = 'image_' + image.image;
+                            img.style.height = "auto";
+                            img.style.width = "auto";
+                            img.style.maxHeight = "100%";
+                            img.style.maxWidth = "100%";
+                            img_container.appendChild(img);
+                            let img_control = document.createElement('div');
+                            img_control.style.padding = '1em 0';
+                            img_control.style.position = 'relative';
+                            let barcode_checkbox = document.createElement('input');
+                            barcode_checkbox.type = 'checkbox';
+                            barcode_checkbox.style.marginRight = '.25em';
+                            barcode_checkbox.id = 'barcode_' + image.image;
+                            barcode_checkbox.className = 'barcode_box';
+                            barcode_checkbox.value = image.image;
+                            barcode_checkbox.setAttribute('p_id', product.p_id);
+                            if (image.barcode_only === true) {
+                                barcode_checkbox.checked = true;
+                                img.style.opacity = 0.5;
+                            }
+                            barcode_checkbox.onchange = function() {let img = document.getElementById('image_' + image.image); if (this.checked === true) {img.style.opacity = 0.5;} else {img.style.opacity = 1;}};
+                            img_control.appendChild(barcode_checkbox);
+                            let bcc_label = document.createElement('label');
+                            bcc_label.htmlFor = 'barcode_' + image.image;
+                            bcc_label.innerText = 'BARCODE ONLY';
+                            img_control.appendChild(bcc_label);
+                            let del_box_a = document.createElement('a');
+                            del_box_a.onclick = function() {remove_image(image.image);};
+                            del_box_a.className = 'float-end';
+                            let del_box = document.createElement('div');
+                            del_box.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+                            del_box_a.appendChild(del_box);
+                            img_control.appendChild(del_box_a);
+                            let cam_box_a = document.createElement('a');
+                            cam_box_a.id = 'cam_box_' + image.image;
+                            cam_box_a.className = 'float-end text-secondary';
+                            cam_box_a.style.marginRight = '.25em';
+                            let cam_box = document.createElement('div');
+                            cam_box.innerHTML = '<i class="fa fa-camera" aria-hidden="true"></i>';
+                            cam_box_a.appendChild(cam_box);
+                            img_control.appendChild(cam_box_a);
+                            img_control.appendChild(document.createElement("br"));
+                            let max_box_a = document.createElement('a');
+                            max_box_a.id = 'max_box_' + image.image;
+                            max_box_a.className = 'float-end';
+                            let min_box_a = document.createElement('a');
+                            min_box_a.id = 'min_box_' + image.image;
+                            min_box_a.className = 'float-end text-secondary';
+                            min_box_a.style.marginRight = '.25em';
+                            max_box_a.onclick = function () {
+                                let cont = document.getElementById('img_container_' + image.image);
+                                if (cont.style.width === '300px') {
+                                    cont.style.width = '600px';
+                                    cont.style.height = '600px';
+                                    min_box_a.className = 'float-end'
+                                }
+                                else {
+                                    cont.style.width = '900px';
+                                    cont.style.height = '900px';
+                                    max_box_a.className = 'float-end text-secondary'
+                                }
+                            };
+                            min_box_a.onclick = function () {
+                                let cont = document.getElementById('img_container_' + image.image);
+                                if (cont.style.width === '900px') {
+                                    cont.style.width = '600px';
+                                    cont.style.height = '600px';
+                                    max_box_a.className = 'float-end'
+                                }
+                                else {
+                                    cont.style.width = '300px';
+                                    cont.style.height = '300px';
+                                    min_box_a.className = 'float-end text-secondary'
+                                }
+                            };
+                            let max_box = document.createElement('div');
+                            max_box.innerHTML = '<i class="fa fa-search-plus" aria-hidden="true"></i>';
+                            max_box_a.appendChild(max_box);
+                            img_control.appendChild(max_box_a);
+                            let min_box = document.createElement('div');
+                            min_box.innerHTML = '<i class="fa fa-search-minus" aria-hidden="true"></i>';
+                            min_box_a.appendChild(min_box);
+                            img_control.appendChild(min_box_a);
+                            let remove_bg_checkbox = document.createElement('input');
+                            remove_bg_checkbox.type = 'checkbox';
+                            remove_bg_checkbox.style.marginRight = '.25em';
+                            remove_bg_checkbox.id = 'remove_bg_' + image.image;
+                            remove_bg_checkbox.className = 'remove_bg_box';
+                            remove_bg_checkbox.value = image.image;
+                            remove_bg_checkbox.setAttribute('p_id', product.p_id);
+                            img_control.appendChild(remove_bg_checkbox);
+                            let rbg_label = document.createElement('label');
+                            rbg_label.htmlFor = 'remove_bg_' + image.image;
+                            rbg_label.innerText = 'REMOVE BG';
+                            img_control.appendChild(rbg_label);
+                            let ean_input = document.createElement('input');
+                            ean_input.className = 'w-100';
+                            ean_input.id = 'ean_input_' + image.image;
+                            ean_input.type = 'text';
+                            if (image.barcode === true) {
+                                ean_input.value = product.p_hsp_id;
+                            }
+                            img_control.appendChild(ean_input);
+                            let ean_button = document.createElement('button');
+                            ean_button.className = 'fromfield_blackbutton supertiny';
+                            ean_button.id = 'ean_button_' + image.image;
+                            ean_button.style.position = 'absolute';
+                            ean_button.style.right = '0';
+                            ean_button.style.bottom = '14px';
+                            ean_button.style.height = '27px';
+                            ean_button.style.padding = '0 .5em';
+                            ean_button.innerHTML = '<i class="fa fa-check" aria-hidden="true"></i>';
+                            ean_button.setAttribute('data-image', image.image);
+                            ean_button.setAttribute('product_id', product.p_id);
+                            ean_button.setAttribute('index', j);
+                            ean_button.onclick = function (){reorder(this.getAttribute('data-image'), this.getAttribute('product_id'), this.getAttribute('index'));};
+                            img_control.appendChild(ean_button);
+                            img_container.appendChild(img_control);
+                            image_cell.appendChild(img_container);
+                        }
+                        let mode_cell = t_row.insertCell();
+                        let remove_input = document.createElement('input');
+                        remove_input.type = 'radio';
+                        remove_input.name = 'mode_' + product.p_id;
+                        remove_input.id = 'mode_remove';
+                        remove_input.className = 'mode_input';
+                        remove_input.value = 'delete';
+                        remove_input.style.marginRight = '.25em';
+                        let ri_label = document.createElement('label');
+                        ri_label.htmlFor = 'mode_remove';
+                        ri_label.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+                        let linebreak = document.createElement("br");
+                        let append_input = document.createElement('input');
+                        append_input.type = 'radio';
+                        append_input.name = 'mode_' + product.p_id;
+                        append_input.id = 'mode_append';
+                        append_input.className = 'mode_input';
+                        append_input.value = 'append';
+                        append_input.style.marginRight = '.25em';
+                        append_input.checked = true;
+                        let ai_label = document.createElement('label');
+                        ai_label.htmlFor = 'mode_append';
+                        ai_label.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
+
+                        mode_cell.appendChild(remove_input);
+                        mode_cell.appendChild(ri_label);
+                        mode_cell.appendChild(linebreak);
+                        mode_cell.appendChild(append_input);
+                        mode_cell.appendChild(ai_label);
+                    }
+                    lighten();
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.', 'danger');
+                }
+            });
+        }
+
+        function reorder(image, p_id, index) {
+            let ean_input = document.getElementById('ean_input_' + image);
+            fetch('/center/orders/get_hsp_id_name/' + ean_input.value).then(function (response) {
+                response.json().then(function (data) {
+                    let t_row = document.getElementById('row_' + data.product_id);
+                    let image_cell = document.getElementById('image_cell_' + data.product_id);
+                    if (t_row === null) {
+                        let table_body = document.getElementById('tbody');
+                        t_row = table_body.insertRow();
+                        t_row.id = 'row_' + data.product_id;
+                        let p_id_cell = t_row.insertCell();
+                        p_id_cell.innerHTML = data.product_id + '<br>' + data.internal_id + '<br>' + data.hsp_id;
+                        let p_name_cell = t_row.insertCell();
+                        let p_name_cell_innerHTML = data.product_name + '<br>';
+                        data.product_images.map(image => {p_name_cell_innerHTML += '<a style="margin-right: .25em;" onclick="window.open(\'' + image.image_url + '\')"<i class="fa fa-image" aria-hidden="true"></i>';});
+                        p_name_cell.innerHTML = p_name_cell_innerHTML;
+                        image_cell = t_row.insertCell();
+                        image_cell.id = 'image_cell_' + data.product_id;
+                        let mode_cell = t_row.insertCell();
+                        let remove_input = document.createElement('input');
+                        remove_input.type = 'radio';
+                        remove_input.name = 'mode_' + data.product_id;
+                        remove_input.id = 'mode_remove_' + data.product_id;
+                        remove_input.className = 'mode_input';
+                        remove_input.value = 'delete';
+                        remove_input.style.marginRight = '.25em';
+                        let ri_label = document.createElement('label');
+                        ri_label.htmlFor = 'mode_remove';
+                        ri_label.innerHTML = '<i class="fa fa-trash" aria-hidden="true"></i>';
+                        let linebreak = document.createElement("br");
+                        let append_input = document.createElement('input');
+                        append_input.type = 'radio';
+                        append_input.name = 'mode_' + data.product_id;
+                        append_input.id = 'mode_append_' + data.product_id;
+                        append_input.className = 'mode_input';
+                        append_input.value = 'append';
+                        append_input.style.marginRight = '.25em';
+                        append_input.checked = true;
+                        let ai_label = document.createElement('label');
+                        ai_label.htmlFor = 'mode_append';
+                        ai_label.innerHTML = '<i class="fa fa-plus" aria-hidden="true"></i>';
+
+                        mode_cell.appendChild(remove_input);
+                        mode_cell.appendChild(ri_label);
+                        mode_cell.appendChild(linebreak);
+                        mode_cell.appendChild(append_input);
+                        mode_cell.appendChild(ai_label);
+                    }
+                    let image_containers = document.getElementsByClassName('product_' + p_id);
+                    for (let i=0; i < image_containers.length; i++)  {
+                        let container = image_containers[i];
+                        if (Number(container.getAttribute('cont_index')) >= index) {
+                            image_cell.appendChild(container);
+                            container.className = 'd-inline-block p-1 product_' + data.product_id;
+                            let ean_button = document.getElementById('ean_button_' + container.getAttribute('image'));
+                            ean_button.setAttribute('product_id', data.product_id);
+                            document.getElementById('barcode_' + container.getAttribute('image')).setAttribute('p_id', data.product_id);
+                            document.getElementById('remove_bg_' + container.getAttribute('image')).setAttribute('p_id', data.product_id);
+                            i-=1;
+                        }
+                    }
+                    if (image_containers.length === 0) {
+                        let row = document.getElementById('row_' + p_id);
+                        row.parentNode.removeChild(row);
+                    }
+                    image_containers = document.getElementsByClassName('product_' + data.product_id);
+                    for (let i=0; i < image_containers.length; i++) {
+                        let container = image_containers[i];
+                        container.setAttribute('cont_index', i);
+                        let ean_button = document.getElementById('ean_button_' + container.getAttribute('image'));
+                        ean_button.setAttribute('index', i);
+                    }
+                });
+            });
+        }
+
+        function remove_image(image){
+            let container = document.getElementById('img_container_' + image);
+            let class_name = container.className;
+            container.parentNode.removeChild(container);
+            let image_containers = document.getElementsByClassName(class_name);
+            for (let i=0; i < image_containers.length; i++) {
+                let container = image_containers[i];
+                container.setAttribute('cont_index', i);
+                let ean_button = document.getElementById('ean_button_' + container.getAttribute('image'));
+                ean_button.setAttribute('index', i);
+            }
+        }
+
+        function transform_images() {
+            let data = [];
+            let p_data = {};
+            let barcode_boxes = document.getElementsByClassName('barcode_box');
+            Array.prototype.map.call(barcode_boxes, barcode_box => {
+                if (barcode_box.checked === false) {
+                    if (barcode_box.getAttribute('p_id')!==null) {
+                        if (barcode_box.getAttribute('p_id') in p_data) {
+                            p_data[barcode_box.getAttribute('p_id')].push({'image': barcode_box.value, 'remove_bg': document.getElementById('remove_bg_' + barcode_box.value).checked === true});
+                        }
+                        else {
+                            p_data[barcode_box.getAttribute('p_id')] = [{'image': barcode_box.value, 'remove_bg': document.getElementById('remove_bg_' + barcode_box.value).checked === true}];
+                        }
+                    }
+                }
+            });
+            let p_ids = Object.keys(p_data);
+            let url = document.getElementById('url').value;
+            p_ids.map(p_id => {
+                let mode = document.querySelector('input[name="mode_' + p_id + '"]:checked').value;
+                data.push({'p_id': p_id, 'images': p_data[p_id], 'url': url, 'mode': mode})
+            });
+            darken();
+            $.ajax({
+                url: "/center/stock/image_processing/transform_images",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function (response) {
+                    console.log(response);
+                    response.map(result => {
+                        result.images.map(image => {
+                            let cambox = document.getElementById('cam_box_' + image.image);
+                            if (image.success === true) {
+                                let cambox = document.getElementById('cam_box_' + image.image);
+                                cambox.onclick = function () {
+                                    window.open(image.new_image_url);
+                                };
+                                cambox.className = 'float-end text-success';
+                            }
+                            else {
+                                cambox.className = 'float-end text-danger';
+                            }
+                        });
+                    });
+                    lighten();
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.', 'danger');
+                }
+            });
+        }
+
+    function upload_images() {
+        let files = document.getElementById('images');
+        let form_data = new FormData();
+        for (let i = 0; i < files.files.length; i++) {
+            form_data.append("files[]", files.files[i]);
+        }
+        $.ajax({
+            url: "/center/stock/image_processing/upload",
+            dataType: 'json', // what to expect back from server
+            cache: false,
+            contentType: false,
+            processData: false,
+            data: form_data,
+            type: 'POST',
+            success: function (response) {
+                document.getElementById('url').value = response.url;
+                console.log(response);
+                get_images(response);
+            }
+        });
+    }
+    </script>
+{%endblock%}

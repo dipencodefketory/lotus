@@ -1,0 +1,44 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkt-Einstellungen{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}">
+{% endblock %}
+
+{% block ext %}
+
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <div class="submenu five lightgrey">
+            Produkte
+        </div>
+        <a class="blackfont" href="{{ url_for('center_settings_marketplaces') }}">
+            <div class="submenu five">
+                Marketplaces
+            </div>
+        </a>
+    </div>
+
+    <div class="visible lightgrey small box100" style="text-align: left; position: relative; height: 50px">
+    </div>
+    <div class="visible lightgrey small box100" style="text-align: left; position: relative; height: 50px">
+    </div>
+    <script>
+        function change_cat_feature(cat,feature) {
+            fetch('/center/settings/products/change_cat_feature/' + cat + ',' + feature);
+        }
+
+        function show_or_hide(thisid) {
+            if (document.getElementById(thisid).style.maxHeight==="80px") {
+                if (thisid==="productcategories"){
+                    document.getElementById(thisid).style.maxHeight = '{{ 267 + 50 * product_categories|length + 50 * (product_features|length)*product_categories|length }}px';
+                }
+                else{
+                    document.getElementById(thisid).style.maxHeight = '{{ 50 * product_features|length }}px';
+                }
+            }
+            else {
+                document.getElementById(thisid).style.maxHeight = '80px';
+            }
+        }
+    </script>
+{%endblock%}

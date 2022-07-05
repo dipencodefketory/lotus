@@ -1,0 +1,119 @@
+{% extends 'index.html' %}
+{% block title %}Produkt-Kategorien{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div id="productcategories" class="visible white small box100" style="text-align: left; position: relative; min-height: 80px;
+            max-height:{{ 267 + 50 * product_categories|length + 50 * (product_features|length)*product_categories|length }}px; overflow: hidden;
+            transition: 900ms ease-in-out">
+        <div class="big box100title" style="text-align: left">
+            Produkt-Kategorien
+        </div>
+        <table class="table table-hover tiny">
+            <thead class="black">
+                <tr>
+                    <th style="background: white"></th>
+                    <th style="background: white"></th>
+                    <th colspan="{{ stocks|length }}" style="text-align: center;">Liefer-Delta</th>
+                    <th style="background: white"></th>
+                    <th style="background: white"></th>
+                </tr>
+                <tr>
+                    <th>Interne ID</th>
+                    <th>Name</th>
+                    {% for stock in stocks %}
+                        <th>
+                            <b>{% if not stock.owned %}{{ stock.supplier.get_name() }}{% endif %}</b><br>
+                            <b>{{ stock.name }}</b>
+                        </th>
+                    {% endfor %}
+                    <th></th>
+                    <th>Aktiv</th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+            {% for category in product_categories %}
+                <tr class="trclick" onclick="open_category('{{ category.id }}')">
+                    <td>{{ category.internal_id }}</td>
+                    <td>{{ category.name }}</td>
+                    {% for stock in stocks %}
+                        <td>
+                            <input id="ship_days_{{ category.id }}_{{ stock.id }}" type="number" step="1" value="{{ sl_dict[category.id][stock.id]['ship_days'] }}" data-sl_id="{{ sl_dict[category.id][stock.id]['sl_id'] }}" onclick="event.cancelBubble=true;">
+                        </td>
+                    {% endfor %}
+                        <td>
+                            <button class="smallbutton blackbutton visible" onclick="event.cancelBubble=true;ship_day_update('{{ category.id }}')"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>
+                        </td>
+                    {% if category.active == True %}
+                        <td>
+                            <a class="blackfont" href="{{ url_for('settings.product_.deactivate_category', productcategory_id=category.id) }}">
+                                <i class="fa fa-check-square-o" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                    {% else %}
+                        <td>
+                            <a class="blackfont" href="{{ url_for('settings.product_.activate_category', productcategory_id=category.id) }}">
+                                <i class="fa fa-square-o" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <form action="" method="POST" style="text-align: left">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="width: 100%; padding: 0 70px 0 150px; position: relative">
+                <div style="position: absolute; left:10px; width: 130px">
+                    <label for="ID">Interne ID:</label>
+                    <input id="ID" type="text" name="ID" maxlength="20" class="form-control tinyhead" onkeyup="lowerbound_warning(this,1)">
+                    <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                </div>
+                <label for="name">Kategoriename:</label>
+                <input id="name" type="text" name="name" maxlength="100" class="form-control tinyhead" onkeyup="lowerbound_warning(this,1)">
+                <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                <button name="btn" type="submit" class="standardbutton green greenbutton tiny" value="add_category" style="position: absolute; right: 0; top: 25px">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+
+        function open_category(id) {
+            window.open('/settings/product/category/'+ id, '_self');
+        }
+
+        function ship_day_update(cat_id) {
+            var data = {};
+            data[cat_id] = {'ship_days': {}};
+            {% for stock in stocks %}
+                var inp{{ stock.id }} = document.getElementById('ship_days_' + cat_id + '_{{ stock.id }}');
+                data[cat_id]['ship_days'][inp{{ stock.id }}.getAttribute('data-sl_id')] = inp{{ stock.id }}.value;
+            {% endfor %}
+            $.ajax({
+                url: "{{ url_for('api.product_category.patch') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function() {
+                },
+                error: function() {
+                }
+            });
+        }
+    </script>
+{%endblock%}

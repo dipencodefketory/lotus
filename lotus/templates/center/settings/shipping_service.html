@@ -1,0 +1,99 @@
+{% extends 'center/settings/index.html' %}
+{% block title %}Versand - {{ shipping_service.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div class="visible white small box100" style="text-align: left; overflow: hidden;">
+        <div class="big box100title" style="text-align: left">
+            {{ shipping_service.name }}
+        </div>
+        <form action="" method="POST" id="form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                {% for marketplace in marketplaces %}
+                    <div class="form-group">
+                        <label for="code_{{ marketplace.id }}">{{ marketplace.name }}</label>
+                        <input type="text" id="code_{{ marketplace.id }}" name="code_{{ marketplace.id }}" class="form-control" value="{{ labels[marketplace.id] if marketplace.id in labels else ''}}">
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="splitright" style="padding-bottom: 75px">
+                <div class="form-group">
+                    <label for="provider">Dienstleister:</label>
+                    <input id="provider" type="text" name="provider" maxlength="80" class="form-control tinyhead" list="shipping_providers" value="{{ shipping_service.provider.name }}">
+                    <datalist id="shipping_providers">
+                        {% for provider in shipping_providers %}
+                        <option value="{{ provider.name }}">{{ provider.name }}</option>
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="form-group">
+                    <div style="width: 50%; padding-right: 10px; float: left; position: relative">
+                        <label for="min_days">Min. Tage</label>
+                        <input type="number" id="min_days" name="min_days" step="1" class="form-control" value="{{ shipping_service.min_days }}">
+                        <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                    </div>
+                    <div style="width: 50%; padding-left: 10px; float: left; position: relative">
+                        <label for="max_days">Max. Tage</label>
+                        <input type="number" id="max_days" name="max_days" step="1" class="form-control" value="{{ shipping_service.max_days }}">
+                        <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="width: 50%; padding-right: 10px; float: left">
+                        <label for="price">Preis</label>
+                        <input type="number" id="price" name="price" step="0.01" class="form-control" value="{{ shipping_service.price }}">
+                        <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                    </div>
+                    <div style="width: 50%; padding-left: 10px; float: left">
+                        <label for="weight_g">Gewicht in Gramm</label>
+                        <input type="number" id="weight_g" name="weight_g" step="1" class="form-control" value="{{ shipping_service.weight_g }}" >
+                        <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="width: 33.3%; padding-right: 10px; float: left">
+                        <label for="height_cm">Höhe in cm.</label>
+                        <input type="number" id="height_cm" name="height_cm" step="0.01" class="form-control" value="{{ shipping_service.height_cm }}">
+                        <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                    </div>
+                    <div style="width: 33.3%; padding: 0 10px; float: left">
+                        <label for="width_cm">Breite in cm.</label>
+                        <input type="number" id="width_cm" name="width_cm" step="1" class="form-control" value="{{ shipping_service.width_cm }}" >
+                        <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                    </div>
+                    <div style="width: 33.3%; padding-left: 10px; float: left">
+                        <label for="depth_cm">Tiefe in cm.</label>
+                        <input type="number" id="depth_cm" name="depth_cm" step="1" class="form-control" value="{{ shipping_service.depth_cm }}" >
+                        <span class="supertinyhead formwarning" id="name_warning">Keine Eingabe</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="shipping_type">Typ:</label>
+                    <select id="shipping_type" name="shipping_type" class="form-control tinyhead">
+                        <option value="national" {% if not shipping_service.international %}selected{% endif %}>national</option>
+                        <option value="international" {% if shipping_service.international %}selected{% endif %}>international</option>
+                    </select>
+                </div>
+                <div class="small buttonholder">
+                    <a href="{{ url_for('center_settings_shipping')}}">
+                        <button type="button" class="standardbutton redbutton visible" style="display: inline-block; margin-right: 15px">
+                            <i class="fa fa-reply" aria-hidden="true"></i> zurück
+                        </button>
+                    </a>
+                    <button name="btn" type="submit" class="standardbutton blackbutton visible " style="display: inline-block">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+        function open_service(id) {
+            window.open('/center/settings/shipping_service/'+ id, '_self');
+        }
+    </script>
+{%endblock%}

@@ -1,0 +1,106 @@
+{% extends 'center/basis.html' %}
+{% block title %}Import/Export{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}">
+{% endblock %}
+
+{% block ext %}
+
+    <div class="visible white small box100" style="text-align: left; position: relative; max-height: 2000px; overflow: hidden; transition: 600ms ease-in-out">
+        <div class="big box100title">
+            Import/Export
+        </div>
+        <form class="small" action="" method="POST" style="padding: 20px" id="form" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="form-group">
+                <input type="radio" id="export" name="imex" value="export" checked>
+                <label for="export">Export</label>
+                <input type="radio" id="import" name="imex" value="import">
+                <label for="import">Import</label><br>
+            </div>
+            <div id="csv_cont" class="form-group">
+                <label for="csv">CSV-Datei</label>
+                <input type="file" id="csv" name="csv" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="group">Wähle ein Gruppe</label>
+                <select id="group" name="group" class="form-control" onchange="addoptions(this.value)">
+                    <option value=""></option>
+                    <option value="products">Produkte</option>
+                    <option value="attributes">Attribute</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="choice">Wähle ein Schema</label>
+                <select id="choice" name="choice" class="form-control">
+                </select>
+            </div>
+            <div class="form-group">
+            {% if session['product_id_choice'] %}
+                ID-Auswahl:
+                {% for id in session['product_list'] %}
+                {{ id }},
+                {% endfor %}
+                <br>
+                <br>
+                Trotzdem wählen?
+                <div style="padding: 5px; display: inline-block; position: relative; top: 2px">
+                    <label style="cursor: pointer">
+                        <input type="checkbox" name="id_range" style="cursor: pointer" value="choose">
+                    </label>
+                </div>
+            {% endif %}
+            </div>
+            <div id="start_id_cont" class="form-group" style="width: 50%; float: left; padding-right: 10px">
+                <label for="start_id">Von ID</label>
+                <input type="number" min="1" id="start_id" name="start_id" class="form-control" onchange="updateend()" value="1">
+            </div>
+            <div id="end_id_cont" class="form-group" style="width: 50%; float: left; padding-left: 10px">
+                <label for="end_id">Bis ID</label>
+                <input type="number" min="1" id="end_id" name="end_id" class="form-control" value="1000000">
+            </div>
+            <button type="submit" class="standardbutton blackbutton visible" style="float: right">
+                <i class="fa fa-play-circle-o" aria-hidden="true"></i> Ausführen
+            </button>
+        </form>
+    </div>
+    <script>
+        function addoptions(value) {
+            if (value == 'products'){
+                document.getElementById('form').action = '{{ url_for('center_import_export_products') }}';
+            }
+            else if (value == 'attributes'){
+                document.getElementById('form').action = '{{ url_for('center_import_export_attributes') }}';
+            }
+
+            fetch('/center/import_export_addoptions/' + value).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('choice').innerHTML = data.options;
+                });
+            });
+        }
+
+        $(document).ready(function(){
+            $("#csv_cont").hide();
+            $("#form input" ).change(function() {
+                var val = $("input[name=imex]:checked").val();
+                if(val != undefined) {
+                    if (val == "import") {
+                        $("#csv_cont").show();
+                        $("#start_id_cont").hide();
+                        $("#end_id_cont").hide();
+                    } else {
+                        $("#csv_cont").hide();
+                        $("#start_id_cont").show();
+                        $("#end_id_cont").show();
+                    }
+                }
+            });
+        });
+
+        function updateend() {
+            document.getElementById('end_id').min = document.getElementById('start_id').value;
+        }
+    </script>
+{%endblock%}

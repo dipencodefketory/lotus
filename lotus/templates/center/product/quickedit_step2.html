@@ -1,0 +1,139 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkte{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="box100">
+        <div class="big seven" style="padding: 15px 0 10px 20px; text-align: left">Schnelles Einstellen</div>
+    </div>
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_proc_sources') }}">
+            <div class="submenu five">
+                Quellen auswerten
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step1') }}">
+            <div class="submenu fives">
+                Schritt 1
+            </div>
+        </a>
+        <div class="submenu five lightgrey">
+            Schritt 2
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step3') }}">
+            <div class="submenu five">
+                Schritt 3
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_step4') }}">
+            <div class="submenu five ">
+                Schritt 4
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_quickedit_upload') }}">
+            <div class="submenu five">
+                Upload
+            </div>
+        </a>
+    </div>
+    <form id="red_form" action="{{ url_for('center_product_quickedit_step2_worker') }}" method="POST">
+        <div class="box100" id="table_holder" style="overflow-x: scroll; padding-left: 500px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <table class="table table-hover tiny" id="feature_table" style="text-align: left;">
+                <thead class="black">
+                    <tr>
+                        <th class="black" style="position: absolute; top: auto; left: 0; width: 100px; border-bottom-width: 1px; margin-top: -1px;">
+                            ID<br>
+                            EAN<br>
+                            Interne ID<br>
+                            <br>
+                            <br>
+                        </th>
+                        <th class="black" style="position: absolute; top: auto; left: 100px; width: 400px; border-bottom-width: 1px; margin-top: -1px;">
+                            Name<br>
+                            Merkmal 0<br>
+                            Merkmal 1<br>
+                            Merkmal 2<br>
+                            Merkmal 3
+                        </th>
+                        {% for feature in features|sort(attribute="id") %}
+                            <th style="min-width: 400px">
+                                {{ feature.name }}<br><br><br><br><br>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbod>
+                    <tr class="trclick">
+                        <td></td>
+                        <td></td>
+                        <td colspan="{ len(features) }">
+                            <div style="width: 100%; height: 60px; position: relative;">
+                                <div class="loader" style="height: 50px; width: 50px; margin: -25px"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbod>
+            </table>
+        </div>
+        <div class="box100" style="position: relative; height: 50px; width: 100%">
+            <button name="button" type="button" id="real_button" class="standardbutton visible blackbutton" style="position: absolute; right: 10px; bottom: 10px; margin-top: 0" onclick="submit_form()">
+                <i class="fa fa-floppy-o" aria-hidden="true"></i> Speichern
+            </button>
+        </div>
+    </form>
+    <script>
+        var csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+
+        fetch('/center/product/quickedit_step2/generate_rows').then(function (response) {
+            response.json().then(function (data) {
+                var table = document.getElementById("feature_table");
+                table.removeChild(table.lastElementChild);
+                table.innerHTML += data.body;
+                document.getElementById("table_holder").style.overflowX = "scroll";
+            });
+        });
+        function submit_form(){
+            {% for product in products %}
+                document.getElementById("{{ product.id }}").style.display = 'None';
+                document.getElementById("load_{{ product.id }}").style.display = 'table-row';
+            {% endfor %}
+            {% for product in products %}
+                $.ajax({
+                    url: "{{ url_for('center_product_quickedit_step2_worker') }}",
+                    type: "POST",
+                    data: {
+                        {% for feature in features %}
+                            feature_{{ feature.id }}: document.getElementById("feature{{ feature.id }}_{{product.id}}").value,
+                        {% endfor %}
+                        name: document.getElementById("name_{{ product.id }}").value,
+                        st_0: document.getElementById("st_0_{{ product.id }}").value,
+                        st_1: document.getElementById("st_1_{{ product.id }}").value,
+                        st_2: document.getElementById("st_2_{{ product.id }}").value,
+                        st_3: document.getElementById("st_3_{{ product.id }}").value,
+                        product_id: {{product.id}}
+                    },
+                    success: function() {
+                        document.getElementById("{{ product.id }}").style.display = 'table-row';
+                        document.getElementById("load_{{ product.id }}").style.display = 'None';
+                    },
+                    error: function() {
+                        document.getElementById("error_{{ product.id }}").style.display = 'table-row';
+                        document.getElementById("load_{{ product.id }}").style.display = 'None';
+                    }
+                });
+            {% endfor %}
+        }
+    </script>
+{%endblock%}

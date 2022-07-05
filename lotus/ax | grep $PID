@@ -1,0 +1,54 @@
+[0;1;32m●[0m cron.service - Regular background program processing daemon
+   Loaded: loaded (/lib/systemd/system/cron.service; enabled; vendor preset: enabled)
+   Active: [0;1;32mactive (running)[0m since Tue 2021-09-21 17:10:53 CEST; 11h ago
+     Docs: man:cron(8)
+ Main PID: 89057 (cron)
+    Tasks: 78 (limit: 19166)
+   CGroup: /system.slice/cron.service
+           ├─  9415 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate.py > /tmp/ilsu_listener.log 2>&1
+           ├─  9419 python3 /home/lotus/idealoandlotusstockupdate.py
+           ├─ 11931 /usr/sbin/CRON -f
+           ├─ 11932 /usr/sbin/CRON -f
+           ├─ 11941 /bin/sh -c python3 /home/lotus/enttrading_offers.py > /tmp/eto_listener.log 2>&1
+           ├─ 11946 /bin/sh -c python3 /home/lotus/get_idealo_prices.py > /tmp/gip_listener.log 2>&1
+           ├─ 11960 python3 /home/lotus/enttrading_offers.py
+           ├─ 11962 python3 /home/lotus/get_idealo_prices.py
+           ├─ 35943 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate_zero.py > /tmp/ilsuz_listener.log 2>&1
+           ├─ 35945 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate.py > /tmp/ilsu_listener.log 2>&1
+           ├─ 35946 python3 /home/lotus/idealoandlotusstockupdate_zero.py
+           ├─ 35949 python3 /home/lotus/idealoandlotusstockupdate.py
+           ├─ 38090 /bin/sh -c python3 /home/lotus/idealotoafterbuy.py > /tmp/ita_listener.log 2>&1
+           ├─ 38092 python3 /home/lotus/idealotoafterbuy.py
+           ├─ 39815 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate.py > /tmp/ilsu_listener.log 2>&1
+           ├─ 39818 python3 /home/lotus/idealoandlotusstockupdate.py
+           ├─ 40298 /usr/sbin/CRON -f
+           ├─ 40306 /bin/sh -c python3 /home/lotus/psa_update.py > /tmp/psau_listener.log 2>&1
+           ├─ 40315 python3 /home/lotus/psa_update.py
+           ├─ 42918 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate.py > /tmp/ilsu_listener.log 2>&1
+           ├─ 42920 python3 /home/lotus/idealoandlotusstockupdate.py
+           ├─ 53415 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate.py > /tmp/ilsu_listener.log 2>&1
+           ├─ 53418 python3 /home/lotus/idealoandlotusstockupdate.py
+           ├─ 59862 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate.py > /tmp/ilsu_listener.log 2>&1
+           ├─ 59864 python3 /home/lotus/idealoandlotusstockupdate.py
+           ├─ 73382 /bin/sh -c python3 /home/lotus/afterbuy_sales_corrector.py > /tmp/asc_listener.log 2>&1
+           ├─ 73384 python3 /home/lotus/afterbuy_sales_corrector.py
+           ├─ 77543 /bin/sh -c python3 /home/lotus/idealo_price_automation.py > /tmp/ipa_listener.log 2>&1
+           ├─ 77544 python3 /home/lotus/idealo_price_automation.py
+           ├─ 80672 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate.py > /tmp/ilsu_listener.log 2>&1
+           ├─ 80675 python3 /home/lotus/idealoandlotusstockupdate.py
+           ├─ 89057 /usr/sbin/cron -f
+           ├─126282 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate.py > /tmp/ilsu_listener.log 2>&1
+           ├─126284 python3 /home/lotus/idealoandlotusstockupdate.py
+           ├─128551 /bin/sh -c python3 /home/lotus/idealoandlotusstockupdate.py > /tmp/ilsu_listener.log 2>&1
+           └─128555 python3 /home/lotus/idealoandlotusstockupdate.py
+
+Sep 22 05:00:01 localhost sudo[40320]: pam_unix(sudo:session): session closed for user root
+Sep 22 05:00:01 localhost CRON[40301]: pam_unix(cron:session): session closed for user root
+Sep 22 05:00:02 localhost sudo[40316]: pam_unix(sudo:session): session closed for user root
+Sep 22 05:00:02 localhost CRON[40300]: pam_unix(cron:session): session closed for user root
+Sep 22 05:00:06 localhost CRON[40297]: pam_unix(cron:session): session closed for user root
+Sep 22 05:00:07 localhost CRON[40293]: pam_unix(cron:session): session closed for user root
+Sep 22 05:00:07 localhost CRON[40294]: pam_unix(cron:session): session closed for user root
+Sep 22 05:00:09 localhost CRON[40295]: pam_unix(cron:session): session closed for user root
+Sep 22 05:00:16 localhost CRON[40296]: pam_unix(cron:session): session closed for user root
+Sep 22 05:00:39 localhost CRON[40299]: pam_unix(cron:session): session closed for user root

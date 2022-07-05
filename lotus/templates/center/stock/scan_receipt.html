@@ -1,0 +1,340 @@
+{% extends 'center/stock/stock_basis.html' %}
+{% block title %}Bestellung hinzufügen{% endblock %}
+
+{% block ext2 %}
+    <div class="visible white small box100" style="text-align: left; padding: 25px">
+        <div class="big box100title" style="text-align: left; margin-left: 0">Neuer Wareneingang</div>
+        <form action="" method="POST" id="form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-3">
+                        <label for="supplier">
+                            Lieferant *
+                            <button type="button" style="margin: 0 5px; padding: 2px 7px" class="supertiny standardbutton visible blackbutton" onclick="refreshsuppliers()">
+                                <i class="fa fa-refresh" aria-hidden="true"></i>
+                            </button>
+                        </label>
+                        <a href="{{ url_for('center_addsupplier') }}" style="float: right" target="_blank">
+                            <button type="button" class="standardbutton supertiny greenbutton visible" style="margin-bottom: 0; margin-top: 0; padding-top: 3px; padding-bottom: 2px">
+                                <i class="fa fa-plus" aria-hidden="true"></i> neu anlegen
+                            </button>
+                        </a>
+                        <select id="supplier" name="supplier" class="form-control">
+                            <option value=""></option>'
+                            {% for supplier in suppliers %}
+                            <option id="{{ supplier.id }}" value="{{ supplier.id }}">
+                                {% if supplier.isfirm %}
+                                    {{ supplier.firmname }}
+                                {% else %}
+                                    {{ supplier.salutation }} {{ supplier.firstname }} {{ supplier.name }}
+                                {% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="supertiny formwarning" id="supplier_warning">Gib einen Lieferanten an!</span>
+                    </div>
+                    <div class="col-3">
+                        <label for="external_id">
+                            Order-Nummer *
+                        </label>
+                        <input type="text" id="external_id" name="external_id" class="form-control">
+                        <span class="supertiny formwarning" id="external_id_warning">Gib einen Order-Nummer an!</span>
+                    </div>
+                    <div class="col-3">
+                        <label for="external_id">
+                            Tracking-Nummer *
+                        </label>
+                        <input type="text" id="tracking_number" name="tracking_number" class="form-control">
+                        <span class="supertiny formwarning" id="tracking_number_warning">Gib eine Tracking-Nummer an!</span>
+                    </div>
+                    <div class="col-3">
+                        <label for="units">
+                            Einheiten *
+                        </label>
+                        <input type="number" step="1" min="1" id="units" name="units" value="1" class="form-control">
+                        <span class="supertiny formwarning" id="units_warning">Gib die Anzahl der Einheiten an!</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-gourp" style="position: relative">
+                <label for="HSP_ID_Scan">HSP-ID</label>
+                <input id="HSP_ID_Scan" name="HSP_ID_Scan" class="form-control" style="padding-right: 50px;" onkeydown="checkforenter(event)">
+                <span class="supertiny formwarning" id="HSP_ID_Scan_warning">Ungültige Eingabe!</span>
+                <button type="button" class="fromfield_button" id="addhspid_button" onclick="addhspid()">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+            <table class="table table-striped" id="hspidwrapper" style="margin-top: 40px">
+                <thead>
+                    <tr>
+                        <th style="width: 50px"></th>
+                        <th>HSP-ID</th>
+                        <th></th>
+                        <th>Name</th>
+                        <th style="width: 50px">Anzahl</th>
+                    </tr>
+                </thead>
+                <tbody id="hspidholder">
+
+                </tbody>
+            </table>
+            <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="transfer()">
+                <i class="fa fa-arrow-circle-o-right" aria-hidden="true"></i> übertragen
+            </button>
+        </form>
+    </div>
+    <div id="ScreenDarkener">
+        <div class="loader"></div>
+        <span class="big">DIESES FENSTER NICHT SCHLIEßEN!</span>
+    </div>
+    <script>
+        $(document).ready(function() {
+            $(window).keydown(function(event){
+                if(event.keyCode == 13) {
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        });
+        let csrftoken = $('meta[name=csrf-token]').attr('content');
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type)) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken)
+                }
+            }
+        });
+        function transfer(){
+            let supplier = document.getElementById('supplier');
+            let external_id = document.getElementById('external_id');
+            let tracking_number = document.getElementById('tracking_number');
+            let units = document.getElementById('units');
+            if (supplier.value === '' || external_id === '' || tracking_number === '' || units === '' ){
+                if (supplier.value === ''){
+                    document.getElementById('supplier_warning').style.opacity = '1';
+                    supplier.style.borderColor = '#a54843';
+                }
+                if (external_id.value === ''){
+                    document.getElementById('external_id_warning').style.opacity = '1';
+                    external_id.style.borderColor = '#a54843';
+                }
+                if (tracking_number.value === ''){
+                    document.getElementById('tracking_number_warning').style.opacity = '1';
+                    tracking_number.style.borderColor = '#a54843';
+                }
+                if (units.value === ''){
+                    document.getElementById('units_warning').style.opacity = '1';
+                    units.style.borderColor = '#a54843';
+                }
+            }
+            else {
+                document.getElementById('supplier_warning').style.opacity = '0';
+                supplier.style.borderColor = '#ced4da';
+                document.getElementById('external_id_warning').style.opacity = '0';
+                external_id.style.borderColor = '#ced4da';
+                document.getElementById('tracking_number_warning').style.opacity = '0';
+                tracking_number.style.borderColor = '#ced4da';
+                document.getElementById('units_warning').style.opacity = '0';
+                units.style.borderColor = '#ced4da';
+                document.getElementById("ScreenDarkener").style.display = 'Block';
+                setTimeout(function() {
+                    document.getElementById("ScreenDarkener").style.opacity = '0.8';
+                }, 200);
+                let scans = document.getElementsByClassName('scan');
+                let products = [];
+                for (let i = 0; i < scans.length; i++) {
+                    let hsp_id = scans[i].getAttribute('data-hsp_id');
+                    products.push({
+                        'ean': hsp_id,
+                        'quantity': scans[i].value,
+                        'weight': document.getElementById(hsp_id + 'weight').value,
+                        'length': document.getElementById(hsp_id + 'length').value,
+                        'width': document.getElementById(hsp_id + 'width').value,
+                        'height': document.getElementById(hsp_id + 'height').value
+                    });
+                }
+                let data = {
+                    'supplier_id': supplier.value,
+                    'external_id': external_id.value,
+                    'tracking_number': tracking_number.value,
+                    'units': units.value,
+                    'products': products
+                };
+                $.ajax({
+                    url: "{{ url_for('api.logistics.stock_receipt.post') }}",
+                    type: "POST",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    success: function (res) {
+                        console.log(res);
+                        document.getElementById('hspidholder').innerHTML = '';
+                        supplier.value = '';
+                        external_id.value = '';
+                        tracking_number.value = '';
+                        units.value = 1;
+                        post_shipped_products(res.result);
+                    },
+                    error: function (res) {
+                        console.log(res.message);
+                        console.log(res.result);
+                        setTimeout(function () {
+                            document.getElementById("ScreenDarkener").style.opacity = '0';
+                            setTimeout(function () {
+                                document.getElementById("ScreenDarkener").style.display = 'None';
+                            }, 200);
+                        }, 1000);
+
+                    }
+                });
+            }
+        }
+
+        function post_shipped_products(data) {
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_order.post_shipped_products') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    console.log(res);
+                    post_ws_receipt(res.result);
+                },
+                error: function () {
+                    setTimeout(function () {
+                        document.getElementById("ScreenDarkener").style.opacity = '0';
+                        setTimeout(function () {
+                            document.getElementById("ScreenDarkener").style.display = 'None';
+                        }, 200);
+                    }, 1000);
+
+                }
+            });
+        }
+
+        function post_ws_receipt(data) {
+            data['units'] = document.getElementById('units').value;
+            $.ajax({
+                url: "{{ url_for('api.logistics.ws_receipt.post') }}",
+                type: "POST",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    console.log(res);
+                    get_parcel_pick_list(res.result.parcel_ids[0]);
+                    setTimeout(function () {
+                        document.getElementById("ScreenDarkener").style.opacity = '0';
+                        setTimeout(function () {
+                            document.getElementById("ScreenDarkener").style.display = 'None';
+                        }, 200);
+                    }, 1000);
+                },
+                error: function () {
+                    setTimeout(function () {
+                        document.getElementById("ScreenDarkener").style.opacity = '0';
+                        setTimeout(function () {
+                            document.getElementById("ScreenDarkener").style.display = 'None';
+                        }, 200);
+                    }, 1000);
+                }
+            });
+        }
+
+        function checkforenter(event) {
+            if (event.which === 13){
+                addhspid();
+            }
+        }
+        function addhspid() {
+            let HSP_ID_Scan_Field = document.getElementById('HSP_ID_Scan');
+            let HSP_ID_Scan = HSP_ID_Scan_Field.value.trim();
+            if (HSP_ID_Scan.length > 10 && HSP_ID_Scan.length < 14 ){
+                document.getElementById('HSP_ID_Scan_warning').style.opacity = '0';
+                document.getElementById('HSP_ID_Scan').style.borderColor = '#ced4da';
+                document.getElementById('addhspid_button').className = 'fromfield_button';
+                while (HSP_ID_Scan.length < 13){
+                    HSP_ID_Scan = '0'+HSP_ID_Scan;
+                }
+                let checkhspidrow = document.getElementById('scanrow_'+HSP_ID_Scan);
+                if (checkhspidrow !== null){
+                    document.getElementById(HSP_ID_Scan+'quant').value = Number(document.getElementById(HSP_ID_Scan+'quant').value)+1;
+                }else{
+                    fetch('/center/orders/get_hsp_id_name/'+HSP_ID_Scan).then(function (response) {
+                        response.json().then(function (data) {
+                            let newname = data.product_name;
+                            let images_taken = data.images_taken;
+                            let weight = data.weight;
+                            let length = data.length;
+                            let width = data.width;
+                            let height = data.height;
+                            let row = document.createElement('tr');
+                            row.className = "scanned_hspid";
+                            row.id = "scanrow_" + HSP_ID_Scan;
+                            row.setAttribute("data-value", HSP_ID_Scan);
+                            let innerstring = '<td style="position: relative; padding-top: 15px">';
+                            innerstring += '<div class="dotclose visible redbutton supertiny" data-value="' + HSP_ID_Scan + '" onclick="subtracthspid(this)">';
+                            innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+                            innerstring += '</div>';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += HSP_ID_Scan;
+                            innerstring += '</td>';
+                            innerstring += '<td style="width: 30px; padding-left: 0; padding-right: 0; text-align: center">';
+                            if (images_taken === false){
+                                innerstring += '<i class="fa fa-camera" aria-hidden="true"></i>';
+                            }
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += newname;
+                            innerstring += '<br>';
+                            innerstring += '<div style="float: left; width: 100px; margin-right:5px">';
+                            innerstring += 'Gewicht (g)<br>';
+                            innerstring += '<input type="text" id="' + HSP_ID_Scan + 'weight" value="' + Number(weight) + '" style="width:80px">';
+                            innerstring += '</div>';
+                            innerstring += '<div style="float: left; width: 100px; margin-right:5px">';
+                            innerstring += 'Länge (mm)<br>';
+                            innerstring += '<input type="text" id="' + HSP_ID_Scan + 'length" value="' + Number(length) + '" style="width:80px">';
+                            innerstring += '</div>';
+                            innerstring += '<div style="float: left; width: 100px; margin-right:5px">';
+                            innerstring += 'Breite (mm)<br>';
+                            innerstring += '<input type="text" id="' + HSP_ID_Scan + 'width" value="' + Number(width)+ '" style="width:80px">';
+                            innerstring += '</div>';
+                            innerstring += '<div style="float: left; width: 100px; margin-right:5px">';
+                            innerstring += 'Höhe (mm)<br>';
+                            innerstring += '<input type="text" id="' + HSP_ID_Scan + 'height" value="' + Number(height) + '" style="width:80px">';
+                            innerstring += '</div>';
+                            innerstring += '</td>';
+                            innerstring += '<td>';
+                            innerstring += '<input type="number" min="1" step="1" class="scan" id="' + HSP_ID_Scan + 'quant" value="1" data-hsp_id="' + HSP_ID_Scan + '">';
+                            innerstring += '</td>';
+                            row.innerHTML = innerstring;
+                            document.getElementById('hspidholder').appendChild(row);
+                        });
+                    });
+                    }
+                HSP_ID_Scan_Field.value = '';
+            }else{
+                document.getElementById('HSP_ID_Scan_warning').style.opacity = '1';
+                document.getElementById('HSP_ID_Scan').style.borderColor = '#a54843';
+                document.getElementById('addhspid_button').className = 'fromfield_warningbutton';
+            }
+
+        }
+
+        function subtracthspid(val){
+            subtracted = document.getElementById('scanrow_'+val.getAttribute('data-value'));
+            subtracted.parentNode.removeChild(subtracted);
+        }
+
+        function refreshsuppliers() {
+            fetch('/center/orders/get_suppliers/').then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById("supplier").innerHTML = data.out;
+                });
+            });
+        }
+    </script>
+{%endblock%}

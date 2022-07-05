@@ -1,0 +1,343 @@
+{% extends 'center/orders/index.html' %}
+{% block title %}Bestellungen{% endblock %}
+
+{% block ext2 %}
+    <div class="box100" style="text-align: left">
+        <a href="{{ url_for('center_orders_addorder') }}">
+            <div class="standardbutton greenbutton visible">
+                <i class="fa fa-plus" aria-hidden="true"></i> Bestellung hinzufügen
+            </div>
+        </a>
+        <a href="{{ url_for('center_orders_allorders') }}">
+            <div class="standardbutton blackbutton visible">
+                <i class="fa fa-list" aria-hidden="true"></i> Gesamtansicht
+            </div>
+        </a>
+        <a href="{{ url_for('center_orders_pre_order') }}">
+            <div class="standardbutton blackbutton visible">
+                 <span class="fa-layers fa-fw" style="position: relative; margin-right: 4px">
+                    <i class="fa fa-shopping-cart"></i>
+                    <i class="fa fa-clock-o" style="left: 10px; top: -2px; position: absolute; font-size: 10px;"></i>
+                  </span> Pre-Order
+            </div>
+        </a>
+        <a href="{{ url_for('center_orders_sales') }}">
+            <div class="standardbutton blackbutton visible">
+                <i class="fa fa-shopping-cart" aria-hidden="true"></i> Verkäufe
+            </div>
+        </a>
+    </div>
+    <div class="box100">
+        <table class="table" style="margin-bottom: 0">
+            <tr>
+                <form  method="POST" action="{{ url_for('center_orders_upload_csv_order') }}" enctype=multipart/form-data>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <td>
+                        Bestellung hochladen:
+                    </td>
+                    <td>
+                        Datei auswählen:
+                        <input type="file" name="csv" id="csv"/>
+                    </td>
+                    <td>
+                        <label for="id_type">ID-Typ:</label>
+                        <select name="id_type" id="id_type">
+                            <option value="id">ID</option>
+                            <option value="internal_id">Interne ID</option>
+                            <option value="hsp_id">HSP-ID</option>
+                            <option value="vitrex_id">Vitrex-ID</option>
+                        </select>
+                    </td>
+                    <td>
+                    <button class="standardbutton tiny blackbutton visible" style="margin:0px; float: right" type="submit" value="filter" name="btn">
+                        <i class="fa fa-upload" aria-hidden="true"></i> Hochladen
+                    </button>
+                    </td>
+                </form>
+            </tr>
+            <tr>
+                <form id="system_order" name="system_order" method="POST" action="{{ url_for('center_orders_upload_system_order') }}" enctype=multipart/form-data>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <td>
+                        Nullbestellung anlegen:
+                    </td>
+                    <td>
+                        Datei auswählen:
+                        <input type="file" name="csv" id="csv"/>
+                    </td>
+                    <td>
+                    </td>
+                    <td>
+                        <button class="standardbutton tiny blackbutton visible" style="margin:0;  float: right" type="button" value="filter" name="btn" onclick="confirm_system_order()">
+                            <i class="fa fa-plus" aria-hidden="true"></i> Generieren
+                        </button>
+                    </td>
+                </form>
+            </tr>
+        </table>
+    </div>
+    <div class="box100">
+        <form action="" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="text" name="checker" value="filter" hidden>
+            <table class="table tiny" style="margin-bottom: 0; text-align: left">
+                <thead>
+                    <tr>
+                        <th style="width: 80px">
+                            <span class="regbig"><i>Filter:</i></span>
+                        </th>
+                        <th>
+                            <div class="table_top_filter" id="name-top_filter" onclick="show_filter_options('name')" onmouseover="show_filter_options('name')" onmouseleave="hide_filter_options('name')">
+                                <i class="fa fa-caret-down" aria-hidden="true"></i> Bezeichnung
+                                <div class="table_top_filter-dropdown visible" id="name-top_filter-dropdown" onmouseover="show_filter_options('name')" onmouseleave="hide_filter_options('name')">
+                                    <table class="table table-hover" style="margin-bottom: 0;">
+                                        <tbody>
+                                            <tr style="padding: 0; margin: 0">
+                                                <td style="padding: 0; margin: 0">
+                                                    <label for="name" class="clickable_rowbox" style="height:100%; padding:4px; width: 100%; cursor: pointer">
+                                                        <input type="checkbox" id="name" style="cursor: pointer" onchange="selectall(this.checked, 'name')">
+                                                        <i>Alle</i>
+                                                    </label>
+                                                </td>
+                                            </tr>
+                                            {% for name in names %}
+                                                <tr style="padding: 0; margin: 0">
+                                                    <td style="padding: 0; margin: 0">
+                                                        <label for="name{{ name }}" style="height:100%; padding:4px; width: 100%; cursor: pointer">
+                                                            <input type="checkbox" value="{{ name }}" class="name_filter" name="name_filter" id="name{{ name }}"
+                                                            {% if name in filtered_names %} checked {% endif %}> {{ name }}
+                                                        </label>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </th>
+                        <th>
+                            <div class="table_top_filter" id="supplier-top_filter" onclick="show_filter_options('supplier')" onmouseover="show_filter_options('supplier')" onmouseleave="hide_filter_options('supplier')">
+                                <i class="fa fa-caret-down" aria-hidden="true"></i> Lieferant
+                                <div class="table_top_filter-dropdown visible" id="supplier-top_filter-dropdown" onmouseover="show_filter_options('supplier')" onmouseleave="hide_filter_options('supplier')">
+                                    <table class="table table-hover" style="margin-bottom: 0;">
+                                        <tbody>
+                                            <tr style="padding: 0; margin: 0">
+                                                <td style="padding: 0; margin: 0">
+                                                    <label for="supplier" class="clickable_rowbox" style="height:100%; padding:4px; width: 100%; cursor: pointer">
+                                                        <input type="checkbox" id="supplier" style="cursor: pointer" onchange="selectall(this.checked, 'supplier')">
+                                                        <i>Alle</i>
+                                                    </label>
+                                                </td>
+                                            </tr>
+                                            {% for supplier in suppliers %}
+                                                <tr style="padding: 0; margin: 0">
+                                                    <td style="padding: 0; margin: 0">
+                                                        <label for="supplier{{ supplier.id }}" style="height:100%; padding:4px; width: 100%; cursor: pointer">
+                                                            <input type="checkbox" value="{{ supplier.id }}" class="supplier_filter" name="supplier_filter" id="supplier{{ supplier.id }}"
+                                                            {% if supplier.id in filtered_suppliers %} checked {% endif %}> {{ supplier.get_name() }}
+                                                        </label>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </th>
+                        <th style="width: 180px">
+                            <div class="table_top_filter" id="start-top_filter" onclick="show_filter_options('start')" onmouseover="show_filter_options('start')" onmouseleave="hide_filter_options('start')">
+                                <span id="start-filter_inner"><i class="fa fa-caret-down" aria-hidden="true"></i> Start{% if start != '' %}: {{ start }}{% endif %}</span>
+                                <div class="table_top_filter-dropdown" id="start-top_filter-dropdown" onmouseover="show_filter_options('start')" onmouseleave="hide_filter_options('start')">
+                                    <input id="start" type="date" name="start" class="form-control tiny" onchange="defocus('start')" value="{{ start }}">
+                                </div>
+                            </div>
+                        </th>
+                        <th style="width: 180px">
+                            <div class="table_top_filter" id="end-top_filter" onclick="show_filter_options('end')" onmouseover="show_filter_options('end')" onmouseleave="hide_filter_options('end')">
+                                <span id="end-filter_inner"><i class="fa fa-caret-down" aria-hidden="true"></i> Ende{% if end != '' %}: {{ end }}{% endif %}</span>
+                                <div class="table_top_filter-dropdown" id="end-top_filter-dropdown" onmouseover="show_filter_options('end')" onmouseleave="hide_filter_options('end')">
+                                    <input id="end" type="date" name="end" class="form-control tiny" onchange="defocus('end')" value="{{ end }}">
+                                </div>
+                            </div>
+                        </th>
+                        <th>
+                            <button class="standardbutton tiny blackbutton visible" style="margin:0" type="submit" value="filter" name="btn">
+                                <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+            </table>
+            <div class="box100">
+                <div class="box100title">
+                    <span class="small seven">{{ result_dict['num_results'] }} Ergebnisse // Zusatzkosten: {{ '%0.2f' % result_dict['summed_additional_cost']|float }} € // Summe brutto: {{ '%0.2f' % result_dict['summed_price']|float}} €</span>
+                </div>
+            </div>
+        </form>
+        <table class="table table-hover tiny sortable" style="text-align: left">
+            <thead class="black">
+                <tr>
+                    <th class="sortable">
+
+                    </th>
+                    <th class="sortable">
+                        ID
+                    </th>
+                    <th class="sortable">
+                        Datum
+                    </th>
+                    <th class="sortable">
+                        Status
+                    </th>
+                    <th class="sortable">
+
+                    </th>
+                    <th class="sortable">
+                        Bezeichnung
+                    </th>
+                    <th class="sortable">
+                        Lieferant
+                    </th>
+                    <th class="sortable">
+                        Zusatzkosten
+                    </th>
+                    <th class="sortable">
+                        Summe brutto
+                    </th>
+                    <th class="sortable">
+
+                    </th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% for order in orders %}
+                <tr class="trclick" onclick="showorder('{{order.id}}')">
+                    <td>
+                        <a onclick="delete_order('{{ order.id }}');event.cancelBubble=true;">
+                            <div class="redbutton visible standardbutton supertiny" style="margin: 0">
+                                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                            </div>
+                        </a>
+                    </td>
+                    <td>{{ order.id }}</td>
+                    <td>{{ order.order_time.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ order.get_current_shipping_stat().label if order.get_current_shipping_stat()!=None }}</td>
+                    <td>{% if order.complete==False %}unvollständig{% endif %}</td>
+                    <td>{{ order.name if order.name!=None}}</td>
+                    <td>{{ order.supplier.get_name() if order.supplier else '' }}</td>
+                    <td>{{ '%0.2f' % (order.additional_cost)|float }} €</td>
+                    <td>{{ '%0.2f' % (order.price)|float }} €</td>
+                    <td>
+                        <a onclick="split_order('{{ order.id }}');event.cancelBubble=true;">
+                            <div class="blackbutton visible standardbutton supertiny" title="Rückstand lösen" style="margin: 0">
+                                <i class="fa fa-chain-broken" aria-hidden="true"></i>
+                            </div>
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="ScreenDarkener">
+
+    </div>
+    <div class="white visible small" id="confirm_system_order">
+        Sind Sie sicher, dass Sie eine Nullbestellung generieren möchten?
+        <div class="small buttonholder">
+            <button name="btn" type="button" class="standardbutton redbutton visible " style="display: inline-block" onclick="close_confirm_system_order()">
+                <i class="fa fa-times" aria-hidden="true"></i> abbrechen
+            </button>
+            <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="document.getElementById('system_order').submit()">
+                <i class="fa fa-thumbs-o-up" aria-hidden="true"></i> bestätigen
+            </button>
+        </div>
+    </div>
+    <script>
+        function confirm_system_order() {
+            document.getElementById("confirm_system_order").style.display = 'Block';
+            document.getElementById("confirm_system_order").style.zIndex = '15002';
+            document.getElementById("ScreenDarkener").style.display = 'Block';
+
+            setTimeout(function() {
+                document.getElementById("confirm_system_order").style.opacity = '1';
+                document.getElementById("ScreenDarkener").style.opacity = '0.8';
+            }, 200);
+        }
+        function close_confirm_system_order() {
+            document.getElementById("confirm_system_order").style.opacity = '0';
+            document.getElementById("confirm_system_order").style.zIndex = '15000';
+            document.getElementById("ScreenDarkener").style.opacity = '0';
+            setTimeout(function() {
+                document.getElementById("confirm_system_order").style.display = 'None';
+                document.getElementById("ScreenDarkener").style.display = 'None';
+            }, 200);
+        }
+        function defocus(type){
+            document.activeElement.blur();
+            obj = document.getElementById(type);
+            setTimeout(function () {
+                if (! $(obj).is(':focus')){
+                    document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                    setTimeout(function () {
+                        document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                    }, 100);
+                }}, 200);
+            if (type =='start'){
+                document.getElementById('start-filter_inner').innerHTML = '<i class="fa fa-caret-down" aria-hidden="true"></i> Start: '+obj.value;
+                document.getElementById('end').setAttribute("min", obj.value);
+            }
+            else if (type =='end'){
+                document.getElementById('end-filter_inner').innerHTML = '<i class="fa fa-caret-down" aria-hidden="true"></i> Ende: '+obj.value;
+                document.getElementById('start').setAttribute("max", obj.value);
+            }
+        }
+
+        function selectall(check, type) {
+            all = document.getElementsByClassName(type+"_filter");
+            if (check==true){
+                for (i=0; i < all.length ; i++){
+                    all[i].checked = true;
+                    }
+                }
+            else{
+                for (i=0; i < all.length ; i++){
+                    all[i].checked = false;
+                    }
+                }
+
+        }
+        function show_filter_options(type){
+            document.getElementById(type+'-top_filter-dropdown').style.display = 'Block';
+            setTimeout(function () {
+                document.getElementById(type+'-top_filter-dropdown').style.opacity = '1.0';
+            }, 100);
+        }
+
+        function hide_filter_options(type){
+            obj = document.getElementById(type);
+            setTimeout(function () {
+                if (! $(obj).is(':focus')){
+                    document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                    setTimeout(function () {
+                        document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                    }, 100);
+                }}, 200);
+            if (! $(obj).is(':focus')){
+                document.getElementById(type+'-top_filter-dropdown').style.opacity = '0.0';
+                setTimeout(function () {
+                    document.getElementById(type+'-top_filter-dropdown').style.display = 'None';
+                }, 100);
+            }
+        }
+        function showorder(id) {
+            window.open('/center/orders/order/'+ id, '_blank');
+        }
+        function delete_order(id) {
+            window.open('/center/orders/delete_order/'+ id, '_self');
+        }
+        function split_order(id) {
+            window.open('/center/orders/split_order/'+ id, '_self');
+        }
+    </script>
+{%endblock%}

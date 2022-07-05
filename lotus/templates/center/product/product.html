@@ -1,0 +1,311 @@
+{% extends 'center/basis.html' %}
+{% block title %}Produkt - {{ product.name }}{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/products.css')}}">
+{% endblock %}
+{% block ext %}
+    <div class="visible white tiny box100" style="text-align: left; position: relative">
+        <div class="submenu five lightgrey">
+            Produkt-Attribute
+        </div>
+        <a class="blackfont" href="{{ url_for('center_product_features', id=product.id) }}">
+            <div class="submenu five">
+                Produkt-Features
+            </div>
+        </a>
+        <a class="blackfont" href="{{ url_for('center_product_marketplace_data', id=product.id) }}">
+            <div class="submenu five">
+                Marketplace-Attribute
+            </div>
+        </a>
+        {% if 'Produkt-Management' in session.roles %}
+            <a class="blackfont" href="{{ url_for('center_product_pricingactions', id=product.id) }}">
+                <div class="submenu five">
+                    Pricing-Aktionen
+                </div>
+            </a>
+            <a class="blackfont" href="{{ url_for('center_product_update_logs', p_id=product.id) }}">
+                <div class="submenu five">
+                    Update-Logs
+                </div>
+            </a>
+        {% endif %}
+    </div>
+    <div class="visible white small box100" style="text-align: left; overflow: hidden;">
+        <div class="big box100title" style="text-align: left">
+            {{ product.name }} <span class="small"><i>({{ product.hsp_id_type }}: {{ product.hsp_id }})</i></span><br>
+            <div class="standardbutton blackbutton small visible" onclick="open_pictures()" style="margin-left: 0">
+                <i class="fa fa-image" aria-hidden="true"></i> Produkt-Bilder
+            </div>
+            <div class="standardbutton blackbutton small visible" onclick="openlinks()" style="margin-left: 0">
+                <i class="fa fa-external-link" aria-hidden="true"></i> Externe Links
+            </div>
+            <div class="standardbutton blackbutton small visible" onclick="window.open('{{ url_for("center_product_ext_features", id=product.id) }}', '_blank')" style="margin-left: 0">
+                <i class="fa fa-info" aria-hidden="true"></i> externe Quellen
+            </div>
+            <div class="standardbutton blackbutton small visible" onclick="window.open('{{ url_for("center_product_update_ebay_images", product_id=product.id) }}', '_self')" style="margin-left: 0">
+                <i class="fa fa-upload" aria-hidden="true"></i> Ebay-Bilder-Update
+            </div>
+        </div>
+        <form action="" method="POST" id="form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <div class="form-group">
+                    <div style="width: 50%; padding: 0 10px 15px 0; float: left;">
+                        <label for="internal_id">Interne ID</label>
+                        <input type="text" id="internal_id" name="internal_id" class="form-control" value="{{ product.internal_id if product.internal_id}}">
+                    </div>
+                    <div style="width: 50%; padding: 0 0 15px 10px; float: left;">
+                        <label for="mpn">MPN</label>
+                        <input type="text" id="mpn" name="mpn" class="form-control" value="{{ product.mpn if product.mpn }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="width: 50%; padding: 0 10px 0 0; float: left;">
+                        <label for="hsp_id_type">HSP-ID-Typ</label>
+                        <select id="hsp_id_type" name="hsp_id_type" class="form-control">
+                            <option value="EAN" {% if product.HSP_ID_Type == 'EAN' %}selected{% endif %}>EAN</option>
+                            <option value="ISBN" {% if product.HSP_ID_Type == 'ISBN' %}selected{% endif %}>ISBN</option>
+                            <option value="ASIN" {% if product.HSP_ID_Type == 'ASIN' %}selected{% endif %}>ASIN</option>
+                            <option value="GTIN" {% if product.HSP_ID_Type == 'GTIN' %}selected{% endif %}>GTIN</option>
+                            <option value="UPC" {% if product.HSP_ID_Type == 'UPC' %}selected{% endif %}>UPC</option>
+                        </select>
+                    </div>
+                    <div style="width: 50%; padding: 0 0 0 10px; float: left;">
+                        <label for="hsp_id">HSP-ID *</label>
+                        <input type="text" maxlength="13" id="hsp_id" name="hsp_id" class="form-control" value="{{ product.hsp_id if product.hsp_id }}">
+                        <span class="supertiny formwarning" id="hsp_id_warning">Ungültige Eingabe!</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" class="form-control" maxlength="255" value="{{ product.name if product.name }}">
+                </div>
+                <div class="form-group">
+                    <div style="width: 50%; padding: 0 10px 15px 0; float: left;">
+                        <label for="spec_trait_0">Merkmal 0</label>
+                        <input type="text" id="spec_trait_0" name="spec_trait_0" class="form-control" value="{{ product.spec_trait_0 if product.spec_trait_0}}">
+                    </div>
+                    <div style="width: 50%; padding: 0 0 15px 10px; float: left;">
+                        <label for="spec_trait_1">Merkmal 1</label>
+                        <input type="text" id="spec_trait_1" name="spec_trait_1" class="form-control" value="{{ product.spec_trait_1 if product.spec_trait_1}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="width: 50%; padding: 0 10px 15px 0; float: left;">
+                        <label for="spec_trait_2">Merkmal 2</label>
+                        <input type="text" id="spec_trait_2" name="spec_trait_2" class="form-control" value="{{ product.spec_trait_2 if product.spec_trait_2}}">
+                    </div>
+                    <div style="width: 50%; padding: 0 0 15px 10px; float: left;">
+                        <label for="spec_trait_3">Merkmal 3</label>
+                        <input type="text" id="spec_trait_3" name="spec_trait_3" class="form-control" value="{{ product.spec_trait_3 if product.spec_trait_3}}">
+                    </div>
+                </div>
+                <div class="form-group" style="width: 100%; display: block; padding: 0; margin-bottom: 0">
+                    <div style="width: 33.3%; padding: 0 10px 15px 0; float: left;">
+                        <label for="product_category">Produkt-Kategorie</label>
+                        <select id="product_category" name="product_category" class="form-control">
+                            <option value=""></option>
+                            {% for productcategory in productcategories %}
+                                <option value="{{ productcategory.id }}" {% if product.category_id == productcategory.id %}selected{% endif %}>{{ productcategory.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="width: 33.3%; padding: 0 10px 15px 10px; float: left;">
+                        <label for="brand">Marke</label>
+                        <input type="text" id="brand" name="brand" class="form-control" maxlength="80" value="{{ product.brand if product.brand }}">
+                    </div>
+                    <div style="width: 33.3%; padding: 0 0 15px 40px; float: left; position: relative;">
+                        <input type="checkbox" id="block_release_date" name="block_release_date" {% if product.block_release_date %}checked{% endif %} style="position: absolute; left: 15px; bottom: 45%"  onchange="block_date()"/>
+                        <label for="release_date">Release-Datum</label>
+                        <input {% if product.block_release_date %}readonly{% endif %} placeholder="dd.mm.yyyy" type="text" id="release_date" name="release_date" class="form-control" maxlength="10" value="{{ product.release_date.strftime('%d.%m.%Y') if product.release_date }}">
+                        <span class="supertiny formwarning" id="release_date_warning">Ungültiges Format!</span>
+                    </div>
+                </div>
+                <div class="form-group" style="width: 100%; display: block">
+                    <div style="width: 33.3%; padding: 0 10px 15px 0; float: left;">
+                        <label for="weight">Gewicht</label>
+                        <input type="text" id="weight" name="weight" class="form-control" value="{{ product.weight if product.weight }}">
+                    </div>
+                    <div style="width: 33.3%; padding: 0 10px 15px 10px; float: left;">
+                        <label for="tax_group">Steuer-Gruppe</label>
+                        <select id="tax_group" name="tax_group" class="form-control">
+                            <option value="" selected></option>
+                            <option value="1" {% if product.tax_group==1 %}selected{% endif %}>Tax_19</option>
+                            <option value="2" {% if product.tax_group==2 %}selected{% endif %}>Tax_7</option>
+                            <option value="3" {% if product.tax_group==3 %}selected{% endif %}>Tax_0</option>
+                        </select>
+                    </div>
+                    <div style="width: 33.3%; padding: 0 0 15px 10px; float: left; position: relative;">
+                        <label for="packagenr">Verpackungsgröße</label>
+                        <input type="text" id="packagenr" name="packagenr" class="form-control" value="{{ product.packagenr if product.packagenr }}">
+                    </div>
+                </div>
+                <div class="form-group" style="width: 100%; display: block">
+                    <div style="width: 33.3%; padding: 0 10px 15px 0; float: left;">
+                        <label for="length">Länge (in mm)</label>
+                        <input type="number" id="length" name="length" class="form-control" value="{{ product.length if product.length }}">
+                    </div>
+                    <div style="width: 33.3%; padding: 0 10px 15px 10px; float: left;">
+                        <label for="width">Breite (in mm)</label>
+                        <input type="number" id="width" name="width" class="form-control" value="{{ product.width if product.width }}">
+                    </div>
+                    <div style="width: 33.3%; padding: 0 0 15px 10px; float: left; position: relative;">
+                        <label for="height">Höhe (in mm)</label>
+                        <input type="number" id="height" name="height" class="form-control" value="{{ product.height if product.height }}">
+                    </div>
+                </div>
+            {% for category in productlinkcategories %}
+                <div class="form-group">
+                    <label for="link{{ category.id }}">{{ category.name }}-Link</label>
+                    <input type="text" id="link{{ category.id }}" name="link{{ category.id }}" class="form-control" maxlength="200" value="{{ product.productlink(category.id) }}">
+                </div>
+            {% endfor %}
+            </div>
+            <div class="splitright" style="padding-bottom: 75px">
+                <div class="form-group">
+                    <label for="bigpic">Hauptbild 1 groß *</label>
+                    <input type="text" id="bigpic" name="bigpic" class="form-control" {% if product.bigpic() %} value="{{ product.bigpic().link }}" {% endif %}>
+                    <span class="supertiny formwarning" id="bigpic_warning">Keine Eingabe!</span>
+                </div>
+                <div class="form-group">
+                    <label for="smallpic">Hauptbild 2 klein *</label>
+                    <input type="text" id="smallpic" name="smallpic" class="form-control" {% if product.smallpic() %} value="{{ product.smallpic().link }}" {% endif %}>
+                    <span class="supertiny formwarning" id="smallpic_warning">Keine Eingabe!</span>
+                </div>
+                <div class="form-group" style="position: relative">
+                    <label for="addpics">Weitere Bilder</label>
+                    <input type="text" id="addpics" name="addpics" class="form-control" style="padding-right: 50px;" onkeyup="lowerbound_warning(this, 1)">
+                    <button type="button" class="fromfield_button" id="addpics_button" onclick="addpic()">
+                        <i class="fa fa-plus" aria-hidden="true"></i>
+                    </button>
+                    <span class="supertiny formwarning" id="addpics_warning">keine Eingabe</span>
+                </div>
+                <div id="ProductsAddPicHolder">
+                    {% for pic in product.otherpics() %}
+                        <div id="added{{ pic.link }}" class="productsaddpic lightgrey visible tiny">
+                            <a href="{{ session['picture_server'] + pic.link }}" target="_blank">
+                                <i class="fa fa-file-image-o" aria-hidden="true"></i>
+                            </a>
+                            {{ pic.link }}
+                            <div class="dotclose redbutton" data-value="{{ pic.link }}" onclick="subtractpic(this)">
+                                <i class="fa fa-times" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div style="display: none">
+                    <input id="additional_pictures" name="additional_pictures" value="{% for pic in product.otherpics() %}{{ pic.link }} {% endfor %}">
+                </div>
+                <div class="small buttonholder">
+                    <a href="{{ url_for('center_product_products')}}">
+                        <button type="button" class="standardbutton redbutton visible" style="display: inline-block; margin-right: 15px">
+                            <i class="fa fa-reply" aria-hidden="true"></i> zurück
+                        </button>
+                    </a>
+                    <button name="btn" type="button" class="standardbutton blackbutton visible " style="display: inline-block" onclick="checkproductform()">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i> speichern
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+        function block_date() {
+            var obj = document.getElementById('block_release_date');
+            document.getElementById('release_date').readonly = obj.checked === true;
+            fetch('/center/product/block_release_date/' + {{ product.id }});
+        }
+
+        function open_pictures(){
+            {% for picture in product.pictures %}
+                window.open("{{ session['picture_server']+picture.link }}", "_blank");
+            {% endfor %}
+        }
+        function addpic() {
+            newpic = document.getElementById('addpics').value;
+            if (newpic != ''){
+                document.getElementById('additional_pictures').value += newpic + ' ';
+                document.getElementById('addpics').value = '';
+                innerstring = '<div id="added' + newpic + '" class="productsaddpic lightgrey visible tiny">';
+                innerstring += '<a href="{{ session['picture_server'] }}' + newpic + '" target="_blank">';
+                innerstring += '<i class="fa fa-file-image-o" aria-hidden="true"></i></a> ' + newpic;
+                innerstring += '<div class="dotclose redbutton" data-value="' + newpic + '" onclick="subtractpic(this)">';
+                innerstring += '<i class="fa fa-times" aria-hidden="true"></i>';
+                innerstring += '</div></div>';
+                document.getElementById('ProductsAddPicHolder').innerHTML += innerstring;
+                document.getElementById('addpics_warning').style.opacity = '0';
+                document.getElementById('addpics').style.borderColor = '#ced4da';
+                document.getElementById('addpics_button').className = 'fromfield_button';
+            }else{
+                document.getElementById('addpics_warning').style.opacity = '1';
+                document.getElementById('addpics').style.borderColor = '#a54843';
+                document.getElementById('addpics_button').className = 'fromfield_warningbutton';
+            }
+        }
+
+        function subtractpic(obj){
+            document.getElementById('additional_pictures').value = document.getElementById('additional_pictures').value.replace(obj.getAttribute('data-value')+' ','');
+            subtracted = document.getElementById('added'+obj.getAttribute('data-value'));
+            subtracted.parentNode.removeChild(subtracted);
+        }
+        function checkproductform() {
+
+            var hsp_id = document.getElementById('hsp_id');
+            var bigpic = document.getElementById('bigpic');
+            var smallpic = document.getElementById('smallpic');
+
+            if (hsp_id.value == ''
+                || hsp_id.value.length < 13
+                || bigpic.value == ''
+                || smallpic.value == '')
+            {
+                if(hsp_id.value == '' || hsp_id.value.length < 13){
+                    document.getElementById('hsp_id_warning').style.opacity = '1';
+                    hsp_id.style.borderColor = '#a54843';
+                }
+                if(bigpic.value == ''){
+                    document.getElementById('bigpic_warning').style.opacity = '1';
+                    bigpic.style.borderColor = '#a54843';
+                }
+                if(smallpic.value == ''){
+                    document.getElementById('smallpic_warning').style.opacity = '1';
+                    smallpic.style.borderColor = '#a54843';
+                }
+            }
+
+            else{
+                var release_date = document.getElementById('release_date');
+                if (release_date.value === ''){
+                    document.getElementById('form').submit();
+                }else{
+                    var letters = /^[0-9]+$/;
+                    var date_list = release_date.value.split('.');
+                    var new_date = '';
+                    for (var i=0; i < date_list.length ; i++) {
+                        new_date += date_list[date_list.length-i-1];
+                        if (i<2){
+                            new_date+='-'
+                        }
+                    }
+                    var check_date = new Date(new_date);
+                    if (isNaN(check_date.getTime())){
+                        document.getElementById('release_date_warning').style.opacity = '1';
+                        release_date.style.borderColor = '#a54843';
+                    }else{
+                        document.getElementById('form').submit();
+                    }
+                }
+            }
+        }
+
+        function openlinks() {
+            {% for link in product.links %}
+                {% if link.link != '' %}
+                    window.open("{{ link.link|safe }}", "_blank");
+                {% endif %}
+            {% endfor %}
+        }
+    </script>
+{%endblock%}

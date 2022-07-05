@@ -1,0 +1,383 @@
+{% extends 'center/analysis/index.html' %}
+{% block title %}Pricing-Bundles{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/settings.css')}}?v=5">
+{% endblock %}
+
+{% block ext2 %}
+    <div class="box100 visible five" style="text-align: left">
+        <div class="big seven" style="padding: 15px 0 10px 20px"><i>Filter</i></div>
+        <form action="" method="POST" name="filterform" style="padding-top: 3px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="splitleft">
+                <div class="form-group" style="margin-top: 20px">
+                    <label for="product_ids" style="width: 100%">Produkte
+                        <div style="float: right">
+                            <input type="radio" value="id" id="id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['analysis_prb_filter'] %}
+                                    {% if session['analysis_prb_filter']['product_id_type'] == 'id' %}
+                                        checked
+                                    {% endif %}
+                                    {% else %}
+                                        checked
+                                    {% endif %}
+                            >
+                            <label for="id" style="margin: 0; padding-bottom: 0">ID
+                            </label>
+                            <input type="radio" value="Internal_ID" id="Internal_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['analysis_prb_filter'] %}
+                                    {% if session['analysis_prb_filter']['product_id_type'] == 'Internal_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="Internal_ID" style="margin: 0; padding-bottom: 0">Interne ID
+                            </label>
+                            <input type="radio" value="HSP_ID" id="HSP_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['analysis_prb_filter'] %}
+                                    {% if session['analysis_prb_filter']['product_id_type'] == 'HSP_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="HSP_ID" style="margin: 0; padding-bottom: 0">HSP-ID
+                            </label>
+                            <input hidden name="product_type" id="product_type" value="{{ session['analysis_prb_filter']['product_id_type'] if session['analysis_prb_filter']['product_id_type'] else 'id' }}">
+                        </div>
+                    </label>
+                    <textarea rows="4" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% for p in session['analysis_prb_filter']['product_ids'] %}{{ p }};{% endfor %}</textarea>
+                    <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                    <div style="position:relative;">
+                        <input type="text" name="product" style="border: solid 1px black;"  class="form-control" id="product" list="product-datalist" style="padding-right: 120px" onkeyup="find_products(this.value)">
+                        <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                        <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="splitright">
+                <table class="table tiny" style="margin-bottom: 0; text-align: left; border: none; box-shadow: none">
+                    <thead style="border: none; box-shadow: none">
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                Verkaufsdatum:<br>
+                                <label for="min_sale_ts"> Min:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="min_sale_ts" id="min_sale_ts" value="{{ session['analysis_prb_filter']['min_sale_ts'].strftime('%Y-%m-%d') if session['analysis_prb_filter']['min_sale_ts'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="max_sale_ts"> Max:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="max_sale_ts" id="max_sale_ts" value="{{ session['analysis_prb_filter']['max_sale_ts'].strftime('%Y-%m-%d') if session['analysis_prb_filter']['max_sale_ts'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                Letzter Verkauf:<br>
+                                <label for="min_last_sale_ts"> Min:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="min_last_sale_ts" id="min_last_sale_ts" value="{{ session['analysis_prb_filter']['min_last_sale_ts'].strftime('%Y-%m-%d') if session['analysis_prb_filter']['min_last_sale_ts'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="max_last_sale_ts"> Max:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="max_last_sale_ts" id="max_last_sale_ts" value="{{ session['analysis_prb_filter']['max_last_sale_ts'].strftime('%Y-%m-%d') if session['analysis_prb_filter']['max_last_sale_ts'] }}">
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                Lagerbestand:<br>
+                                <label for="min_stock"> Min:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="number" step="1" name="min_stock" id="min_stock" value="{{ session['analysis_prb_filter']['min_stock'] if session['analysis_prb_filter']['min_stock'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <label for="max_stock"> Max:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="number" step="1" name="max_stock" id="max_stock" value="{{ session['analysis_prb_filter']['max_stock'] if session['analysis_prb_filter']['max_stock'] }}">
+                            </th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;"></th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;"></th>
+                        </tr>
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;"></th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;"></th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;"></th>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px;">
+                                <button class="standardbutton tiny blackbutton visible" style="float: right; margin: 0" type="submit" value="filter" name="btn">
+                                    <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </form>
+    </div>
+    <div class="visible white small box100" style="text-align: left">
+        <table class="table tiny">
+            <thead class="black">
+                <tr>
+                    <th>Pricing-Bundle</th>
+                    <th>Aktiv von insgesamt</th>
+                    <th>In Filterung</th>
+                    <th>
+                        Handelsereignisse<br>
+                        Stk.<br>
+                        Umsatz
+                    </th>
+                    <th>
+                        Aktion aktivieren
+                    </th>
+                    <th>
+                        Bundle aktivieren
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="table_body">
+
+            </tbody>
+        </table>
+        <div id="loader" class="box100" style="position: relative; height: 200px">
+            <div class="loader"></div>
+        </div>
+    </div>
+    <script>
+        let table_body = document.getElementById('table_body');
+        fetch('/center/analysis/pricing_bundles/load').then(function (response) {
+            response.json().then(function (response) {
+                response.data.forEach(pa_data => {
+                    let t_row = table_body.insertRow();
+                    let pa_name_cell = t_row.insertCell();
+                    pa_name_cell.innerText = pa_data.name;
+                    let num_ps_cell = t_row.insertCell();
+                    let pr_a = document.createElement('a');
+                    pr_a.className = 'smallbutton blackbutton';
+                    pr_a.innerText = pa_data.products;
+                    pr_a.onclick = function() {display_prb_products(pa_data.name, 'active')};
+                    num_ps_cell.appendChild(pr_a);
+                    let p_count_cell = t_row.insertCell();
+                    let p_a = document.createElement('a');
+                    p_a.innerText = pa_data.p_count;
+                    p_a.className = 'smallbutton blackbutton';
+                    p_a.onclick = function() {display_prb_products(pa_data.name, 'filtered')};
+                    p_count_cell.appendChild(p_a);
+                    let num_sales_cell = t_row.insertCell();
+                    num_sales_cell.innerHTML = `${pa_data.tre_count}<br>${pa_data.quantity}<br>${pa_data.revenue}`;
+                    let pa_cell = t_row.insertCell();
+                    let pa_select = document.createElement('select');
+                    pa_select.id = `pa_select_${pa_data.name}`;
+                    {% for pa_name in pa_names %}
+                        let pa_option_{{ loop.index }} = document.createElement('option');
+                        pa_option_{{ loop.index }}.value = "{{ pa_name }}";
+                        pa_option_{{ loop.index }}.innerText = "{{ pa_name }}";
+                        pa_select.appendChild(pa_option_{{ loop.index }});
+                    {% endfor %}
+                    pa_cell.appendChild(pa_select);
+                    let pat_button = document.createElement('button');
+                    pat_button.className = 'smallbutton blackbutton';
+                    pat_button.innerHTML = '<i class="fa fa-check"></i>';
+                    pat_button.onclick = function() {center_analysis_transform(pa_data.name, 'pa_transform')};
+                    pa_cell.appendChild(pat_button);
+                    let prb_cell = t_row.insertCell();
+                    let prb_select = document.createElement('select');
+                    prb_select.id = `pr_select_${pa_data.name}`;
+                    let prb_option_0 = document.createElement('option');
+                    prb_option_0.value = "0";
+                    prb_option_0.innerText = "";
+                    prb_select.appendChild(prb_option_0);
+                    {% for pr_bundle in pr_bundles %}
+                        let prb_option_{{ loop.index }} = document.createElement('option');
+                        prb_option_{{ loop.index }}.value = "{{ pr_bundle.id }}";
+                        prb_option_{{ loop.index }}.innerText = "{{ pr_bundle.name }}";
+                        prb_select.appendChild(prb_option_{{ loop.index }});
+                    {% endfor %}
+                    prb_cell.appendChild(prb_select);
+                    let prt_button = document.createElement('button');
+                    prt_button.className = 'smallbutton blackbutton';
+                    prt_button.innerHTML = '<i class="fa fa-check"></i>';
+                    prt_button.onclick = function() {center_analysis_transform(pa_data.name, 'pr_transform')};
+                    prb_cell.appendChild(prt_button);
+                });
+                document.getElementById('loader').style.display = 'None';
+            });
+        });
+
+        function display_prb_products(prb_name, mode) {
+            let data = {'prb_name': prb_name, 'mode': mode};
+            darken();
+            $.ajax({
+                url: "{{ url_for('center_analysis_get_prb_products') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    document.getElementById('msg_basic_msg').innerHTML = '';
+                    document.getElementById('msg_basic_title').innerText = prb_name;
+                    let se_table = document.createElement('table');
+                    se_table.className = "table";
+                    let se_head = se_table.createTHead();
+                    let head_row = se_head.insertRow();
+                    head_row.className = 'black';
+                    let th_1 = head_row.insertCell();
+                    th_1.innerHTML = '<a onclick="copy_to_clipboard(\'p_ids\')"><button class="supertiny smallbutton blackbutton px-1 mx-1"><i class="fa fa-copy" aria-hidden="true"></i></button></a>ID';
+                    let th_2 = head_row.insertCell();
+                    th_2.innerHTML = 'Name';
+                    let th_3 = head_row.insertCell();
+                    th_3.innerHTML = '<input type="checkbox" onclick="check_all(this)" checked>';
+                    th_3.innerHTML += `<input style="width: 0; height:0; opacity: 0" id="p_ids" value="${ response.ids }">`;
+                    let se_body = se_table.createTBody();
+                    response.results.forEach(function(el) {
+                        let t_row = se_body.insertRow();
+                        let td_1 = t_row.insertCell();
+                        td_1.innerText = el.p_id;
+                        let td_2 = t_row.insertCell();
+                        td_2.innerText = el.p_name;
+                        let td_3 = t_row.insertCell();
+                        let check_box = document.createElement('input');
+                        check_box.type = 'checkbox';
+                        check_box.id = `checkbox_${el.p_id}`;
+                        check_box.value = el.p_id;
+                        check_box.className = `p_checkbox`;
+                        check_box.checked = true;
+                        td_3.appendChild(check_box);
+
+                    });
+                    document.getElementById('msg_basic_msg').appendChild(se_table);
+                    let r = document.createElement('div');
+                    r.className = 'row';let col_1 = document.createElement('div');
+                    col_1.className = 'col-6';
+                    let pa_select = document.createElement('select');
+                    pa_select.id = `pa_pu_select_${prb_name}`;
+                    {% for pa_name in pa_names %}
+                        let pa_option_{{ loop.index }} = document.createElement('option');
+                        pa_option_{{ loop.index }}.value = "{{ pa_name }}";
+                        pa_option_{{ loop.index }}.innerText = "{{ pa_name }}";
+                        pa_select.appendChild(pa_option_{{ loop.index }});
+                    {% endfor %}
+                    col_1.appendChild(pa_select);
+                    let pat_button = document.createElement('button');
+                    pat_button.className = 'smallbutton blackbutton';
+                    pat_button.innerHTML = '<i class="fa fa-check"></i>';
+                    pat_button.onclick = function() {transform_products(prb_name, 'pa_transform')};
+                    col_1.appendChild(pat_button);
+                    r.appendChild(col_1);
+                    let col_2 = document.createElement('div');
+                    col_2.className = 'col-12';
+                    let prb_select = document.createElement('select');
+                    prb_select.id = `pr_pu_select_${prb_name}`;
+                    let prb_option_0 = document.createElement('option');
+                    prb_option_0.value = "0";
+                    prb_option_0.innerText = "";
+                    prb_select.appendChild(prb_option_0);
+                    {% for pr_bundle in pr_bundles %}
+                        let prb_option_{{ loop.index }} = document.createElement('option');
+                        prb_option_{{ loop.index }}.value = "{{ pr_bundle.id }}";
+                        prb_option_{{ loop.index }}.innerText = "{{ pr_bundle.name }}";
+                        prb_select.appendChild(prb_option_{{ loop.index }});
+                    {% endfor %}
+                    col_2.appendChild(prb_select);
+                    let prt_button = document.createElement('button');
+                    prt_button.className = 'smallbutton blackbutton';
+                    prt_button.innerHTML = '<i class="fa fa-check"></i>';
+                    prt_button.onclick = function() {transform_products(prb_name, 'pr_transform')};
+                    col_2.appendChild(prt_button);
+                    r.appendChild(col_2);
+                    document.getElementById('msg_basic_msg').appendChild(r);
+
+                    document.getElementById("msg_basic").style.display = 'Block';
+                    document.getElementById("msg_basic").style.zIndex = '15002';
+                    document.getElementById("msg_darkener").style.display = 'Block';
+
+                    setTimeout(function() {
+                        document.getElementById("msg_basic").style.opacity = '1';
+                        document.getElementById("msg_darkener").style.opacity = '0.8';
+                    }, 200);
+                    lighten();
+                },
+                error: function(response) {
+                    lighten();
+                }
+            });
+        }
+
+        function center_analysis_transform(prb_name, mode) {
+            let data = {};
+            if (mode === 'pa_transform') {
+                data = {'from_bundle': prb_name, 'to_action': document.getElementById(`pa_select_${prb_name}`).value};
+            }
+            else {
+                data = {'from_bundle': prb_name, 'to_bundle': document.getElementById(`pr_select_${prb_name}`).value};
+            }
+            darken();
+            $.ajax({
+                url: "{{ url_for('center_analysis_pricing_bundles_transform') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                }
+            });
+        }
+
+        function transform_products(prb_name, mode) {
+            let checkboxes = document.getElementsByClassName('p_checkbox');
+            let p_ids = [];
+            for (let checkbox of checkboxes) {
+                if (checkbox.checked === true) {
+                    p_ids.push(checkbox.value);
+                }
+            }
+            if (mode === 'pa_transform') {
+                data = {'from_bundle': prb_name, 'to_action': document.getElementById(`pa_select_${prb_name}`).value, 'p_ids': p_ids};
+            }
+            else {
+                data = {'from_bundle': prb_name, 'to_bundle': document.getElementById(`pr_select_${prb_name}`).value, 'p_ids': p_ids};
+            }
+            darken();
+            $.ajax({
+                url: "{{ url_for('center_analysis_pricing_bundles_transform') }}",
+                type: "PATCH",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    lighten();
+                    show_msg('Update erfolgreich.', 'success');
+                },
+                error: function(response) {
+                    lighten();
+                    show_msg('Es ist ein Fehler aufgetreten.<br>' + response.responseJSON.msg, 'danger');
+                }
+            });
+        }
+
+        function check_all(obj){
+            let checkboxes = document.getElementsByClassName('p_checkbox');
+            if (obj.checked === true) {
+                for (let checkbox of checkboxes) {
+                    checkbox.checked = true;
+                }
+            }
+            else {
+                for (let checkbox of checkboxes) {
+                    checkbox.checked = false;
+                }
+            }
+        }
+    </script>
+{%endblock%}

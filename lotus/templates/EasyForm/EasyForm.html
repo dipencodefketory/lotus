@@ -1,0 +1,16 @@
+<form id="{{ form.id }}" action="{{ form.action }}" method="{{ form.method }}">
+    {% for field_id in (form.form_fields.keys()|sort())[:form.form_fields.keys()|length//2] %}
+        <div class="splitleft">
+            <div class="form-group">
+                {{ form.form_fields[field_id].make_field()|safe }}
+            </div>
+        </div>
+    {% endfor %}
+    {% for field_id in (form.form_fields.keys()|sort())[form.form_fields.keys()|length//2:] %}
+        <div class="splitright">
+            <div class="form-group">
+                {{ form.form_fields[field_id].make_field()|safe }}
+            </div>
+        </div>
+    {% endfor %}
+</form>

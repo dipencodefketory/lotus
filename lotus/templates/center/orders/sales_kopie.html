@@ -1,0 +1,306 @@
+{% extends 'center/basis.html' %}
+{% block title %}Sales{% endblock %}
+
+{% block addsheets %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/center/orders.css')}}">
+{% endblock %}
+
+{% block ext %}
+    <div class="box100" style="text-align: left">
+        <form action="" method="POST" name="filterform" style="padding-top: 3px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="text" name="checker" value="filter_preorders" hidden>
+            <div class="splitleft">
+                <div class="form-group" style="margin-top: 20px">
+                    <label for="product_ids" style="width: 100%">Produkte (IDs an Semikolon trennen!)
+                        <div style="float: right">
+                            <input type="radio" value="id" id="id" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['orders_sales_filter_infos'] %}
+                                    {% if session['orders_sales_filter_infos']['product_id_type'] == 'id' %}
+                                        checked
+                                    {% endif %}
+                                    {% else %}
+                                        checked
+                                    {% endif %}
+                            >
+                            <label for="id" style="margin: 0; padding-bottom: 0">ID
+                            </label>
+                            <input type="radio" value="Internal_ID" id="Internal_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['orders_sales_filter_infos'] %}
+                                    {% if session['orders_sales_filter_infos']['product_id_type'] == 'Internal_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="Internal_ID" style="margin: 0; padding-bottom: 0">Interne ID
+                            </label>
+                            <input type="radio" value="HSP_ID" id="HSP_ID" class="id_type"
+                                   name="id_type" onclick="transform_ids(this.value)"
+                                    {% if 'product_id_type' in session['orders_sales_filter_infos'] %}
+                                    {% if session['orders_sales_filter_infos']['product_id_type'] == 'HSP_ID' %}
+                                        checked
+                                    {% endif %}
+                                    {% endif %}
+                            >
+                            <label for="HSP_ID" style="margin: 0; padding-bottom: 0">HSP-ID
+                            </label>
+                            <input hidden name="product_type" id="product_type" value="{{ session['orders_sales_filter_infos']['product_id_type'] if session['orders_sales_filter_infos']['product_id_type'] else 'id' }}">
+                        </div>
+                    </label>
+                    <textarea rows="4" id="product_ids" style="border: solid 1px black;"  name="product_ids" class="form-control">{% for p in session['orders_sales_filter_infos']['product_ids'] %}{{ p }};{% endfor %}</textarea>
+                    <span class="supertiny formwarning" id="product_ids_warning">Keine Eingabe!</span>
+                    <div style="position:relative;">
+                        <input type="text" name="product" style="border: solid 1px black;"  class="form-control" id="product" list="product-datalist" style="padding-right: 120px" onkeyup="find_products(this.value)">
+                        <span class="supertiny formwarning" id="product_warning">Nur Ziffern erlaubt!</span>
+                        <datalist id="product-datalist" onmouseover="show_filter_options('product')" onmouseleave="hide_filter_options('product')" >
+
+                        </datalist>
+                        <button type="button" class="fromfield_blackbutton" name="btn" onclick="add_product()" id="attributebtn">
+                            <i class="fa fa-caret-up" aria-hidden="true"></i> hinzufügen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="splitright">
+                <table class="table tiny" style="margin-bottom: 0; text-align: left; border: none; box-shadow: none">
+                    <thead style="border: none; box-shadow: none">
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px; width: 120px;">
+                                Verkaufsdatum:<br>
+                                <label for="min_sale_date"> Start:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="min_sale_date" id="min_sale_date" value="{{ session['orders_sales_filter_infos']['min_sale_date'].strftime('%Y-%m-%d') }}">
+                            </th>
+                            <th style="border: none; box-shadow: none;">
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="border: none; box-shadow: none; padding-bottom: 5px; width: 120px;">
+                                <label for="max_sale_date"> Ende:
+                                </label>
+                                <input class="form-control tiny" style="border: solid 1px black; display: block; width: 100%;" type="date" name="max_sale_date" id="max_sale_date" value="{{ session['orders_sales_filter_infos']['max_sale_date'].strftime('%Y-%m-%d') }}">
+                            </th>
+
+                            <th style="border: none; box-shadow: none; padding-bottom: 15px; width: 120px;">
+                                <button class="standardbutton tiny blackbutton visible" style="float: right; margin: 0" type="submit" value="filter" name="btn">
+                                    <i class="fa fa-filter" aria-hidden="true"></i> Filtern
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </form>
+    </div>
+    <div class="box100">
+        <div class="box100">
+            <div class="box100title">
+                {{ result_length }} Treffer
+            </div>
+            <div class="box100title">
+                Seite: <input id="page" type="number" max="{{ (result_length/25)|round(0, 'ceil')|int }}" min="1" value="{{ session['orders_sales_filter_infos']['page'] }}" style="width: 50px" onchange="turnpage(this.value)">
+                / {{ (result_length/25)|round(0, 'ceil')|int }}
+            </div>
+        </div>
+        <table class="table table-hover tiny sortable" style="text-align: left">
+            <thead class="black">
+                <tr>
+                    <th class="sortable">
+
+                    </th>
+                    <th class="sortable">
+                        ID
+                    </th>
+                    <th class="sortable">
+                        HSP-ID
+                    </th>
+                    <th class="sortable">
+                        Name
+                    </th>
+                    <th class="sortable">
+                        VK-Preis
+                    </th>
+                    <th class="sortable">
+                        Versand
+                    </th>
+                    <th class="sortable">
+                        VK-Stck.
+                    </th>
+                    <th class="sortable">
+                        Marge
+                    </th>
+                    <th class="sortable">
+                        Eigenes Lager
+                    </th>
+                    <th>
+                    </th>
+                    <th>
+                    </th>
+                    <th>
+                    </th>
+                    <th>
+                        Günstigster Konkurrentenpreis
+                    </th>
+                </tr>
+            </thead>
+            <tbody style="border-bottom: solid 1px rgb(222, 226, 230);">
+                {% for s in sales %}
+                    {% set id = namespace(value=s[1]) %}
+                <tr>
+                    <td>
+
+                    </td>
+                    <td>
+                        {{ s[0].id }}
+                    </td>
+                    <td>
+                        {{ s[0].hsp_id }}
+                    </td>
+                    <td>
+                        {{ s[0].name }}
+                    </td>
+                    <td>
+                        {{ '%0.2f' % s[2]|float }} €
+                    </td>
+                    <td>
+                        {{ '%0.2f' % s[4]|float }} €
+                    </td>
+                    <td>
+                        <table>
+                            <tr>
+                                {% for mp in mps %}
+                                <td style="padding: 0; border: None" >
+                                    <img src="{{ url_for('static', filename='images/foreignicons/' + mp.name + '_icon.png') }}" style="height:15px; width: 15px; margin: 2px">
+                                </td>
+                                {% endfor %}
+                                <td style="padding: 0 5px; border: None;" >
+                                    &Sigma;
+                                </td>
+                            </tr>
+                            <tr>
+                                {% for mp in mps %}
+                                    <td style="padding: 0; border: None; text-align: center" >{{ s[mp.name] }}</td>
+                                {% endfor %}
+                                <td style="padding: 0 5px; border: None; font-weight: 500">
+                                    {{ s[3] }}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                        {% set sum = namespace(value=0) %}
+                        {% for mp in mps %}
+                            {% set sum.value = sum.value + s[0].get_avgmargin_by_mp_sellp_shipp(mp.id, s[2], s[4], s[mp.name]) %}
+                        {% endfor %}
+                        {% if s[3] != 0 and sum.value!=0 %}
+                            <td {% if sum.value < 0 %}style="background: #fad0cd" {% endif %}>
+                                {{ '%0.2f' % (sum.value / s[3]) }} %
+                            </td>
+                        {% else %}
+                            <td>
+                                -
+                            </td>
+                        {% endif %}
+                    <td>
+                        {{ '%0.2f' % s[0].get_own_buying_price()|float + ' €' if s[0].get_own_buying_price() else '-'}}
+                    </td>
+                    {% for p in s[0].get_three_cheapest_ext_stocks() %}
+                        {% if p!=None %}
+                            <td>
+                                {{ p[0] }}<br>
+                                ({{ p[1].supplier.get_name() }})
+                            </td>
+                        {% else %}
+                            <td>
+                                - <br>
+
+                            </td>
+                        {% endif %}
+                    {% endfor %}
+                    <td>
+                        {% if s[0].get_cheapest_ext_idealo_price() %}
+                            {{ '%0.2f' % s[0].get_cheapest_ext_idealo_price().selling_price }} €<br>
+                            {{ s[0].get_cheapest_ext_idealo_price().get_seller_name() }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+
+        function find_products(val){
+            var letters = /^[0-9A-Za-zÀ-ž\u0370-\u03FF\u0400-\u04FF]+$/;
+            if(val.match(letters)) {
+                fetch('/center/product/products/find_products/' + val).then(function (response) {
+                    response.json().then(function (data) {
+                        document.getElementById("product-datalist").innerHTML = data.out;
+                    });
+                });
+            }
+        }
+        function add_product() {
+            var value = document.getElementById('product').value;
+            var values = value.split(' - ');
+            var type = document.getElementById('product_type').value;
+            if (values.length > 2 && !isNaN(Number(values[0])) && !isNaN(Number(values[1])) && !isNaN(Number(values[2]))) {
+                if (type === 'id') {
+                    var prod_id = document.getElementById('product').value.split(" - ")[0];
+                } else if (type === 'Internal_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[1];
+                } else if (type === 'HSP_ID') {
+                    prod_id = document.getElementById('product').value.split(" - ")[2];
+                }
+                var prod_ids = document.getElementById('product_ids');
+                if (prod_ids.value.replace(' ', '') === '') {
+                    prod_ids.value = prod_id;
+                }
+                else {
+                    prod_ids.value += ';' + prod_id;
+                }
+            } else {
+                var list = document.getElementById("product-datalist").children;
+                for (var i = 0; i < list.length; i++) {
+                    if (type === 'id') {
+                        prod_id = list[i].value.split(" - ")[0];
+                    } else if (type === 'Internal_ID') {
+                        prod_id = list[i].value.split(" - ")[1];
+                    } else if (type === 'HSP_ID') {
+                        prod_id = list[i].value.split(" - ")[2];
+                    }
+                    prod_ids = document.getElementById('product_ids');
+                    if (prod_ids.value.replace(' ', '') === '') {
+                        prod_ids.value = prod_id;
+                    }
+                    else {
+                        prod_ids.value += ';' + prod_id;
+                    }
+                }
+            }
+        }
+
+        function transform_ids(val) {
+            old_type = document.getElementById('product_type').value;
+            document.getElementById('product_type').value = val;
+            ids = document.getElementById('product_ids').value.replace(/(?:\r\n|\r|\n|,)/g, ';');
+            fetch('/center/product/dynamic_pricing/transform_ids/'+ids+','+old_type+','+val).then(function (response) {
+                response.json().then(function (data) {
+                    document.getElementById('product_ids').value = data.ids;
+                    if(data.not_found!==''){
+                        alert("Die IDs "+data.not_found+" konnten nicht umgewandelt werden.");
+                    }
+                });
+            });
+        }
+
+        function turnpage(val){
+            fetch('/center/orders/sales/turnpage/' + val).then(function (response) {
+                setTimeout(function() {
+                    document.filterform.submit();
+                }, 200);
+            });
+        }
+    </script>
+{%endblock%}
